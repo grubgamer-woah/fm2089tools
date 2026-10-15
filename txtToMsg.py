@@ -11,8 +11,7 @@ from msgToTxt import txtFileSeparator
 #         string ID,             original text (titles for col 1 and 2)
 # msglabels_fileName_msg_000, "string to convert"
 
-tr_nitropacker_name = "FM2089_TR_UNPACK" # TR stands for TRanslated, this is the unpacked data we use to repack the rom
-tr_export = Path(f"./temp/{tr_nitropacker_name}/data/data/font") # Location where we export the translated .msg to
+tr_export = Path("./text/translated") # Location where we export the translated .msg to
 
 writeToLog = True
 debugLog = None
