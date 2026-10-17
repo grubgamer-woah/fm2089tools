@@ -30,6 +30,11 @@ CLEAN_MD5 = 'e965ed696171d327656dac3adf6c6221'  # Front Mission 2089 - Border of
 MSG_DIR = 'data/font/'
 FONT_PATH = 'data/font/msgcmn.fnt'
 SCREEN_WIDTH = 256
+# Dialogue and message boxes wrap mid-word past this width (measured in the emulator).
+TEXT_BOX_WIDTH = 228
+# The hero's name is a variable; widths count it as the default name.
+HERO_NAME = '«E801:00»'
+HERO_DEFAULT = 'Storm'
 PATCH_NAME = 'FM2089 English'
 
 GROUPS = [
@@ -161,7 +166,13 @@ class Catalog:
         self.entries.sort(key=lambda e: keys[e['id']])
 
     def limit(self, entry):
-        """Widest line allowed before a warning: the widest Japanese line in the same file."""
+        """Widest line allowed before a warning.
+
+        Story text goes in the dialogue box, which wraps mid-word past TEXT_BOX_WIDTH
+        (the Japanese relies on that wrap, so its own width is no guide). Other text
+        sits in fixed slots, so the widest Japanese line in the same file is the guide."""
+        if entry['group'] in DIALOGUE_GROUPS:
+            return TEXT_BOX_WIDTH
         return max(entry['file_width'], entry['jp_width']) or SCREEN_WIDTH
 
     def full_text(self, e, text, speakers):
@@ -181,14 +192,17 @@ class Catalog:
         body = text
         text, speaker_warning = self.full_text(e, text, speakers or {})
         toks, errors = msgcodec.text_to_tokens(text, self.font)
-        widths = msgcodec.line_widths(toks, self.font)
+        widths = msgcodec.line_widths(msgcodec.text_to_tokens(text.replace(HERO_NAME, HERO_DEFAULT), self.font)[0], self.font)
         warnings = [speaker_warning] if speaker_warning else []
         limit = self.limit(e)
         for n, w in enumerate(widths, 1):
             if w > SCREEN_WIDTH:
                 errors.append(f'Line {n} is {w} px, wider than the DS screen ({SCREEN_WIDTH} px)')
             elif w > limit:
-                warnings.append(f'Line {n} is {w} px; the widest Japanese line in this file is {limit} px')
+                if e['group'] in DIALOGUE_GROUPS:
+                    warnings.append(f'Line {n} is {w} px; the text box wraps mid-word past {limit} px')
+                else:
+                    warnings.append(f'Line {n} is {w} px; the widest Japanese line in this file is {limit} px')
         if len(widths) > e['lines']:
             warnings.append(f'{len(widths)} lines; the Japanese has {e["lines"]}')
         jp_codes = sorted(set(re.findall(r'«(?!g:)[^»]+»', e['body'])))
