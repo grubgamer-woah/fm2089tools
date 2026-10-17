@@ -13,6 +13,10 @@ to their own copy of the game.
 2. Double-click **`Launch Studio.pyw`** (needs Python 3.8 or newer), or run
    `python -X utf8 studio/tools/studio_server.py`.
 3. Your browser opens <http://127.0.0.1:8796>. The server only listens on this computer.
+4. **Restart** (top right) stops the Studio's Python program and starts it
+   again, then reloads the page; use it after updating the Studio's files.
+   Double-clicking `Launch Studio.pyw` while the Studio is running restarts it too
+   (unless a build is running).
 
 ## Editing
 

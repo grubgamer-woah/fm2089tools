@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import threading
+import time
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -36,6 +37,9 @@ class State:
 
 
 STATE = None
+SERVER = None
+RESTART = False
+STARTED = time.time()
 
 
 def open_folder(path):
@@ -45,6 +49,14 @@ def open_folder(path):
         subprocess.Popen(['open', path])
     else:
         subprocess.Popen(['xdg-open', path])
+
+
+def restart():
+    """Stop serving; main() then starts a fresh copy of this server (same Python, same arguments)."""
+    global RESTART
+    time.sleep(.3)  # let the reply reach the page
+    RESTART = True
+    SERVER.shutdown()
 
 
 def run_build():
@@ -90,7 +102,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == '/api/config':
                 cat = STATE.catalog
                 return self.send(200, {
-                    'application': APP, 'rom': str(cat.rom_path) if cat else None, 'rom_problem': STATE.rom_problem,
+                    'application': APP, 'started': STARTED, 'rom': str(cat.rom_path) if cat else None, 'rom_problem': STATE.rom_problem,
                     'rom_dir': str(core.ROM_DIR), 'groups': [[k, label] for k, label, _ in core.GROUPS],
                     'project': str(STATE.project.path), 'screen_width': core.SCREEN_WIDTH,
                     'controls': {f'{k:04X}': v for k, v in core.msgcodec.CONTROL_NAMES.items()}})
@@ -136,6 +148,9 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get('Origin') not in (None, f'http://{self.headers.get("Host")}'):
             return self.send(403, {'error': 'cross-site request refused'})
         try:
+            if path == '/api/restart':
+                threading.Thread(target=restart, daemon=True).start()
+                return self.send(200, {'ok': True, 'started': STARTED})
             if path == '/api/reload':
                 STATE.load()
                 return self.send(200, {'ok': STATE.catalog is not None, 'rom_problem': STATE.rom_problem})
@@ -209,16 +224,31 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    global STATE
+    global STATE, SERVER
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--port', type=int, default=8796)
     args = ap.parse_args()
     STATE = State()
-    server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
+    # The old copy may still be letting go of the port after a restart
+    for _ in range(40):
+        try:
+            server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
+            break
+        except OSError:
+            time.sleep(.25)
+    else:
+        server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
+    SERVER = server
     print(f'FM2089 Translation Studio: http://127.0.0.1:{args.port}')
     if STATE.rom_problem:
         print(STATE.rom_problem)
     server.serve_forever()
+    server.server_close()
+    if RESTART:
+        flags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+        subprocess.Popen([sys.executable, '-u', '-X', 'utf8', *sys.argv], creationflags=flags,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        os._exit(0)  # a build thread that is still running stops here too
 
 
 if __name__ == '__main__':

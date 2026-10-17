@@ -383,6 +383,23 @@ function showSpeakers() {
   document.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => showFacePicker(b.dataset.pick, showSpeakers));
 }
 
+async function restartStudio() {
+  const building = (await api('/api/job')).running;
+  if (!confirm(building ? 'A build is running and will be stopped. Restart the Studio anyway?' : 'Restart the Studio? Your saved work is kept.')) return;
+  if (S.current && S.dirty) await save(false);
+  const before = S.config && S.config.started;
+  flash('Restarting…');
+  try { await api('/api/restart', {}); } catch (err) { /* the old server may close before it answers */ }
+  for (let i = 0; i < 120; i++) {
+    await new Promise(r => setTimeout(r, 500));
+    try {
+      const c = await (await fetch('/api/config', {cache: 'no-store'})).json();
+      if (c.started !== before) { location.reload(); return; }
+    } catch (err) { /* still starting */ }
+  }
+  flash('The Studio did not come back. Double-click Launch Studio.pyw to start it.');
+}
+
 async function validate() {
   if (S.dirty) await save(true);
   const r = await api('/api/validate', {});
@@ -434,6 +451,7 @@ $('#file').onchange = $('#status').onchange = $('#empty').onchange = () => { S.p
 $('#prev-page').onclick = () => { S.page--; renderRows(); $('#rows').scrollTop = 0; };
 $('#next-page').onclick = () => { S.page++; renderRows(); $('#rows').scrollTop = 0; };
 $('#validate').onclick = validate;
+$('#restart').onclick = restartStudio;
 $('#speakers').onclick = showSpeakers;
 $('#speaker').onchange = () => { S.page = 0; applyFilter(); };
 $('#build').onclick = build;
