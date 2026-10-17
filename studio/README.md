@@ -35,6 +35,10 @@ to their own copy of the game.
   Translate each name once, in the editor or under **Speakers**, and it is used
   on every line that speaker says. The **Speaker** filter lists one
   character's lines. A name with no English yet keeps its Japanese.
+* Each speaker's line shows their portrait, taken from the game's own face art.
+  The main cast is matched automatically. For anyone else, click the portrait
+  (or the letter in its place) in the editor or under **Speakers** and pick a
+  face. Portraits are only shown in the Studio; they never change the game.
 * Notes and the **Done** checkbox are only for you; they never go into the game.
 * Edits are saved to `studio/workspace/project.json` (the save before it is kept
   as `project.previous.json`).
@@ -67,6 +71,7 @@ spacing looks normal and straight double quotes work.
 * `tools/msgcodec.py` reads and writes `.msg` files: UTF-8 text whose code
   points are glyph numbers, with control codes at U+E800–U+E8FF.
 * `tools/fontdata.py` reads the 12 px proportional font and its ASCII table.
+* `tools/portraits.py` decodes the character face graphics for the Studio.
 * `tools/vcdiff.py` writes and checks the xdelta (VCDIFF) patch in pure Python.
 * `tools/test_studio.py` checks all of this against the real ROM.
 

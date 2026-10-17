@@ -2,7 +2,7 @@
 const $ = s => document.querySelector(s);
 const PAGE = 200;
 const COLORS = {E8F5: '#303030', E8F6: '#ff5a5a', E8F7: '#ffe14d', E8F8: '#6aa8ff', E8F9: null};
-const S = {config: null, entries: [], project: {}, speakers: {}, defaultSpeakers: {}, speakerCounts: {}, font: null, group: 'story', page: 0, current: null, filtered: [], dirty: false, checkTimer: null};
+const S = {config: null, entries: [], project: {}, speakers: {}, defaultSpeakers: {}, faces: {}, defaultFaces: {}, portraits: [], speakerCounts: {}, font: null, group: 'story', page: 0, current: null, filtered: [], dirty: false, checkTimer: null};
 
 async function api(path, body) {
   const opts = body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: typeof body === 'string' ? body : JSON.stringify(body)};
@@ -31,6 +31,7 @@ async function start() {
   const [cat, font] = await Promise.all([api('/api/catalog'), api('/api/font')]);
   S.entries = cat.entries; S.project = cat.project;
   S.speakers = cat.speakers; S.defaultSpeakers = cat.default_speakers;
+  S.faces = cat.faces; S.defaultFaces = cat.default_faces; S.portraits = cat.portraits;
   S.speakerCounts = {};
   for (const e of S.entries) if (e.speaker) S.speakerCounts[e.speaker] = (S.speakerCounts[e.speaker] || 0) + 1;
   S.font = font;
@@ -40,6 +41,14 @@ async function start() {
   if (params.get('group')) S.group = params.get('group');
   renderTabs(); fillFiles(); applyFilter();
   if (params.get('id') && S.byId[params.get('id')]) select(params.get('id'));
+}
+
+function faceOf(jp) { const f = S.faces[jp] || S.defaultFaces[jp] || ''; return f === '-' ? '' : f; }
+function faceImg(jp, cls = 'face') {
+  const face = faceOf(jp);
+  if (face) return `<img class="${cls}" src="/api/portrait?face=${encodeURIComponent(face)}" alt="" title="${esc(face)}">`;
+  const letter = (speakerEn(jp) || jp).replace(/«[^»]*»/g, '').charAt(0) || '?';
+  return `<span class="${cls} no-face" title="No portrait picked">${esc(letter)}</span>`;
 }
 
 function speakerEn(jp) { return S.speakers[jp] || S.defaultSpeakers[jp] || ''; }
@@ -121,13 +130,14 @@ function renderRows() {
 function rowEl(e) {
   const p = S.project[e.id] || {};
   const b = document.createElement('button');
-  b.className = 'row' + (S.current === e.id ? ' active' : '');
+  b.className = 'row' + (e.speaker ? ' has-face' : '') + (S.current === e.id ? ' active' : '');
   b.dataset.id = e.id;
   const badges = (p.done ? '<span class="badge done">done</span> ' : '') + (p.note ? '<span class="badge">note</span>' : '');
-  b.innerHTML = `<div class="meta"><span>${esc(e.file.replace('MsgLabels_', ''))} #${e.index}</span><span>${badges}</span></div>` +
+  b.innerHTML = (e.speaker ? faceImg(e.speaker) + '<div class="row-text">' : '') + `<div class="meta"><span>${esc(e.file.replace('MsgLabels_', ''))} #${e.index}</span><span>${badges}</span></div>` +
     (e.speaker ? `<div class="speaker">${esc(speakerLabel(e))}</div>` : '') +
     `<div class="jp">${esc(e.speaker ? e.body : e.jp) || '<i>(empty)</i>'}</div>` +
-    `<div class="en ${p.en === undefined ? 'none' : ''}">${p.en === undefined ? 'Not translated' : esc(p.en) || '(blank)'}</div>`;
+    `<div class="en ${p.en === undefined ? 'none' : ''}">${p.en === undefined ? 'Not translated' : esc(p.en) || '(blank)'}</div>` +
+    (e.speaker ? '</div>' : '');
   b.onclick = () => select(e.id);
   return b;
 }
@@ -161,7 +171,7 @@ function renderEditor() {
   $('#editor').innerHTML = `
     <h2>${esc(e.id)}</h2>
     <div class="sub">${esc(e.file)} · string ${e.index} · ${e.lines} line(s) · widest Japanese line ${e.jp_width} px (file max ${e.file_width} px)</div>
-    ${e.speaker ? `<div class="speaker-bar"><span>Speaker <b>${esc(e.speaker)}</b> · ${fmt(S.speakerCounts[e.speaker])} lines</span>
+    ${e.speaker ? `<div class="speaker-bar"><button id="face-pick" class="face-button" title="Pick this speaker's portrait">${faceImg(e.speaker, 'face big')}</button><span>Speaker <b>${esc(e.speaker)}</b> · ${fmt(S.speakerCounts[e.speaker])} lines</span>
       <label class="inline">English name <input id="speaker-en" value="${esc(S.speakers[e.speaker] || '')}" placeholder="${esc(S.defaultSpeakers[e.speaker] || 'Not translated yet')}"></label>
       <button id="speaker-save" title="Changes this name on every line this speaker says">Save name everywhere</button></div>` : ''}
     <label>Japanese${e.speaker ? ' (the speaker name is added automatically)' : ''}</label><div class="jp-box">${jpHtml(e.body) || '<i>(empty)</i>'}</div>
@@ -172,7 +182,7 @@ function renderEditor() {
       <div class="widths" id="widths"></div>
       <ul class="msgs" id="msgs"></ul>
     </div>
-    <div class="field"><label for="note">Note (not put in the game)</label><input id="note" value="${esc(p.note || '')}"></div>
+    <div class="field"><label for="note">Note (not put in the game)</label><textarea id="note" class="note" rows="2">${esc(p.note || '')}</textarea></div>
     <div class="buttons">
       <button id="save" class="primary" title="Ctrl+Enter">Save entry</button>
       <label class="check"><input id="done" type="checkbox" ${p.done ? 'checked' : ''}> Done</label>
@@ -189,6 +199,7 @@ function renderEditor() {
   $('#clear').onclick = async () => { en.value = ''; S.dirty = true; await save(true, true); };
   if (e.speaker) {
     $('#speaker-save').onclick = () => saveSpeaker(e.speaker, $('#speaker-en').value);
+    $('#face-pick').onclick = () => showFacePicker(e.speaker);
     $('#speaker-en').onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); saveSpeaker(e.speaker, $('#speaker-en').value); } };
   }
   $('#copy-jp').onclick = () => { en.value = e.body; S.dirty = true; scheduleCheck(); en.focus(); };
@@ -333,13 +344,43 @@ async function saveSpeaker(jp, en) {
   return true;
 }
 
+async function saveFace(jp, face) {
+  const r = await api('/api/speaker', {jp, face});
+  if (!r.ok) { flash('Portrait not saved: ' + r.errors.join(', ')); return; }
+  S.faces = r.faces;
+  flash(`Portrait saved for ${fmt(S.speakerCounts[jp])} lines`);
+  renderRows();
+  if (S.current && S.byId[S.current].speaker === jp) {
+    const pending = $('#en').value, note = $('#note').value, dirty = S.dirty;
+    renderEditor(); if (dirty) { $('#en').value = pending; $('#note').value = note; S.dirty = true; scheduleCheck(0); }
+  }
+}
+
+function showFacePicker(jp, back) {
+  const current = faceOf(jp);
+  showJob(`<h3>Portrait for ${esc(speakerEn(jp) && speakerEn(jp) !== jp ? speakerEn(jp) + ' · ' + jp : jp)}</h3>
+    <p>Pick the face shown next to this speaker's lines. It is only shown in the Studio and does not change the game.</p>
+    <div class="face-grid">${S.portraits.map(f => `<button data-face="${esc(f)}" class="${f === current ? 'picked' : ''}" title="${esc(f)}"><img class="face big" src="/api/portrait?face=${encodeURIComponent(f)}" alt=""><small>${esc(f)}</small></button>`).join('')}
+      <button data-face="" class="${current ? '' : 'picked'}"><span class="face big no-face">–</span><small>None</small></button></div>
+    ${back ? '<p><button id="face-back">Back to speakers</button></p>' : ''}`);
+  document.querySelectorAll('[data-face]').forEach(b => b.onclick = async () => {
+    // The built-in match needs no override; "-" means no portrait for this speaker
+    const face = b.dataset.face || '-';
+    await saveFace(jp, face === (S.defaultFaces[jp] || '-') ? '' : face);
+    if (back) back(); else $('#job').hidden = true;
+  });
+  if (back) $('#face-back').onclick = back;
+}
+
 function showSpeakers() {
   const names = Object.keys(S.speakerCounts).sort((a, b) => S.speakerCounts[b] - S.speakerCounts[a]);
   const done = names.filter(n => speakerEn(n)).length;
   showJob(`<h3>Speakers</h3><p>${done} of ${names.length} speaker names have English. Each name is used on every line that speaker says.</p>
-    <div class="speaker-table">${names.map(n => `<label class="inline"><span>${esc(n)} <small>${fmt(S.speakerCounts[n])}</small></span>
-    <input data-speaker="${esc(n)}" value="${esc(S.speakers[n] || '')}" placeholder="${esc(S.defaultSpeakers[n] || '')}"></label>`).join('')}</div>`);
+    <div class="speaker-table">${names.map(n => `<div class="speaker-cell"><button class="face-button" data-pick="${esc(n)}" title="Pick a portrait">${faceImg(n)}</button>
+    <label class="inline"><span>${esc(n)} <small>${fmt(S.speakerCounts[n])}</small></span>
+    <input data-speaker="${esc(n)}" value="${esc(S.speakers[n] || '')}" placeholder="${esc(S.defaultSpeakers[n] || '')}"></label></div>`).join('')}</div>`);
   document.querySelectorAll('[data-speaker]').forEach(i => i.onchange = () => saveSpeaker(i.dataset.speaker, i.value));
+  document.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => showFacePicker(b.dataset.pick, showSpeakers));
 }
 
 async function validate() {

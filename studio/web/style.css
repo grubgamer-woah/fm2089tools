@@ -77,3 +77,17 @@ canvas{image-rendering:pixelated;display:block}
 .job a{color:var(--accent)}
 footer{color:var(--muted);font-size:12px;padding:10px 28px 24px}
 code{font-family:Consolas,monospace}
+.row.has-face{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;align-items:start}
+.face{width:40px;height:40px;object-fit:contain;object-position:center top;image-rendering:pixelated;background:#10191a;border:1px solid var(--line);border-radius:4px;display:block}
+.face.big{width:64px;height:64px}
+.face.no-face{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:16px;font-weight:600}
+.face.big.no-face{font-size:22px}
+.face-button{padding:0;border:0;background:transparent;border-radius:4px}
+.face-button:hover .face{border-color:var(--accent)}
+.speaker-cell{display:flex;gap:8px;align-items:flex-end}
+.speaker-cell label{flex:1}
+.face-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;max-height:420px;overflow:auto}
+.face-grid button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px}
+.face-grid button.picked{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.face-grid small{font-size:10px;color:var(--muted)}
+textarea.note{min-height:0;height:auto;font-family:inherit;font-size:14px}

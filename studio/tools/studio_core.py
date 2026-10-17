@@ -17,6 +17,7 @@ from pathlib import Path
 import fontdata
 import msgcodec
 import ndsrom
+import portraits
 import vcdiff
 
 STUDIO = Path(__file__).resolve().parents[1]
@@ -85,6 +86,7 @@ class Catalog:
         self.rom = ndsrom.Rom(self.rom_path.read_bytes())
         self.font_data = fontdata.tweak(self.rom.read(FONT_PATH))
         self.font = fontdata.Font(self.font_data)
+        self.portraits = portraits.Portraits(self.rom)
         self.files = {}
         self.entries = []
         self.by_id = {}
@@ -159,10 +161,12 @@ class Project:
         self.path = Path(path)
         self.entries = {}
         self.speakers = {}  # Japanese speaker name -> English name, shared by every line
+        self.faces = {}  # Japanese speaker name -> portrait picked in the Studio ('-' = none); never built
         if self.path.exists():
             data = json.loads(self.path.read_text(encoding='utf-8'))
             self.entries = data.get('entries', {})
             self.speakers = data.get('speakers', {})
+            self.faces = data.get('faces', {})
 
     def save(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -172,9 +176,15 @@ class Project:
         tmp = self.path.with_suffix('.tmp')
         data = {'application': 'fm2089-translation-studio', 'version': 1, 'rom_md5': CLEAN_MD5,
                 'saved': dt.datetime.now().isoformat(timespec='seconds'),
-                'speakers': self.speakers, 'entries': self.entries}
+                'speakers': self.speakers, 'faces': self.faces, 'entries': self.entries}
         tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding='utf-8')
         os.replace(tmp, self.path)
+
+    def set_face(self, jp, face):
+        if face:
+            self.faces[jp] = face
+        else:
+            self.faces.pop(jp, None)
 
     def set_speaker(self, jp, en):
         if en:

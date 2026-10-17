@@ -9,6 +9,7 @@ from pathlib import Path
 
 import msgcodec
 import ndsrom
+import portraits
 import studio_core as core
 import vcdiff
 
@@ -56,6 +57,10 @@ def main():
         project.set_speaker('レイン', 'Rain')
         e = next(e for e in cat.entries if e['speaker'] == 'レイン')
         assert cat.check(e['id'], 'Hi.', project.speakers)['full'] == 'Rain:\nHi.'
+        faces = cat.portraits
+        assert all(f in faces.paths for f in portraits.SPEAKER_FACES.values())
+        for face in ('Rain', 'Falcon', 'Brown'):  # small face art and a bust-up crop
+            assert faces.image(face).startswith(b'\x89PNG'), face
         print(f'OK: {len(cat.entries)} strings, patch {len(patch):,} bytes, files {[f["placement"] for f in result["files"]]}')
 
 

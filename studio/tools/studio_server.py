@@ -68,8 +68,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header('Content-Type', ctype)
         self.send_header('Content-Length', str(len(body)))
-        self.send_header('Cache-Control', 'no-store')
-        for k, v in (extra or {}).items():
+        for k, v in {'Cache-Control': 'no-store', **(extra or {})}.items():
             self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
@@ -100,7 +99,17 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 with STATE.lock:
                     return self.send(200, {'entries': STATE.catalog.entries, 'project': STATE.project.entries,
-                                           'speakers': STATE.project.speakers, 'default_speakers': core.DEFAULT_SPEAKERS})
+                                           'speakers': STATE.project.speakers, 'default_speakers': core.DEFAULT_SPEAKERS,
+                                           'faces': STATE.project.faces, 'default_faces': core.portraits.SPEAKER_FACES,
+                                           'portraits': STATE.catalog.portraits.faces})
+            if path == '/api/portrait':
+                if self.need_rom():
+                    return
+                face = parse_qs(url.query).get('face', [''])[0]
+                image = STATE.catalog.portraits.image(face) if face in STATE.catalog.portraits.paths else None
+                if image is None:
+                    return self.send(404, {'error': 'no such portrait'})
+                return self.send(200, image, 'image/png', {'Cache-Control': 'max-age=86400'})
             if path == '/api/font':
                 if self.need_rom():
                     return
@@ -155,6 +164,14 @@ class Handler(BaseHTTPRequestHandler):
             if path == '/api/speaker':
                 data = json.loads(self.body())
                 jp, en = data['jp'], (data.get('en') or '').strip()
+                if 'face' in data:
+                    face = data['face'] or ''
+                    if face and face != '-' and face not in cat.portraits.paths:
+                        return self.send(200, {'ok': False, 'errors': [f'unknown portrait {face}']})
+                    with STATE.lock:
+                        STATE.project.set_face(jp, face)
+                        STATE.project.save()
+                    return self.send(200, {'ok': True, 'faces': STATE.project.faces})
                 if en:
                     _, problems = core.msgcodec.text_to_tokens(en, cat.font)
                     if problems:
