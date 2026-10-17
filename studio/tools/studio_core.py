@@ -16,6 +16,7 @@ from pathlib import Path
 
 import fontdata
 import heroname
+import koname
 import labels
 import msgcodec
 import ndsrom
@@ -99,6 +100,9 @@ class Catalog:
         self.font = fontdata.Font(self.font_data)
         self.portraits = portraits.Portraits(self.rom)
         self.titles = titles.Titles(self.rom)
+        # The En+Ko fan patch's name entry screens are used when that ROM sits next to the Japanese one
+        ko = koname.find([ROM_DIR, STUDIO.parent, STUDIO.parent.parent/'1. Original ROM', self.rom_path.parent])
+        self.ko_rom = ndsrom.Rom(ko.read_bytes()) if ko else None
         self.files = {}
         self.entries = []
         self.by_id = {}
@@ -416,6 +420,13 @@ def compose(catalog, project):
     graphics, graphic_problems = labels.compose(catalog.rom, catalog.font, texts)
     files.update(graphics)
     problems += graphic_problems
+    overlay = f'overlay/{heroname.OVERLAY}'
+    files[overlay] = catalog.rom.read(overlay)
+    if catalog.ko_rom:
+        files.update(koname.compose(catalog.ko_rom))
+    else:
+        problems.append({'id': labels.entry_id('check_pilot'), 'level': 'warning',
+                         'message': f'"{koname.KO_NAME}" not found, so the name entry screens stay Japanese'})
     name = project.entries.get(HERO_NAME_ID, {}).get('en', HERO_DEFAULT)
     try:
         heroname.encode(name)
@@ -423,8 +434,7 @@ def compose(catalog, project):
         problems.append({'id': HERO_NAME_ID, 'level': 'warning',
                          'message': f'Name entry screen keeps "{HERO_DEFAULT}": {error}'})
         name = HERO_DEFAULT
-    overlay = f'overlay/{heroname.OVERLAY}'
-    files[overlay] = heroname.patch(catalog.rom.read(overlay), name)
+    files[overlay] = heroname.patch(files[overlay], name)
     return files, problems
 
 
@@ -463,6 +473,7 @@ def build(catalog, project, out_root=BUILDS, log=print):
         'patch_md5': hashlib.md5(patch).hexdigest(),
         'translated_entries': translated, 'total_entries': len(catalog.entries),
         'hero_default_name': heroname.decode(check.read(f'overlay/{heroname.OVERLAY}')),
+        'name_entry_screens': 'En+Ko patch' if catalog.ko_rom else 'Japanese',
         'mission_titles': sorted({p.split('/')[-1][:13] for p in images}),
         'files': report, 'warnings': [p for p in problems if p['level'] == 'warning'],
     }

@@ -62,6 +62,17 @@ class Rom:
     def list(self, folder):
         return sorted(p for p in self.paths if p.startswith(folder))
 
+    def _resize_overlay(self, out, ov_id, size):
+        """A bigger (uncompressed) overlay loads more bytes; its zeroed area shrinks to match."""
+        ovt, ovt_size = struct.unpack_from('<II', self.data, 0x50)
+        for i in range(ovt_size//32):
+            o = ovt+32*i
+            oid, _, ram, bss = struct.unpack_from('<4I', self.data, o)
+            if oid == ov_id and size > ram:
+                if struct.unpack_from('<I', self.data, o+28)[0] & 0x01000000:
+                    raise ValueError(f'overlay {ov_id} is compressed')
+                struct.pack_into('<II', out, o+8, size, max(0, ram+bss-size))
+
     def rebuild(self, replacements):
         """replacements: {path: bytes}. Returns (new rom bytes, report list)."""
         out = bytearray(self.data)
@@ -90,6 +101,8 @@ class Rom:
                 free = align(s+len(new))
                 where = f'moved to {s:#x}'
             struct.pack_into('<II', out, self.fat_off+8*fid, s, s+len(new))
+            if path.startswith('overlay/'):
+                self._resize_overlay(out, int(path[8:]), len(new))
             report.append({'path': path, 'old_size': e-self.fat[fid][0], 'new_size': len(new), 'placement': where})
         new_used = max(self.used, max(struct.unpack_from('<I', out, self.fat_off+8*i+4)[0] for i in range(len(self.fat))))
         struct.pack_into('<I', out, 0x80, new_used)

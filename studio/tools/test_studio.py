@@ -3,11 +3,13 @@
 Needs the clean Japanese ROM (in studio/rom/ or given on the command line).
 Uses a temporary workspace, so your saved translations are never touched.
 """
+import struct
 import sys
 import tempfile
 from pathlib import Path
 
 import heroname
+import koname
 import labels
 import msgcodec
 import ndsrom
@@ -58,6 +60,10 @@ def main():
                 for path in (src.values() if isinstance(src, dict) else [] if kind == 'check' else [src]):
                     assert check.read(path) != cat.rom.read(path), path
         assert check.read('data/name/EntryCheck_ncg.bin') != cat.rom.read('data/name/EntryCheck_ncg.bin')
+        if cat.ko_rom:
+            assert check.read('data/name/fon00_ncg.bin') == cat.ko_rom.read('data/name/en/fon00_ncg.bin')
+            ovt = struct.unpack_from('<I', patched, 0x50)[0]
+            assert any(struct.unpack_from('<3I', patched, ovt+32*i)[::2] == (14, koname.SIZE) for i in range(64))
         st = msgcodec.MsgFile('x', check.read('data/font/MsgLabels_station_01.msg'))
         assert msgcodec.tokens_to_text(st.tokens(1), cat.font) == '«E801:00»:\n«E801:00» says line 2 in English.'
 
