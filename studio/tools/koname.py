@@ -23,6 +23,8 @@ import hashlib
 import struct
 
 import msgcodec
+import portraits
+import titles
 
 KO_MD5 = '4b813a912697d890e32914f65acac3c7'
 KO_SIZE = 44040192
@@ -51,6 +53,23 @@ SPRITES = 0x21FBF02, 0xDB  # code -> name sprite, u16; sprite - 386 = MsgLabels_
 FIRST_SPRITE = 386
 KO_FONT_MSG = 'data/font/en/MsgLabels_font.msg'
 NO_KEY = 218
+# The patch draws a few keys with Japanese marks (、 ‥ ー 「 」 ×) that type , ' - [ ] * and _
+# in dialogue; those cells of fon01 (16x16, 8 per row, index 43 = cell 0) are redrawn.
+# Rows of 16: '#' = face (colour 1); the outline (colour 3) is added around it.
+KEY_SHEET = '/data/name/fon01_ncg.bin'
+KEY_GLYPHS = {
+    8: ['', '', '', '', '', '', '', '', '', '', '.##', '.##', '..#', '.#'],              # ,
+    9: ['', '.##', '.##', '..#', '.#'],                                                  # '
+    10: ['', '', '', '', '', '', '', '....#######'],                                     # -
+    18: ['', '.........####', '.........#', '.........#', '.........#', '.........#',
+         '.........#', '.........#', '.........#', '.........#', '.........#', '.........#',
+         '.........####'],                                                               # [
+    19: ['', '..####', '.....#', '.....#', '.....#', '.....#', '.....#', '.....#', '.....#',
+         '.....#', '.....#', '.....#', '..####'],                                        # ]
+    20: ['', '', '', '.......#', '....#..#..#', '.....#.#.#', '......###', '....#######',
+         '......###', '.....#.#.#', '....#..#..#', '.......#'],                           # *
+    23: ['', '', '', '', '', '', '', '', '', '', '', '', '.############'],              # _
+}
 ENV_KINDS = ('NANR', 'NCER', 'NCGR', 'NCLR')
 SAME_PATH = ['data/name/CallCheckEnd_nsc.bin']  # changed in place by the patch
 
@@ -91,6 +110,25 @@ def key_chars(ko_rom, font):
     return chars, sprites
 
 
+def redraw_keys(data):
+    """fon01 of the patch with KEY_GLYPHS drawn in."""
+    d = bytearray(portraits.lz10(data) if data[:1] == b'\x10' else data)
+    tiles = memoryview(d)[8:]
+
+    def put(x, y, v):
+        o = (y//8*16 + x//8)*32 + y % 8*4 + x % 8//2
+        tiles[o] = tiles[o] & (0xF0 if x % 2 == 0 else 0x0F) | v << (x % 2*4)
+
+    for cell, rows in KEY_GLYPHS.items():
+        x0, y0 = cell % 8*16, cell//8*16
+        face = {(x, y) for y, row in enumerate(rows) for x, c in enumerate(row) if c == '#'}
+        edge = {(x+dx, y+dy) for x, y in face for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))} - face
+        for y in range(16):
+            for x in range(16):
+                put(x0+x, y0+y, 1 if (x, y) in face else 3 if (x, y) in edge else 0)
+    return titles.lz10_compress(bytes(d))
+
+
 def compose(ko_rom, font):
     """({rom path: bytes}, {MsgLabels_font index: character}) for the Japanese ROM.
     ko_rom: ndsrom.Rom of the En+Ko ROM; font: fontdata.Font of the build."""
@@ -121,7 +159,7 @@ def compose(ko_rom, font):
             raise ValueError(f'{en} not found in overlay 14 of the En+Ko ROM')
         ov[o:o+len(en)] = jp.encode().ljust(len(en), b'\0')
         if src:
-            files[jp[1:]] = ko_rom.read(src)
+            files[jp[1:]] = redraw_keys(ko_rom.read(src)) if jp == KEY_SHEET else ko_rom.read(src)
     for kind in ENV_KINDS:
         files[f'data/name/NameEntryEnv.{kind}'] = ko_rom.read(f'data/name/en/env/NameEntryEnv.{kind}')
     for path in SAME_PATH:
