@@ -1,0 +1,3 @@
+Put the clean Japanese ROM here:
+Front Mission 2089 - Border of Madness (Japan).nds  (MD5 e965ed696171d327656dac3adf6c6221)
+Any file name works. This folder is ignored by git.

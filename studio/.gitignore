@@ -1,0 +1,7 @@
+# Never commit the game or anything built from it
+rom/*
+!rom/PUT-ROM-HERE.txt
+*.nds
+builds/
+workspace/
+__pycache__/

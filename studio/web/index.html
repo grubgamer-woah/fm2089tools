@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FM2089 Translation Studio</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><span class="mark">2089</span><div><h1>Translation Studio</h1><p>Front Mission 2089: Border of Madness</p></div></div>
+  <div class="actions">
+    <button id="import" title="Import a .tsv or msgToTxt .txt file">Import TSV</button>
+    <a id="export" class="button" href="/api/export.tsv" download>Export TSV</a>
+    <button id="validate" title="Check every translated entry">Validate</button>
+    <button id="build" class="primary" title="Build a patched ROM and an xdelta patch">Build xdelta</button>
+  </div>
+</header>
+<div class="basebar"><span id="base">Loading…</span><span id="progress"></span><span id="saved" role="status"></span></div>
+<nav id="tabs" aria-label="Text groups"></nav>
+<main>
+  <section id="rom-missing" class="notice" hidden>
+    <h2>Japanese ROM needed</h2>
+    <p id="rom-problem"></p>
+    <button id="retry" class="primary">Check again</button>
+  </section>
+  <div id="app">
+    <section class="toolbar">
+      <label class="search"><span>Search Japanese, English, note or ID</span><input id="search" type="search" placeholder="Search…"></label>
+      <label>File<select id="file"><option value="">All files</option></select></label>
+      <label>Show<select id="status">
+        <option value="">Everything</option>
+        <option value="todo">Untranslated</option>
+        <option value="translated">Translated</option>
+        <option value="done">Marked done</option>
+        <option value="notdone">Translated, not marked done</option>
+        <option value="noted">Has a note</option>
+      </select></label>
+      <label class="check"><input id="empty" type="checkbox"> Include empty entries</label>
+    </section>
+    <div class="workspace">
+      <section class="catalog">
+        <div class="list-head"><span id="count"></span><span>Japanese / English</span></div>
+        <div id="rows" role="list" aria-label="Text entries"></div>
+        <div class="pagination"><button id="prev-page">Previous</button><span id="page"></span><button id="next-page">Next</button></div>
+      </section>
+      <section id="editor" class="editor"><p class="empty-editor">Select an entry to compare and edit its text.</p></section>
+    </div>
+    <section id="job" class="job" hidden aria-live="polite"></section>
+  </div>
+</main>
+<footer>Edits save to <code id="project-path">workspace/project.json</code> on this computer. Builds never overwrite earlier builds.</footer>
+<input id="import-file" type="file" accept=".tsv,.txt,.csv" hidden>
+<script src="/app.js"></script>
+</body>
+</html>

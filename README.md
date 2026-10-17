@@ -1,4 +1,6 @@
 # fm2089tools
+
+**New:** [`studio/`](studio/README.md) is a GUI editor that reads the text straight from the ROM and builds an xdelta English patch with one button (no NitroPacker needed).
 These tools allow you to both export and import text from a .msg file and and can be used to make your own translation.
 This tools were written as an improvement of [MSGExporter](https://github.com/neuroKip/MSGExporter) (check the README there for some more info)
 
