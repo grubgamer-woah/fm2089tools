@@ -16,6 +16,7 @@ from pathlib import Path
 
 import fontdata
 import heroname
+import labels
 import msgcodec
 import ndsrom
 import portraits
@@ -45,6 +46,7 @@ GROUPS = [
     ('story', 'Story (game order)', re.compile(r'^MsgLabels_(station|tactics)_\d')),
     ('parts', 'Parts & items', re.compile(r'^MsgLabels_parts_')),
     ('names', 'Names', re.compile(r'^MsgLabels_(name|mission_name)\.')),
+    (labels.GROUP, 'Screen graphics', re.compile('^' + re.escape(labels.FILE) + '$')),
     ('menus', 'Menus & system', re.compile(r'.')),
 ]
 
@@ -123,6 +125,15 @@ class Catalog:
                 self.by_id[e['id']] = (name, i, e)
         # "勝利条件：…" looks like a same-line speaker; only trust names that also speak on their own line
         real = {e['speaker'] for e in self.entries if e['speaker'] and e['speaker_own_line']}
+        # Japanese drawn into graphics (screen headers, base icons...): edited like text, built by labels.py
+        for n, (key, (jp, _, _, _)) in enumerate(labels.LABELS.items(), 1):
+            e = {
+                'id': labels.entry_id(key), 'file': labels.FILE, 'index': n, 'group': labels.GROUP,
+                'jp': jp, 'speaker': None, 'speaker_own_line': False, 'body': jp,
+                'lines': labels.max_lines(key), 'jp_width': labels.limit(key), 'file_width': labels.limit(key),
+            }
+            self.entries.append(e)
+            self.by_id[e['id']] = (None, None, e)
         for e in self.entries:
             if e['speaker'] and e['speaker'] not in real:
                 e.update(speaker=None, speaker_own_line=False, body=e['jp'])
@@ -390,6 +401,9 @@ def compose(catalog, project):
             continue
         name, i, e = catalog.by_id[sid]
         res = catalog.check(sid, p['en'], project.speakers)
+        if name is None:  # a graphic; labels.compose draws it
+            problems += [{'id': sid, 'level': 'error', 'message': msg} for msg in res['errors']]
+            continue
         for msg in res['errors']:
             problems.append({'id': sid, 'level': 'error', 'message': msg})
         for msg in res['warnings']:
@@ -398,6 +412,10 @@ def compose(catalog, project):
             per_file.setdefault(name, {})[i] = msgcodec.tokens_to_bytes(res['tokens'])
     files = {MSG_DIR+name: catalog.files[name].build(repl) for name, repl in per_file.items()}
     files[FONT_PATH] = catalog.font_data
+    texts = {key: project.entries.get(labels.entry_id(key), {}).get('en') for key in labels.LABELS}
+    graphics, graphic_problems = labels.compose(catalog.rom, catalog.font, texts)
+    files.update(graphics)
+    problems += graphic_problems
     name = project.entries.get(HERO_NAME_ID, {}).get('en', HERO_DEFAULT)
     try:
         heroname.encode(name)
@@ -419,7 +437,7 @@ def build(catalog, project, out_root=BUILDS, log=print):
     errors = [p for p in problems if p['level'] == 'error']
     if errors:
         return {'ok': False, 'problems': problems, 'message': f'{len(errors)} entries have errors; fix them first.'}
-    log(f'Writing {len(files) - len(images) - 1} text files and {len(images)//3} mission titles into the ROM…')
+    log(f'Writing {len(files) - len(images)} files ({len(images)//3} mission titles) into the ROM…')
     clean = catalog.rom.data
     patched, report = catalog.rom.rebuild(files)
     out = Path(out_root)/f'build-{stamp}'

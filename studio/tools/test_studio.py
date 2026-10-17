@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 
 import heroname
+import labels
 import msgcodec
 import ndsrom
 import portraits
@@ -20,7 +21,7 @@ def main():
     if rom is None:
         sys.exit(core.find_rom()[1])
     cat = core.Catalog(rom)
-    assert len(cat.entries) == 11500, len(cat.entries)
+    assert len(cat.entries) == 11500 + len(labels.LABELS), len(cat.entries)
 
     for name, mf in cat.files.items():
         assert mf.build({}) == mf.data, f'{name} does not rebuild byte for byte'
@@ -36,6 +37,7 @@ def main():
         for e in cat.entries:
             if e['file'] == 'MsgLabels_station_01' and e['jp']:
                 project.set(e['id'], en=f'«E801:00» says line {e["index"]} in English.')
+        project.set(labels.entry_id('title_startmenu'), en='Main Menu')
         project.save()
         tsv = core.export_tsv(cat, project)
         fresh = core.Project(Path(tmp)/'imported.json')
@@ -51,6 +53,11 @@ def main():
         mf = msgcodec.MsgFile('x', check.read('data/font/MsgLabels_city_common.msg'))
         assert msgcodec.tokens_to_text(mf.tokens(99), cat.font).startswith('Initializing save data.')
         assert heroname.decode(check.read('overlay/14')) == 'Storm'
+        for key, (_, _, kind, sources) in labels.LABELS.items():
+            for src in sources:
+                for path in (src.values() if isinstance(src, dict) else [] if kind == 'check' else [src]):
+                    assert check.read(path) != cat.rom.read(path), path
+        assert check.read('data/name/EntryCheck_ncg.bin') != cat.rom.read('data/name/EntryCheck_ncg.bin')
         st = msgcodec.MsgFile('x', check.read('data/font/MsgLabels_station_01.msg'))
         assert msgcodec.tokens_to_text(st.tokens(1), cat.font) == '«E801:00»:\n«E801:00» says line 2 in English.'
 
