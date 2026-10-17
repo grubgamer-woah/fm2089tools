@@ -29,6 +29,12 @@ to their own copy of the game.
   Lines past the screen edge are errors; lines past the blue line are warnings.
 * Untranslated entries keep their Japanese bytes exactly. **Use Japanese** removes
   an English entry again.
+* Story and battle lines start with the speaker's name in the Japanese
+  (`レイン：`). The Studio shows the speaker on each entry and leaves the name
+  out of the text you translate, then adds it back as `Rain:` when it builds.
+  Translate each name once, in the editor or under **Speakers**, and it is used
+  on every line that speaker says. The **Speaker** filter lists one
+  character's lines. A name with no English yet keeps its Japanese.
 * Notes and the **Done** checkbox are only for you; they never go into the game.
 * Edits are saved to `studio/workspace/project.json` (the save before it is kept
   as `project.previous.json`).

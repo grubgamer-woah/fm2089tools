@@ -40,6 +40,20 @@ GROUPS = [
 ]
 
 
+# Dialogue starts with the speaker's name: "レイン：\n…" (own line) or "«E801:00»：眼？" (same line).
+SPEAKER_RX = re.compile(r'^((?:«E801:00»|[^\s：。、«»\n]){1,16})：( ?)(\n?)')
+DIALOGUE_GROUPS = ('story', 'battle')
+DEFAULT_SPEAKERS = {'«E801:00»': '«E801:00»', '？？？': '???', '？？？？': '????'}
+
+
+def split_speaker(text, group):
+    """Return (speaker, own_line, body); speaker is None for lines without one."""
+    m = SPEAKER_RX.match(text)
+    if m and (m.group(3) or group in DIALOGUE_GROUPS):
+        return m.group(1), bool(m.group(3)), text[m.end():]
+    return None, False, text
+
+
 def group_of(file_name):
     for key, _, rx in GROUPS:
         if rx.search(file_name):
@@ -85,24 +99,45 @@ class Catalog:
             stem = name[:-4]
             for i, toks in enumerate(toks_all):
                 widths = msgcodec.line_widths(toks, self.font)
+                jp = msgcodec.tokens_to_text(toks, self.font)
+                group = group_of(name)
+                speaker, own_line, body = split_speaker(jp, group)
                 e = {
                     'id': msgcodec.string_id(name, i), 'file': stem, 'index': i+1,
-                    'group': group_of(name), 'jp': msgcodec.tokens_to_text(toks, self.font),
+                    'group': group, 'jp': jp, 'speaker': speaker, 'speaker_own_line': own_line, 'body': body,
                     'lines': len(widths), 'jp_width': max(widths), 'file_width': widest,
                 }
                 self.entries.append(e)
                 self.by_id[e['id']] = (name, i, e)
+        # "勝利条件：…" looks like a same-line speaker; only trust names that also speak on their own line
+        real = {e['speaker'] for e in self.entries if e['speaker'] and e['speaker_own_line']}
+        for e in self.entries:
+            if e['speaker'] and e['speaker'] not in real:
+                e.update(speaker=None, speaker_own_line=False, body=e['jp'])
 
     def limit(self, entry):
         """Widest line allowed before a warning: the widest Japanese line in the same file."""
         return max(entry['file_width'], entry['jp_width']) or SCREEN_WIDTH
 
-    def check(self, entry_id, text):
+    def full_text(self, e, text, speakers):
+        """The English as the game shows it: speaker name prefix plus the entry's text."""
+        if not e['speaker']:
+            return text, None
+        name = speakers.get(e['speaker']) or DEFAULT_SPEAKERS.get(e['speaker'])
+        warning = None
+        if not name:
+            name = e['speaker']
+            warning = f'The speaker "{e["speaker"]}" has no English name yet, so the Japanese name is used'
+        return f'{name}:' + ('\n' if e['speaker_own_line'] else ' ') + text, warning
+
+    def check(self, entry_id, text, speakers=None):
         """Return dict with tokens, errors and warnings for an English string."""
         _, _, e = self.by_id[entry_id]
+        body = text
+        text, speaker_warning = self.full_text(e, text, speakers or {})
         toks, errors = msgcodec.text_to_tokens(text, self.font)
         widths = msgcodec.line_widths(toks, self.font)
-        warnings = []
+        warnings = [speaker_warning] if speaker_warning else []
         limit = self.limit(e)
         for n, w in enumerate(widths, 1):
             if w > SCREEN_WIDTH:
@@ -111,21 +146,23 @@ class Catalog:
                 warnings.append(f'Line {n} is {w} px; the widest Japanese line in this file is {limit} px')
         if len(widths) > e['lines']:
             warnings.append(f'{len(widths)} lines; the Japanese has {e["lines"]}')
-        jp_codes = sorted(set(re.findall(r'«(?!g:)[^»]+»', e['jp'])))
-        en_codes = set(re.findall(r'«(?!g:)[^»]+»', text.upper()))
+        jp_codes = sorted(set(re.findall(r'«(?!g:)[^»]+»', e['body'])))
+        en_codes = set(re.findall(r'«(?!g:)[^»]+»', body.upper()))
         missing = [c for c in jp_codes if c.upper() not in en_codes]
         if missing:
             warnings.append('Codes from the Japanese are missing: ' + ' '.join(missing))
-        return {'tokens': toks, 'errors': errors, 'warnings': warnings, 'widths': widths, 'limit': limit}
+        return {'tokens': toks, 'errors': errors, 'warnings': warnings, 'widths': widths, 'limit': limit, 'full': text}
 
 
 class Project:
     def __init__(self, path=PROJECT):
         self.path = Path(path)
         self.entries = {}
+        self.speakers = {}  # Japanese speaker name -> English name, shared by every line
         if self.path.exists():
             data = json.loads(self.path.read_text(encoding='utf-8'))
             self.entries = data.get('entries', {})
+            self.speakers = data.get('speakers', {})
 
     def save(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -134,9 +171,16 @@ class Project:
             prev.write_bytes(self.path.read_bytes())
         tmp = self.path.with_suffix('.tmp')
         data = {'application': 'fm2089-translation-studio', 'version': 1, 'rom_md5': CLEAN_MD5,
-                'saved': dt.datetime.now().isoformat(timespec='seconds'), 'entries': self.entries}
+                'saved': dt.datetime.now().isoformat(timespec='seconds'),
+                'speakers': self.speakers, 'entries': self.entries}
         tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding='utf-8')
         os.replace(tmp, self.path)
+
+    def set_speaker(self, jp, en):
+        if en:
+            self.speakers[jp] = en
+        else:
+            self.speakers.pop(jp, None)
 
     def set(self, entry_id, en=None, note=None, done=None):
         cur = dict(self.entries.get(entry_id, {}))
@@ -162,13 +206,17 @@ class Project:
 
 
 def export_tsv(catalog, project):
-    """Same layout as msgToTxt.py plus Japanese, so it pastes into a spreadsheet."""
+    """Same first columns as msgToTxt.py, so it pastes into a spreadsheet.
+
+    text and japanese leave out the speaker prefix; the speaker columns carry it."""
     buf = io.StringIO()
     w = csv.writer(buf, delimiter='\t', lineterminator='\n')
-    w.writerow(['stringID', 'text', 'japanese', 'note'])
+    w.writerow(['stringID', 'text', 'japanese', 'note', 'speaker', 'speaker_english'])
     for e in catalog.entries:
         p = project.entries.get(e['id'], {})
-        w.writerow([e['id'], p.get('en', ''), e['jp'], p.get('note', '')])
+        sp = e['speaker'] or ''
+        w.writerow([e['id'], p.get('en', ''), e['body'], p.get('note', ''), sp,
+                    project.speakers.get(sp, '') if sp else ''])
     return buf.getvalue()
 
 
@@ -182,8 +230,18 @@ def import_tsv(catalog, project, text):
         sid = row[0].strip()
         if sid not in catalog.by_id:
             unknown.append(sid); continue
+        e = catalog.by_id[sid][2]
         en = row[1] if len(row) > 1 else ''
-        if en and en != catalog.by_id[sid][2]['jp']:
+        if len(row) > 5 and e['speaker'] and row[5]:
+            project.set_speaker(e['speaker'], row[5])
+        if e['speaker']:
+            # msgToTxt-style rows still carry the "Name:" prefix; the Studio adds it itself
+            for prefix in (e['speaker']+'：', e['speaker']+':', (project.speakers.get(e['speaker']) or '\0')+':'):
+                if en.startswith(prefix):
+                    en = en[len(prefix):].lstrip(' ')
+                    en = en[1:] if en.startswith('\n') and e['speaker_own_line'] else en
+                    break
+        if en and en not in (e['jp'], e['body']):
             project.set(sid, en=en); count += 1
         if len(row) > 3 and row[3]:
             project.set(sid, note=row[3])
@@ -197,7 +255,7 @@ def compose(catalog, project):
         if 'en' not in p or sid not in catalog.by_id:
             continue
         name, i, e = catalog.by_id[sid]
-        res = catalog.check(sid, p['en'])
+        res = catalog.check(sid, p['en'], project.speakers)
         for msg in res['errors']:
             problems.append({'id': sid, 'level': 'error', 'message': msg})
         for msg in res['warnings']:

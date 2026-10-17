@@ -12,6 +12,7 @@
   <div class="actions">
     <button id="import" title="Import a .tsv or msgToTxt .txt file">Import TSV</button>
     <a id="export" class="button" href="/api/export.tsv" download>Export TSV</a>
+    <button id="speakers" title="Translate each speaker's name once">Speakers</button>
     <button id="validate" title="Check every translated entry">Validate</button>
     <button id="build" class="primary" title="Build a patched ROM and an xdelta patch">Build xdelta</button>
   </div>
@@ -28,6 +29,7 @@
     <section class="toolbar">
       <label class="search"><span>Search Japanese, English, note or ID</span><input id="search" type="search" placeholder="Search…"></label>
       <label>File<select id="file"><option value="">All files</option></select></label>
+      <label id="speaker-box">Speaker<select id="speaker"><option value="">All speakers</option></select></label>
       <label>Show<select id="status">
         <option value="">Everything</option>
         <option value="todo">Untranslated</option>

@@ -99,7 +99,8 @@ class Handler(BaseHTTPRequestHandler):
                 if self.need_rom():
                     return
                 with STATE.lock:
-                    return self.send(200, {'entries': STATE.catalog.entries, 'project': STATE.project.entries})
+                    return self.send(200, {'entries': STATE.catalog.entries, 'project': STATE.project.entries,
+                                           'speakers': STATE.project.speakers, 'default_speakers': core.DEFAULT_SPEAKERS})
             if path == '/api/font':
                 if self.need_rom():
                     return
@@ -134,7 +135,7 @@ class Handler(BaseHTTPRequestHandler):
             cat = STATE.catalog
             if path == '/api/check':
                 data = json.loads(self.body())
-                res = cat.check(data['id'], data.get('en', ''))
+                res = cat.check(data['id'], data.get('en', ''), STATE.project.speakers)
                 res.pop('tokens')
                 return self.send(200, res)
             if path == '/api/entry':
@@ -142,7 +143,7 @@ class Handler(BaseHTTPRequestHandler):
                 sid = data['id']
                 if sid not in cat.by_id:
                     return self.send(404, {'error': f'unknown entry {sid}'})
-                res = cat.check(sid, data.get('en') or '') if data.get('en') else {'errors': [], 'warnings': [], 'widths': []}
+                res = cat.check(sid, data.get('en') or '', STATE.project.speakers) if data.get('en') else {'errors': [], 'warnings': [], 'widths': []}
                 res.pop('tokens', None)
                 if res['errors'] and not data.get('force'):
                     return self.send(200, {'ok': False, **res})
@@ -151,6 +152,17 @@ class Handler(BaseHTTPRequestHandler):
                     STATE.project.save()
                     saved = STATE.project.entries.get(sid, {})
                 return self.send(200, {'ok': True, 'entry': saved, **res})
+            if path == '/api/speaker':
+                data = json.loads(self.body())
+                jp, en = data['jp'], (data.get('en') or '').strip()
+                if en:
+                    _, problems = core.msgcodec.text_to_tokens(en, cat.font)
+                    if problems:
+                        return self.send(200, {'ok': False, 'errors': problems})
+                with STATE.lock:
+                    STATE.project.set_speaker(jp, en)
+                    STATE.project.save()
+                return self.send(200, {'ok': True, 'speakers': STATE.project.speakers})
             if path == '/api/validate':
                 with STATE.lock:
                     _, problems = core.compose(cat, STATE.project)

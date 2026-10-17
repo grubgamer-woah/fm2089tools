@@ -48,6 +48,14 @@ def main():
         check = ndsrom.Rom(patched)
         mf = msgcodec.MsgFile('x', check.read('data/font/MsgLabels_city_common.msg'))
         assert msgcodec.tokens_to_text(mf.tokens(99), cat.font).startswith('Initializing save data.')
+        st = msgcodec.MsgFile('x', check.read('data/font/MsgLabels_station_01.msg'))
+        assert msgcodec.tokens_to_text(st.tokens(1), cat.font) == '«E801:00»:\n«E801:00» says line 2 in English.'
+
+        speakers = sum(1 for e in cat.entries if e['speaker'])
+        assert speakers > 5800, speakers
+        project.set_speaker('レイン', 'Rain')
+        e = next(e for e in cat.entries if e['speaker'] == 'レイン')
+        assert cat.check(e['id'], 'Hi.', project.speakers)['full'] == 'Rain:\nHi.'
         print(f'OK: {len(cat.entries)} strings, patch {len(patch):,} bytes, files {[f["placement"] for f in result["files"]]}')
 
 

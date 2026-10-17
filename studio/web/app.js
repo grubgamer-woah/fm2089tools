@@ -2,7 +2,7 @@
 const $ = s => document.querySelector(s);
 const PAGE = 200;
 const COLORS = {E8F5: '#303030', E8F6: '#ff5a5a', E8F7: '#ffe14d', E8F8: '#6aa8ff', E8F9: null};
-const S = {config: null, entries: [], project: {}, font: null, group: 'story', page: 0, current: null, filtered: [], dirty: false, checkTimer: null};
+const S = {config: null, entries: [], project: {}, speakers: {}, defaultSpeakers: {}, speakerCounts: {}, font: null, group: 'story', page: 0, current: null, filtered: [], dirty: false, checkTimer: null};
 
 async function api(path, body) {
   const opts = body === undefined ? {} : {method: 'POST', headers: {'Content-Type': 'application/json'}, body: typeof body === 'string' ? body : JSON.stringify(body)};
@@ -30,6 +30,9 @@ async function start() {
   $('#base').textContent = 'ROM: ' + S.config.rom;
   const [cat, font] = await Promise.all([api('/api/catalog'), api('/api/font')]);
   S.entries = cat.entries; S.project = cat.project;
+  S.speakers = cat.speakers; S.defaultSpeakers = cat.default_speakers;
+  S.speakerCounts = {};
+  for (const e of S.entries) if (e.speaker) S.speakerCounts[e.speaker] = (S.speakerCounts[e.speaker] || 0) + 1;
   S.font = font;
   S.font.bitmaps = font.glyphs.map(([w, rb, b64]) => [w, rb, b64 ? Uint8Array.from(atob(b64), c => c.charCodeAt(0)) : null]);
   S.byId = Object.fromEntries(S.entries.map(e => [e.id, e]));
@@ -37,6 +40,18 @@ async function start() {
   if (params.get('group')) S.group = params.get('group');
   renderTabs(); fillFiles(); applyFilter();
   if (params.get('id') && S.byId[params.get('id')]) select(params.get('id'));
+}
+
+function speakerEn(jp) { return S.speakers[jp] || S.defaultSpeakers[jp] || ''; }
+function speakerLabel(e) {
+  if (!e.speaker) return '';
+  const en = speakerEn(e.speaker);
+  return en && en !== e.speaker ? `${en} · ${e.speaker}` : e.speaker;
+}
+// The text as the game shows it: the Studio adds the speaker prefix itself.
+function fullText(e, body) {
+  if (!e.speaker) return body;
+  return (speakerEn(e.speaker) || e.speaker) + ':' + (e.speaker_own_line ? '\n' : ' ') + body;
 }
 
 function translated(e) { return S.project[e.id] && S.project[e.id].en !== undefined; }
@@ -63,14 +78,21 @@ function fillFiles() {
   const sel = $('#file');
   const files = [...new Set(S.entries.filter(e => e.group === S.group).map(e => e.file))];
   sel.innerHTML = '<option value="">All files</option>' + files.map(f => `<option>${esc(f)}</option>`).join('');
+  const counts = {};
+  for (const e of S.entries) if (e.group === S.group && e.speaker) counts[e.speaker] = (counts[e.speaker] || 0) + 1;
+  const names = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  $('#speaker').innerHTML = '<option value="">All speakers</option>' + (names.length ? '<option value="-">No speaker</option>' : '') +
+    names.map(n => `<option value="${esc(n)}">${esc(speakerEn(n) && speakerEn(n) !== n ? speakerEn(n) + ' · ' + n : n)} (${counts[n]})</option>`).join('');
+  $('#speaker-box').hidden = !names.length;
 }
 
 function applyFilter() {
   const q = $('#search').value.trim().toLowerCase();
-  const file = $('#file').value, status = $('#status').value, empty = $('#empty').checked;
+  const file = $('#file').value, status = $('#status').value, empty = $('#empty').checked, speaker = $('#speaker').value;
   S.filtered = S.entries.filter(e => {
     if (e.group !== S.group && !q) return false;
     if (file && e.file !== file) return false;
+    if (speaker === '-' ? e.speaker : speaker && e.speaker !== speaker) return false;
     const p = S.project[e.id] || {};
     if (!empty && !e.jp.trim() && p.en === undefined) return false;
     if (status === 'todo' && p.en !== undefined) return false;
@@ -78,7 +100,7 @@ function applyFilter() {
     if (status === 'done' && !p.done) return false;
     if (status === 'notdone' && (p.en === undefined || p.done)) return false;
     if (status === 'noted' && !p.note) return false;
-    if (q) return (e.id + '\n' + e.jp + '\n' + (p.en || '') + '\n' + (p.note || '')).toLowerCase().includes(q);
+    if (q) return (e.id + '\n' + e.jp + '\n' + (p.en || '') + '\n' + (p.note || '') + '\n' + (e.speaker ? speakerEn(e.speaker) : '')).toLowerCase().includes(q);
     return true;
   });
   const pages = Math.max(1, Math.ceil(S.filtered.length / PAGE));
@@ -103,7 +125,8 @@ function rowEl(e) {
   b.dataset.id = e.id;
   const badges = (p.done ? '<span class="badge done">done</span> ' : '') + (p.note ? '<span class="badge">note</span>' : '');
   b.innerHTML = `<div class="meta"><span>${esc(e.file.replace('MsgLabels_', ''))} #${e.index}</span><span>${badges}</span></div>` +
-    `<div class="jp">${esc(e.jp) || '<i>(empty)</i>'}</div>` +
+    (e.speaker ? `<div class="speaker">${esc(speakerLabel(e))}</div>` : '') +
+    `<div class="jp">${esc(e.speaker ? e.body : e.jp) || '<i>(empty)</i>'}</div>` +
     `<div class="en ${p.en === undefined ? 'none' : ''}">${p.en === undefined ? 'Not translated' : esc(p.en) || '(blank)'}</div>`;
   b.onclick = () => select(e.id);
   return b;
@@ -134,11 +157,14 @@ function jpHtml(text) {
 
 function renderEditor() {
   const e = S.byId[S.current]; const p = S.project[e.id] || {};
-  const tags = [...new Set(e.jp.match(/«(?!g:)[^»]+»/g) || [])];
+  const tags = [...new Set(e.body.match(/«(?!g:)[^»]+»/g) || [])];
   $('#editor').innerHTML = `
     <h2>${esc(e.id)}</h2>
     <div class="sub">${esc(e.file)} · string ${e.index} · ${e.lines} line(s) · widest Japanese line ${e.jp_width} px (file max ${e.file_width} px)</div>
-    <label>Japanese</label><div class="jp-box">${jpHtml(e.jp) || '<i>(empty)</i>'}</div>
+    ${e.speaker ? `<div class="speaker-bar"><span>Speaker <b>${esc(e.speaker)}</b> · ${fmt(S.speakerCounts[e.speaker])} lines</span>
+      <label class="inline">English name <input id="speaker-en" value="${esc(S.speakers[e.speaker] || '')}" placeholder="${esc(S.defaultSpeakers[e.speaker] || 'Not translated yet')}"></label>
+      <button id="speaker-save" title="Changes this name on every line this speaker says">Save name everywhere</button></div>` : ''}
+    <label>Japanese${e.speaker ? ' (the speaker name is added automatically)' : ''}</label><div class="jp-box">${jpHtml(e.body) || '<i>(empty)</i>'}</div>
     <div class="field"><label for="en">English</label>
       <textarea id="en" spellcheck="true" placeholder="Type the English text. Enter = new line in game.">${esc(p.en || '')}</textarea>
       ${tags.length ? `<div class="codes"><span class="widths">Insert code:</span>${tags.map(t => `<button data-insert="${esc(t)}" title="${esc(S.config.controls[t.slice(1, 5).toUpperCase()] || '')}">${esc(t)}</button>`).join('')}</div>` : ''}
@@ -161,7 +187,11 @@ function renderEditor() {
   $('#done').onchange = () => save(true);
   $('#save').onclick = () => save(true);
   $('#clear').onclick = async () => { en.value = ''; S.dirty = true; await save(true, true); };
-  $('#copy-jp').onclick = () => { en.value = e.jp; S.dirty = true; scheduleCheck(); en.focus(); };
+  if (e.speaker) {
+    $('#speaker-save').onclick = () => saveSpeaker(e.speaker, $('#speaker-en').value);
+    $('#speaker-en').onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); saveSpeaker(e.speaker, $('#speaker-en').value); } };
+  }
+  $('#copy-jp').onclick = () => { en.value = e.body; S.dirty = true; scheduleCheck(); en.focus(); };
   $('#prev').onclick = () => step(-1); $('#next').onclick = () => step(1);
   document.querySelectorAll('[data-insert], .tag').forEach(b => b.onclick = () => insert(b.dataset.insert || b.dataset.tag));
   scheduleCheck(0);
@@ -193,7 +223,7 @@ function scheduleCheck(delay = 250) {
 
 async function check() {
   const id = S.current; const text = $('#en').value;
-  const shown = text || S.byId[id].jp;
+  const shown = text ? fullText(S.byId[id], text) : S.byId[id].jp;
   drawPreview(shown, S.byId[id]);
   if (!text) { $('#msgs').innerHTML = ''; $('#widths').textContent = 'Preview shows the Japanese because there is no English yet.'; return; }
   const r = await api('/api/check', {id, en: text});
@@ -293,6 +323,25 @@ function wireGoto() {
   });
 }
 
+async function saveSpeaker(jp, en) {
+  const r = await api('/api/speaker', {jp, en});
+  if (!r.ok) { flash('Name not saved: ' + r.errors.join(', ')); return false; }
+  S.speakers = r.speakers;
+  flash(`Speaker name saved for ${fmt(S.speakerCounts[jp])} lines`);
+  const keep = $('#speaker').value; fillFiles(); $('#speaker').value = keep;
+  renderRows(); if (S.current) { const pending = $('#en') && $('#en').value; renderEditor(); if (pending !== undefined && S.dirty) $('#en').value = pending; scheduleCheck(0); }
+  return true;
+}
+
+function showSpeakers() {
+  const names = Object.keys(S.speakerCounts).sort((a, b) => S.speakerCounts[b] - S.speakerCounts[a]);
+  const done = names.filter(n => speakerEn(n)).length;
+  showJob(`<h3>Speakers</h3><p>${done} of ${names.length} speaker names have English. Each name is used on every line that speaker says.</p>
+    <div class="speaker-table">${names.map(n => `<label class="inline"><span>${esc(n)} <small>${fmt(S.speakerCounts[n])}</small></span>
+    <input data-speaker="${esc(n)}" value="${esc(S.speakers[n] || '')}" placeholder="${esc(S.defaultSpeakers[n] || '')}"></label>`).join('')}</div>`);
+  document.querySelectorAll('[data-speaker]').forEach(i => i.onchange = () => saveSpeaker(i.dataset.speaker, i.value));
+}
+
 async function validate() {
   if (S.dirty) await save(true);
   const r = await api('/api/validate', {});
@@ -334,7 +383,7 @@ async function build() {
 async function importFile(file) {
   const text = await file.text();
   const r = await api('/api/import', text);
-  const cat = await api('/api/catalog'); S.project = cat.project;
+  const cat = await api('/api/catalog'); S.project = cat.project; S.speakers = cat.speakers;
   renderTabs(); applyFilter(); if (S.current) renderEditor();
   showJob(`<h3>Import finished</h3><p>${fmt(r.imported)} English strings imported.${r.unknown_count ? ` ${r.unknown_count} rows had unknown IDs (for example ${esc(r.unknown.slice(0, 5).join(', '))}).` : ''}</p>`);
 }
@@ -344,6 +393,8 @@ $('#file').onchange = $('#status').onchange = $('#empty').onchange = () => { S.p
 $('#prev-page').onclick = () => { S.page--; renderRows(); $('#rows').scrollTop = 0; };
 $('#next-page').onclick = () => { S.page++; renderRows(); $('#rows').scrollTop = 0; };
 $('#validate').onclick = validate;
+$('#speakers').onclick = showSpeakers;
+$('#speaker').onchange = () => { S.page = 0; applyFilter(); };
 $('#build').onclick = build;
 $('#import').onclick = () => $('#import-file').click();
 $('#import-file').onchange = ev => { if (ev.target.files[0]) importFile(ev.target.files[0]); ev.target.value = ''; };
