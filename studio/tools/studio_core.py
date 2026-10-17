@@ -414,6 +414,12 @@ def compose(catalog, project):
             problems.append({'id': sid, 'level': 'warning', 'message': msg})
         if not res['errors']:
             per_file.setdefault(name, {})[i] = msgcodec.tokens_to_bytes(res['tokens'])
+    ko_files = {}
+    if catalog.ko_rom:
+        # digit and symbol keys of the patch's keyboard show these in dialogue
+        ko_files, name_chars = koname.compose(catalog.ko_rom, catalog.font)
+        for i, ch in name_chars.items():
+            per_file.setdefault('MsgLabels_font.msg', {})[i] = msgcodec.tokens_to_bytes([('g', catalog.font.char_glyph(ch))])
     files = {MSG_DIR+name: catalog.files[name].build(repl) for name, repl in per_file.items()}
     files[FONT_PATH] = catalog.font_data
     texts = {key: project.entries.get(labels.entry_id(key), {}).get('en') for key in labels.LABELS}
@@ -423,7 +429,7 @@ def compose(catalog, project):
     overlay = f'overlay/{heroname.OVERLAY}'
     files[overlay] = catalog.rom.read(overlay)
     if catalog.ko_rom:
-        files.update(koname.compose(catalog.ko_rom))
+        files.update(ko_files)
     else:
         problems.append({'id': labels.entry_id('check_pilot'), 'level': 'warning',
                          'message': f'"{koname.KO_NAME}" not found, so the name entry screens stay Japanese'})

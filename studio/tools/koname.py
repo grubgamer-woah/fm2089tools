@@ -12,13 +12,17 @@ instead, its English file names are pointed at the Japanese ROM's own files, and
 those files get the English pictures. Its English default name copy is turned into
 a no-op so heroname.py still sets the default name.
 
-Its keyboard gives letters the codes 0-51, which the Japanese game saves and
-shows in dialogue as kana (the patch fixes that elsewhere). So the keyboard is
-remapped to the Japanese game's own letter codes (a-z 162-187, A-Z 192-217);
-keys with no Japanese code (digits, symbols) do nothing.
+Its keyboard gives its keys the codes 0-80, which the Japanese game saves and
+shows in dialogue as kana (the patch fixes that elsewhere). So letter keys are
+remapped to the Japanese game's own letter codes (a-z 162-187, A-Z 192-217).
+Digits and symbols keep their kana codes, and the build's MsgLabels_font.msg
+(the character each name code shows in dialogue) gets those characters there;
+the romaji keyboard has no kana keys, so nothing else uses those slots.
 """
 import hashlib
 import struct
+
+import msgcodec
 
 KO_MD5 = '4b813a912697d890e32914f65acac3c7'
 KO_SIZE = 44040192
@@ -43,6 +47,9 @@ FILES = {
     '/data/name/en/env/NameEntryEnv.': ('/data/name/NameEntryEnv.', None),
 }
 KEYS = 0x21FBB80, 0xE6     # key -> code, u16
+SPRITES = 0x21FBF02, 0xDB  # code -> name sprite, u16; sprite - 386 = MsgLabels_font string
+FIRST_SPRITE = 386
+KO_FONT_MSG = 'data/font/en/MsgLabels_font.msg'
 NO_KEY = 218
 ENV_KINDS = ('NANR', 'NCER', 'NCGR', 'NCLR')
 SAME_PATH = ['data/name/CallCheckEnd_nsc.bin']  # changed in place by the patch
@@ -70,15 +77,42 @@ def _word(buf, addr, old, new):
     struct.pack_into('<I', buf, o, new)
 
 
-def compose(ko_rom):
-    """{rom path: bytes} for the Japanese ROM. ko_rom: ndsrom.Rom of the En+Ko ROM."""
+def key_chars(ko_rom, font):
+    """The character each of the patch's key codes types, read from its English name font table."""
+    ov = ko_rom.read(OVERLAY)
+    sprites = struct.unpack_from(f'<{SPRITES[1]}H', ov, SPRITES[0]-BASE)
+    msg = msgcodec.MsgFile('MsgLabels_font.msg', ko_rom.read(KO_FONT_MSG))
+    ascii_of = {g: chr(0x20+i) for i, g in enumerate(font.ascii)}
+    chars = {}
+    for code in range(NO_KEY):
+        toks = msg.tokens(sprites[code]-FIRST_SPRITE)
+        if len(toks) == 1 and toks[0][0] == 'g' and toks[0][1] in ascii_of:
+            chars[code] = ascii_of[toks[0][1]]
+    return chars, sprites
+
+
+def compose(ko_rom, font):
+    """({rom path: bytes}, {MsgLabels_font index: character}) for the Japanese ROM.
+    ko_rom: ndsrom.Rom of the En+Ko ROM; font: fontdata.Font of the build."""
     ov = bytearray(ko_rom.read(OVERLAY))
     if len(ov) != SIZE:
         raise ValueError('overlay 14 of the En+Ko ROM is not the expected size')
     for addr, (old, new) in {**LANGUAGE_READS, **NAME_COPY}.items():
         _word(ov, addr, old, new)
     keys = list(struct.unpack_from(f'<{KEYS[1]}H', ov, KEYS[0]-BASE))
-    keys = [jp_code(c) if c < 52 else NO_KEY for c in keys]
+    chars, sprites = key_chars(ko_rom, font)
+    name_chars = {}
+    new_keys = []
+    for c in keys:
+        ch = chars.get(c)
+        if ch is None:
+            new_keys.append(NO_KEY)
+        elif ch.isascii() and ch.isalpha():
+            new_keys.append(jp_code(ch))
+        else:
+            new_keys.append(c)
+            name_chars[sprites[c]-FIRST_SPRITE] = ch
+    keys = new_keys
     struct.pack_into(f'<{KEYS[1]}H', ov, KEYS[0]-BASE, *keys)
     files = {}
     for en, (jp, src) in FILES.items():
@@ -93,9 +127,9 @@ def compose(ko_rom):
     for path in SAME_PATH:
         files[path] = ko_rom.read(path)
     files[OVERLAY] = bytes(ov)
-    return files
+    return files, name_chars
 
 
-def jp_code(c):
-    """The patch's letter code (A-Z 0-25, a-z 26-51) as the Japanese game's code."""
-    return 192 + c if c < 26 else 162 + c - 26
+def jp_code(ch):
+    """The Japanese game's name code for an English letter."""
+    return 192 + ord(ch) - ord('A') if ch.isupper() else 162 + ord(ch) - ord('a')
