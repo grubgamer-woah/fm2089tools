@@ -38,7 +38,7 @@ async function start() {
   S.font.bitmaps = font.glyphs.map(([w, rb, b64]) => [w, rb, b64 ? Uint8Array.from(atob(b64), c => c.charCodeAt(0)) : null]);
   S.byId = Object.fromEntries(S.entries.map(e => [e.id, e]));
   const params = new URLSearchParams(location.hash.slice(1));
-  if (params.get('group')) S.group = params.get('group');
+  if (S.config.groups.some(([key]) => key === params.get('group'))) S.group = params.get('group');
   renderTabs(); fillFiles(); applyFilter();
   if (params.get('id') && S.byId[params.get('id')]) select(params.get('id'));
 }
@@ -50,6 +50,8 @@ function faceImg(jp, cls = 'face') {
   const letter = (speakerEn(jp) || jp).replace(/«[^»]*»/g, '').charAt(0) || '?';
   return `<span class="${cls} no-face" title="No portrait picked">${esc(letter)}</span>`;
 }
+
+function sceneLabel(e) { return `Mission ${e.mission}${e.mission_title ? ' · ' + e.mission_title : ''} · ${e.scene}`; }
 
 function speakerEn(jp) { return S.speakers[jp] || S.defaultSpeakers[jp] || ''; }
 function speakerLabel(e) {
@@ -85,8 +87,12 @@ function renderTabs() {
 
 function fillFiles() {
   const sel = $('#file');
-  const files = [...new Set(S.entries.filter(e => e.group === S.group).map(e => e.file))];
-  sel.innerHTML = '<option value="">All files</option>' + files.map(f => `<option>${esc(f)}</option>`).join('');
+  const first = {};
+  for (const e of S.entries) if (e.group === S.group && !first[e.file]) first[e.file] = e;
+  const files = Object.keys(first), story = files.some(f => first[f].mission);
+  $('#file-label').textContent = story ? 'Mission' : 'File';
+  sel.innerHTML = `<option value="">${story ? 'All missions' : 'All files'}</option>` +
+    files.map(f => `<option value="${esc(f)}">${esc(first[f].mission ? sceneLabel(first[f]) : f)}</option>`).join('');
   const counts = {};
   for (const e of S.entries) if (e.group === S.group && e.speaker) counts[e.speaker] = (counts[e.speaker] || 0) + 1;
   const names = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
@@ -120,7 +126,15 @@ function applyFilter() {
 function renderRows() {
   const rows = $('#rows'); rows.innerHTML = '';
   const slice = S.filtered.slice(S.page * PAGE, (S.page + 1) * PAGE);
-  for (const e of slice) rows.appendChild(rowEl(e));
+  let scene = null;
+  for (const e of slice) {
+    // A heading wherever a mission's base or battle part starts, as the game plays them
+    if (e.mission && !$('#search').value.trim() && e.file !== scene) {
+      const h = document.createElement('div'); h.className = 'scene-head'; h.textContent = sceneLabel(e);
+      rows.appendChild(h); scene = e.file;
+    }
+    rows.appendChild(rowEl(e));
+  }
   const pages = Math.max(1, Math.ceil(S.filtered.length / PAGE));
   $('#count').textContent = `${fmt(S.filtered.length)} entries` + ($('#search').value.trim() ? ' (all groups)' : '');
   $('#page').textContent = `Page ${S.page + 1} of ${pages}`;

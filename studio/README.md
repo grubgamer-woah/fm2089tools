@@ -20,8 +20,11 @@ to their own copy of the game.
 
 ## Editing
 
-* Tabs split the 11,500 strings into story scenes (`station_*`), battle dialogue
-  (`tactics_*`), parts and items, names, and menus/system text.
+* Tabs split the 11,500 strings into the story, parts and items, names, and
+  menus/system text. The story tab is in the order the game plays it: each
+  mission's base scenes (talks, briefing, cutscenes), then its battle, with a
+  heading where each one starts. The **Mission** list jumps to one part.
+  Base talks you can do in any order keep the order the game stores them in.
 * Pick an entry, type the English and press **Save entry** (Ctrl+Enter).
   Alt+Up / Alt+Down move between entries. Switching entries saves first.
 * **Enter** in the English box is a line break in the game.

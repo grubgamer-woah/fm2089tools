@@ -33,8 +33,7 @@ SCREEN_WIDTH = 256
 PATCH_NAME = 'FM2089 English'
 
 GROUPS = [
-    ('story', 'Story scenes', re.compile(r'^MsgLabels_station_')),
-    ('battle', 'Battle dialogue', re.compile(r'^MsgLabels_tactics_\d')),
+    ('story', 'Story (game order)', re.compile(r'^MsgLabels_(station|tactics)_\d')),
     ('parts', 'Parts & items', re.compile(r'^MsgLabels_parts_')),
     ('names', 'Names', re.compile(r'^MsgLabels_(name|mission_name)\.')),
     ('menus', 'Menus & system', re.compile(r'.')),
@@ -43,7 +42,8 @@ GROUPS = [
 
 # Dialogue starts with the speaker's name: "レイン：\n…" (own line) or "«E801:00»：眼？" (same line).
 SPEAKER_RX = re.compile(r'^((?:«E801:00»|[^\s：。、«»\n]){1,16})：( ?)(\n?)')
-DIALOGUE_GROUPS = ('story', 'battle')
+DIALOGUE_GROUPS = ('story',)
+SCENE_RX = re.compile(r'^MsgLabels_(station|tactics)_(\d+)(?:_(\d+))?$')
 DEFAULT_SPEAKERS = {'«E801:00»': '«E801:00»', '？？？': '???', '？？？？': '????'}
 
 
@@ -116,6 +116,49 @@ class Catalog:
         for e in self.entries:
             if e['speaker'] and e['speaker'] not in real:
                 e.update(speaker=None, speaker_own_line=False, body=e['jp'])
+        self._play_order()
+
+    def _play_order(self):
+        """Put story text in the order the game plays it.
+
+        Mission N is the base (station_N: talks, briefing, cutscenes) and then its
+        battle (tactics_N). Inside a file the game's own order is kept, except:
+        station_01 ends with the opening narration, which plays first; station_60
+        is the closing narration after the last battle; and dialogue choices stored
+        at the top of a base file go right before the reply they lead to."""
+        titles = {e['index']: re.sub(r'^.*?«g:24»', '', e['jp']) for e in self.entries if e['file'] == 'MsgLabels_mission_name'}
+        groups = [key for key, _, _ in GROUPS]
+        by_file = {}
+        for e in self.entries:
+            by_file.setdefault(e['file'], []).append(e)
+        keys = {}
+        for n, e in enumerate(self.entries):
+            keys[e['id']] = (groups.index(e['group']), 0, 0, 0, n)
+        for file, es in by_file.items():
+            m = SCENE_RX.match(file)
+            if not m:
+                continue
+            kind, mission, sub = m.group(1), int(m.group(2)), int(m.group(3) or 0)
+            part = 0 if kind == 'station' else 1
+            if file == 'MsgLabels_station_60':
+                part = 2
+            pos = {e['id']: float(e['index']) for e in es}
+            if file == 'MsgLabels_station_01':
+                for e in es[-3:]:
+                    pos[e['id']] -= 1000
+            if kind == 'station':
+                for e in es[:4]:
+                    if e['speaker'] or not e['body'].strip() or '\n' in e['body']:
+                        break
+                    reply = next((r for r in es if r['speaker'] == '«E801:00»' and r['body'].startswith(e['body'])), None)
+                    if reply:
+                        pos[e['id']] = reply['index'] - .5
+            for e in es:
+                e['mission'] = mission
+                e['scene'] = ('Base', 'Battle', 'Ending')[part]
+                e['mission_title'] = titles.get(mission, '')
+                keys[e['id']] = (groups.index(e['group']), mission, part, sub, pos[e['id']])
+        self.entries.sort(key=lambda e: keys[e['id']])
 
     def limit(self, entry):
         """Widest line allowed before a warning: the widest Japanese line in the same file."""
