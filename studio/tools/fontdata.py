@@ -10,7 +10,9 @@ import struct
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root, for conversionTables.py
+# conversionTables.py sits in the repo root, or next to tools/ when the studio folder's contents are moved up
+for _root in Path(__file__).resolve().parents[2:0:-1]:
+    sys.path.insert(0, str(_root))
 import conversionTables  # noqa: E402
 
 LETTER_SPACING = 1  # matches the gap seen in DeSmuME

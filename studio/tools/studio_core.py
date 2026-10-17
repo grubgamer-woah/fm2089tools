@@ -25,6 +25,8 @@ import titles
 import vcdiff
 
 STUDIO = Path(__file__).resolve().parents[1]
+# where the Japanese and En+Ko ROMs are looked for; '1. Original ROM' may sit one or two levels up
+ROM_FOLDERS = [STUDIO.parent, STUDIO.parent/'1. Original ROM', STUDIO.parent.parent/'1. Original ROM']
 ROM_DIR = STUDIO/'rom'
 WORKSPACE = STUDIO/'workspace'
 BUILDS = STUDIO/'builds'
@@ -75,7 +77,7 @@ def group_of(file_name):
 
 def find_rom(folders=None):
     """Return (path, md5) of the clean Japanese ROM, or (None, reason)."""
-    folders = folders or [ROM_DIR, STUDIO.parent, STUDIO.parent.parent/'1. Original ROM']
+    folders = folders or [ROM_DIR, *ROM_FOLDERS]
     seen = []
     for folder in folders:
         if not folder.is_dir():
@@ -101,7 +103,7 @@ class Catalog:
         self.portraits = portraits.Portraits(self.rom)
         self.titles = titles.Titles(self.rom)
         # The En+Ko fan patch's name entry screens are used when that ROM sits next to the Japanese one
-        ko = koname.find([ROM_DIR, STUDIO.parent, STUDIO.parent.parent/'1. Original ROM', self.rom_path.parent])
+        ko = koname.find([ROM_DIR, *ROM_FOLDERS, self.rom_path.parent])
         self.ko_rom = ndsrom.Rom(ko.read_bytes()) if ko else None
         self.files = {}
         self.entries = []
