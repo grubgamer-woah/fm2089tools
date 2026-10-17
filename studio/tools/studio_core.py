@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 import fontdata
+import heroname
 import msgcodec
 import ndsrom
 import portraits
@@ -36,6 +37,8 @@ TEXT_BOX_WIDTH = 228
 # The hero's name is a variable; widths count it as the default name.
 HERO_NAME = '«E801:00»'
 HERO_DEFAULT = 'Storm'
+# The name entry screen's preset name follows this string's English (ストーム in the names list).
+HERO_NAME_ID = 'MsgLabels_name_msg_110'
 PATCH_NAME = 'FM2089 English'
 
 GROUPS = [
@@ -395,6 +398,15 @@ def compose(catalog, project):
             per_file.setdefault(name, {})[i] = msgcodec.tokens_to_bytes(res['tokens'])
     files = {MSG_DIR+name: catalog.files[name].build(repl) for name, repl in per_file.items()}
     files[FONT_PATH] = catalog.font_data
+    name = project.entries.get(HERO_NAME_ID, {}).get('en', HERO_DEFAULT)
+    try:
+        heroname.encode(name)
+    except ValueError as error:
+        problems.append({'id': HERO_NAME_ID, 'level': 'warning',
+                         'message': f'Name entry screen keeps "{HERO_DEFAULT}": {error}'})
+        name = HERO_DEFAULT
+    overlay = f'overlay/{heroname.OVERLAY}'
+    files[overlay] = heroname.patch(catalog.rom.read(overlay), name)
     return files, problems
 
 
@@ -407,7 +419,7 @@ def build(catalog, project, out_root=BUILDS, log=print):
     errors = [p for p in problems if p['level'] == 'error']
     if errors:
         return {'ok': False, 'problems': problems, 'message': f'{len(errors)} entries have errors; fix them first.'}
-    log(f'Writing {len(files) - len(images)} text files and {len(images)//3} mission titles into the ROM…')
+    log(f'Writing {len(files) - len(images) - 1} text files and {len(images)//3} mission titles into the ROM…')
     clean = catalog.rom.data
     patched, report = catalog.rom.rebuild(files)
     out = Path(out_root)/f'build-{stamp}'
@@ -432,6 +444,7 @@ def build(catalog, project, out_root=BUILDS, log=print):
         'patched_rom_md5': hashlib.md5(patched).hexdigest(),
         'patch_md5': hashlib.md5(patch).hexdigest(),
         'translated_entries': translated, 'total_entries': len(catalog.entries),
+        'hero_default_name': heroname.decode(check.read(f'overlay/{heroname.OVERLAY}')),
         'mission_titles': sorted({p.split('/')[-1][:13] for p in images}),
         'files': report, 'warnings': [p for p in problems if p['level'] == 'warning'],
     }

@@ -7,6 +7,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import heroname
 import msgcodec
 import ndsrom
 import portraits
@@ -49,6 +50,7 @@ def main():
         check = ndsrom.Rom(patched)
         mf = msgcodec.MsgFile('x', check.read('data/font/MsgLabels_city_common.msg'))
         assert msgcodec.tokens_to_text(mf.tokens(99), cat.font).startswith('Initializing save data.')
+        assert heroname.decode(check.read('overlay/14')) == 'Storm'
         st = msgcodec.MsgFile('x', check.read('data/font/MsgLabels_station_01.msg'))
         assert msgcodec.tokens_to_text(st.tokens(1), cat.font) == '«E801:00»:\n«E801:00» says line 2 in English.'
 

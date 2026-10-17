@@ -33,6 +33,11 @@ class Rom:
         self.used = struct.unpack_from('<I', data, 0x80)[0]
         self.paths = {}
         self._walk(0xF000, '')
+        # ARM9 overlays have no name in the file table; they are read and replaced as "overlay/N"
+        ovt, ovt_size = struct.unpack_from('<II', data, 0x50)
+        for i in range(ovt_size//32):
+            ov_id, = struct.unpack_from('<I', data, ovt+32*i)
+            self.paths[f'overlay/{ov_id}'], = struct.unpack_from('<I', data, ovt+32*i+24)
 
     def _walk(self, dir_id, prefix):
         d = self.data
