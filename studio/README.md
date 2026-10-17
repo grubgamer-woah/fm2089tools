@@ -54,6 +54,21 @@ to their own copy of the game.
 spreadsheet. **Import TSV** reads that file back, or a `.txt` made by
 `msgToTxt.py` that already has English in it.
 
+## Mission titles
+
+The mission title screens ("Mission 01 / 実戦訓練1") are pictures, not text. Click
+**Mission titles** to see each Japanese screen next to its English one, exactly as
+the game will draw it. **Add pictures…** takes several PNGs at once and matches them
+by number (`m10.png` or `mtittle_bg_10_nsc.png` goes to title 10); each card also has
+Replace and Remove. Pictures are 256×256 or 256×192 (the DS shows the top 256×192);
+magenta is see-through, as in the game's own art. Title numbers are the game's file
+numbers, not mission numbers (title 06 is "Mission 04", the sniper route), and 48 and
+61 are info screens, not titles.
+
+The pictures are stored in `workspace/images/` and listed under `images` in
+project.json. The Studio turns each into the game's 16-color tiles once (about a
+second) and keeps the result in `workspace/cache/`; every build includes them.
+
 ## Building the patch
 
 **Build xdelta** checks every entry, then writes a new folder in `studio/builds/`:

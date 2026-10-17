@@ -122,6 +122,27 @@ class Handler(BaseHTTPRequestHandler):
                 if image is None:
                     return self.send(404, {'error': 'no such portrait'})
                 return self.send(200, image, 'image/png', {'Cache-Control': 'max-age=86400'})
+            if path == '/api/titles':
+                if self.need_rom():
+                    return
+                titles = STATE.catalog.titles
+                return self.send(200, {'titles': [{'name': n, 'number': int(n[-2:]), 'english': n in STATE.project.images}
+                                                  for n in titles.names]})
+            if path == '/api/title.png':
+                if self.need_rom():
+                    return
+                q = parse_qs(url.query)
+                name, kind = q.get('name', [''])[0], q.get('kind', ['jp'])[0]
+                titles = STATE.catalog.titles
+                if name not in titles.names:
+                    return self.send(404, {'error': 'no such title'})
+                if kind == 'en':
+                    if name not in STATE.project.images:
+                        return self.send(404, {'error': 'no English image'})
+                    image = core.titles.png(*core.titles.render(*core.title_files(STATE.catalog, STATE.project, name)))
+                else:
+                    image = titles.original_png(name)
+                return self.send(200, image, 'image/png')
             if path == '/api/font':
                 if self.need_rom():
                     return
@@ -195,6 +216,24 @@ class Handler(BaseHTTPRequestHandler):
                     STATE.project.set_speaker(jp, en)
                     STATE.project.save()
                 return self.send(200, {'ok': True, 'speakers': STATE.project.speakers})
+            if path == '/api/title':
+                name = parse_qs(urlparse(self.path).query).get('name', [''])[0]
+                if name not in cat.titles.names:
+                    return self.send(404, {'error': f'unknown mission title {name}'})
+                data = self.body()
+                if not data:
+                    with STATE.lock:
+                        STATE.project.set_image(name, None)
+                        STATE.project.save()
+                    return self.send(200, {'ok': True})
+                try:
+                    core.title_files(cat, STATE.project, name, data)  # converts and caches; bad pictures stop here
+                except Exception as error:
+                    return self.send(200, {'ok': False, 'error': str(error)})
+                with STATE.lock:
+                    STATE.project.set_image(name, data)
+                    STATE.project.save()
+                return self.send(200, {'ok': True})
             if path == '/api/validate':
                 with STATE.lock:
                     _, problems = core.compose(cat, STATE.project)

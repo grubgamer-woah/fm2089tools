@@ -18,6 +18,7 @@ import fontdata
 import msgcodec
 import ndsrom
 import portraits
+import titles
 import vcdiff
 
 STUDIO = Path(__file__).resolve().parents[1]
@@ -92,6 +93,7 @@ class Catalog:
         self.font_data = fontdata.tweak(self.rom.read(FONT_PATH))
         self.font = fontdata.Font(self.font_data)
         self.portraits = portraits.Portraits(self.rom)
+        self.titles = titles.Titles(self.rom)
         self.files = {}
         self.entries = []
         self.by_id = {}
@@ -219,11 +221,21 @@ class Project:
         self.entries = {}
         self.speakers = {}  # Japanese speaker name -> English name, shared by every line
         self.faces = {}  # Japanese speaker name -> portrait picked in the Studio ('-' = none); never built
+        self.images = {}  # mission title name -> replacement PNG, relative to the project folder
         if self.path.exists():
             data = json.loads(self.path.read_text(encoding='utf-8'))
             self.entries = data.get('entries', {})
             self.speakers = data.get('speakers', {})
             self.faces = data.get('faces', {})
+            self.images = data.get('images', {})
+        # A PNG in images/ counts even if an older Studio saved the project without it
+        for png in sorted(self.image_dir.glob('mtittle_bg_??.png')):
+            self.images.setdefault(png.stem, f'images/{png.name}')
+        self.images = {k: v for k, v in self.images.items() if (self.path.parent/v).is_file()}
+
+    @property
+    def image_dir(self):
+        return self.path.parent/'images'
 
     def save(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -233,9 +245,25 @@ class Project:
         tmp = self.path.with_suffix('.tmp')
         data = {'application': 'fm2089-translation-studio', 'version': 1, 'rom_md5': CLEAN_MD5,
                 'saved': dt.datetime.now().isoformat(timespec='seconds'),
-                'speakers': self.speakers, 'faces': self.faces, 'entries': self.entries}
+                'speakers': self.speakers, 'faces': self.faces, 'images': dict(sorted(self.images.items())),
+                'entries': self.entries}
         tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding='utf-8')
         os.replace(tmp, self.path)
+
+    def set_image(self, name, png_bytes):
+        """Store a replacement mission title (None removes it)."""
+        path = self.image_dir/f'{name}.png'
+        if png_bytes is None:
+            if path.exists():
+                path.unlink()
+            self.images.pop(name, None)
+            return
+        self.image_dir.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(png_bytes)
+        self.images[name] = f'images/{name}.png'
+
+    def image_bytes(self, name):
+        return (self.path.parent/self.images[name]).read_bytes()
 
     def set_face(self, jp, face):
         if face:
@@ -315,6 +343,42 @@ def import_tsv(catalog, project, text):
     return count, unknown
 
 
+def title_files(catalog, project, name, png_bytes=None):
+    """(ncg, ncl, nsc) for a replacement mission title, converted once and cached by PNG hash."""
+    data = png_bytes if png_bytes is not None else project.image_bytes(name)
+    cache = project.path.parent/'cache'/f'{name}-{hashlib.sha1(data).hexdigest()[:16]}.bin'
+    if cache.is_file():
+        blob = cache.read_bytes()
+        parts, p = [], 0
+        while p < len(blob):
+            n = int.from_bytes(blob[p:p+4], 'little')
+            parts.append(blob[p+4:p+4+n]); p += 4+n
+        return tuple(parts)
+    parts = catalog.titles.convert(name, data)
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    for old in cache.parent.glob(f'{name}-*.bin'):
+        old.unlink()
+    cache.write_bytes(b''.join(len(x).to_bytes(4, 'little')+x for x in parts))
+    return parts
+
+
+def compose_images(catalog, project, log=print):
+    """Return ({rom path: bytes}, problems) for the replacement mission titles."""
+    files, problems = {}, []
+    names = [n for n in sorted(project.images) if n in catalog.titles.names]
+    if names:
+        log(f'Converting {len(names)} mission title images…')
+    for name in names:
+        try:
+            parts = title_files(catalog, project, name)
+        except Exception as error:  # a broken PNG stops the build with its name
+            problems.append({'id': name, 'level': 'error', 'message': f'Mission title image: {error}'})
+            continue
+        for kind, data in zip(('ncg', 'ncl', 'nsc'), parts):
+            files[titles.paths(name)[kind]] = data
+    return files, problems
+
+
 def compose(catalog, project):
     """Return ({rom path: new .msg bytes}, problems)."""
     per_file, problems = {}, []
@@ -337,10 +401,13 @@ def compose(catalog, project):
 def build(catalog, project, out_root=BUILDS, log=print):
     stamp = dt.datetime.now().strftime('%Y%m%d-%H%M%S')
     files, problems = compose(catalog, project)
+    images, image_problems = compose_images(catalog, project, log)
+    files.update(images)
+    problems += image_problems
     errors = [p for p in problems if p['level'] == 'error']
     if errors:
         return {'ok': False, 'problems': problems, 'message': f'{len(errors)} entries have errors; fix them first.'}
-    log(f'Writing {len(files)} text files into the ROM…')
+    log(f'Writing {len(files) - len(images)} text files and {len(images)//3} mission titles into the ROM…')
     clean = catalog.rom.data
     patched, report = catalog.rom.rebuild(files)
     out = Path(out_root)/f'build-{stamp}'
@@ -365,6 +432,7 @@ def build(catalog, project, out_root=BUILDS, log=print):
         'patched_rom_md5': hashlib.md5(patched).hexdigest(),
         'patch_md5': hashlib.md5(patch).hexdigest(),
         'translated_entries': translated, 'total_entries': len(catalog.entries),
+        'mission_titles': sorted({p.split('/')[-1][:13] for p in images}),
         'files': report, 'warnings': [p for p in problems if p['level'] == 'warning'],
     }
     (out/'build-manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding='utf-8')
@@ -374,10 +442,11 @@ def build(catalog, project, out_root=BUILDS, log=print):
         f'Apply "{patch_out.name}" with xdelta3, Delta Patcher or https://www.marcrobledo.com/RomPatcher.js/\n'
         f'to the clean Japanese ROM (MD5 {CLEAN_MD5}).\n'
         f'Patched ROM MD5: {manifest["patched_rom_md5"]}\n'
-        f'Translated {translated} of {len(catalog.entries)} strings.\n', encoding='utf-8')
+        f'Translated {translated} of {len(catalog.entries)} strings and {len(images)//3} mission title screens.\n', encoding='utf-8')
     log('Done.')
     return {'ok': True, 'folder': str(out), 'rom': str(rom_out), 'patch': str(patch_out),
-            'patch_size': len(patch), 'problems': problems, 'files': report, 'translated': translated}
+            'patch_size': len(patch), 'problems': problems, 'files': report, 'translated': translated,
+            'titles': len(images)//3}
 
 
 def main():

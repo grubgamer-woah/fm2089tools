@@ -92,3 +92,13 @@ code{font-family:Consolas,monospace}
 .face-grid small{font-size:10px;color:var(--muted)}
 textarea.note{min-height:0;height:auto;font-family:inherit;font-size:14px}
 .scene-head{position:sticky;top:0;z-index:1;padding:6px 14px;background:#152022;border-bottom:1px solid var(--line);color:var(--accent);font-size:12px;font-weight:600;letter-spacing:.3px}
+.title-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(540px,1fr));gap:10px;max-height:70vh;overflow:auto;padding-right:6px}
+.title-cell{border:1px solid var(--line);border-radius:4px;background:#10191a;padding:8px 10px}
+.title-head{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px}
+.title-head b{color:var(--ink)}
+.title-pics{display:flex;gap:8px}
+.title-pics img,.title-empty{width:256px;height:192px;image-rendering:pixelated;border:1px solid var(--line);flex:none}
+.title-empty{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px}
+.title-cell .buttons{margin-top:8px}
+.muted{color:var(--muted)}
+.bad{color:var(--red)}

@@ -22,11 +22,11 @@ async function start() {
     $('#rom-missing').hidden = false; $('#app').hidden = true; $('#tabs').hidden = true;
     $('#rom-problem').textContent = S.config.rom_problem;
     $('#base').textContent = 'No ROM loaded';
-    for (const b of ['#build', '#validate', '#import']) $(b).disabled = true;
+    for (const b of ['#build', '#validate', '#import', '#titles']) $(b).disabled = true;
     return;
   }
   $('#rom-missing').hidden = true; $('#app').hidden = false; $('#tabs').hidden = false;
-  for (const b of ['#build', '#validate', '#import']) $(b).disabled = false;
+  for (const b of ['#build', '#validate', '#import', '#titles']) $(b).disabled = false;
   $('#base').textContent = 'ROM: ' + S.config.rom;
   const [cat, font] = await Promise.all([api('/api/catalog'), api('/api/font')]);
   S.entries = cat.entries; S.project = cat.project;
@@ -397,6 +397,50 @@ function showSpeakers() {
   document.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => showFacePicker(b.dataset.pick, showSpeakers));
 }
 
+// Mission title screens: the Japanese picture next to the English one as the game will show it
+async function showTitles(note = '') {
+  const r = await api('/api/titles');
+  const done = r.titles.filter(t => t.english).length;
+  const stamp = Date.now();
+  showJob(`<h3>Mission titles</h3>
+    <p>${done} of ${r.titles.length} title screens have an English picture. Pictures are 256×256 or 256×192 PNGs (the DS shows the top 256×192);
+    the right-hand picture is how the game will show it (16-color tiles). Pick several files at once: <code>m10.png</code> or <code>mtittle_bg_10…png</code> goes to title 10.</p>
+    <p><button id="title-add" class="primary">Add pictures…</button> ${note}</p>
+    <div class="title-grid">${r.titles.map(t => `<div class="title-cell">
+      <div class="title-head"><b>Title ${String(t.number).padStart(2, '0')}</b><span>${t.english ? 'English' : '<span class="muted">Japanese kept</span>'}</span></div>
+      <div class="title-pics"><img src="/api/title.png?name=${t.name}&kind=jp" alt="Japanese title ${t.number}" loading="lazy">
+      ${t.english ? `<img src="/api/title.png?name=${t.name}&kind=en&t=${stamp}" alt="English title ${t.number}" loading="lazy">` : '<span class="title-empty">No English picture</span>'}</div>
+      <div class="buttons"><button data-title-pick="${t.name}">${t.english ? 'Replace…' : 'Add…'}</button>${t.english ? `<button data-title-remove="${t.name}">Remove</button>` : ''}</div>
+    </div>`).join('')}</div>`);
+  const input = $('#title-files');
+  $('#title-add').onclick = () => { input.dataset.name = ''; input.multiple = true; input.click(); };
+  document.querySelectorAll('[data-title-pick]').forEach(b => b.onclick = () => { input.dataset.name = b.dataset.titlePick; input.multiple = false; input.click(); });
+  document.querySelectorAll('[data-title-remove]').forEach(b => b.onclick = async () => {
+    if (!confirm('Remove this English picture? The game will show the Japanese title again.')) return;
+    await fetch('/api/title?name=' + b.dataset.titleRemove, {method: 'POST'});
+    showTitles('Removed.');
+  });
+}
+
+function titleNumber(fileName) {
+  const m = fileName.match(/(?:mtittle_bg_|^m|\D)(\d{1,2})(?!\d)/i);
+  return m ? +m[1] : null;
+}
+
+async function uploadTitles(files, name) {
+  const names = (await api('/api/titles')).titles.map(t => t.name);
+  const done = [], failed = [];
+  for (const f of files) {
+    const target = name || 'mtittle_bg_' + String(titleNumber(f.name)).padStart(2, '0');
+    if (!names.includes(target)) { failed.push(`${f.name}: no title screen with that number`); continue; }
+    flash(`Converting ${f.name}…`);
+    const r = await (await fetch('/api/title?name=' + target, {method: 'POST', headers: {'Content-Type': 'image/png'}, body: f})).json();
+    if (r.ok) done.push(f.name); else failed.push(`${f.name}: ${r.error}`);
+  }
+  showTitles(`${done.length} picture${done.length === 1 ? '' : 's'} added.` +
+    (failed.length ? `<span class="bad"> Not added: ${failed.map(esc).join('; ')}</span>` : ''));
+}
+
 async function restartStudio() {
   const building = (await api('/api/job')).running;
   if (!confirm(building ? 'A build is running and will be stopped. Restart the Studio anyway?' : 'Restart the Studio? Your saved work is kept.')) return;
@@ -437,7 +481,7 @@ async function build() {
         if (r.ok) {
           showJob(`<h3 class="ok">Build finished</h3>
             <p>Patch: <code>${esc(r.patch)}</code> (${fmt(r.patch_size)} bytes)<br>Patched ROM: <code>${esc(r.rom)}</code><br>
-            ${fmt(r.translated)} translated strings in ${r.files.length} text files.</p>
+            ${fmt(r.translated)} translated strings and ${fmt(r.titles || 0)} mission titles in ${r.files.length} files.</p>
             <button id="open-build">Open build folder</button>${r.problems.length ? `<p>${r.problems.length} warnings:</p>` + problemList(r.problems) : ''}`);
           $('#open-build').onclick = () => api('/api/open', {path: r.folder});
           wireGoto();
@@ -467,6 +511,8 @@ $('#next-page').onclick = () => { S.page++; renderRows(); $('#rows').scrollTop =
 $('#validate').onclick = validate;
 $('#restart').onclick = restartStudio;
 $('#speakers').onclick = showSpeakers;
+$('#titles').onclick = () => showTitles();
+$('#title-files').onchange = ev => { const files = [...ev.target.files]; if (files.length) uploadTitles(files, ev.target.dataset.name); ev.target.value = ''; };
 $('#speaker').onchange = () => { S.page = 0; applyFilter(); };
 $('#build').onclick = build;
 $('#import').onclick = () => $('#import-file').click();
