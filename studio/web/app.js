@@ -185,6 +185,7 @@ function renderEditor() {
   $('#editor').innerHTML = `
     <h2>${esc(e.id)}</h2>
     <div class="sub">${esc(e.file)} · string ${e.index} · ${e.lines} line(s) · widest Japanese line ${e.jp_width} px (file max ${e.file_width} px)</div>
+    ${e.art ? `<div class="sub art">${esc(e.art)}</div>` : ''}
     ${e.speaker ? `<div class="speaker-bar"><button id="face-pick" class="face-button" title="Pick this speaker's portrait">${faceImg(e.speaker, 'face big')}</button><span>Speaker <b>${esc(e.speaker)}</b> · ${fmt(S.speakerCounts[e.speaker])} lines</span>
       <label class="inline">English name <input id="speaker-en" value="${esc(S.speakers[e.speaker] || '')}" placeholder="${esc(S.defaultSpeakers[e.speaker] || 'Not translated yet')}"></label>
       <button id="speaker-save" title="Changes this name on every line this speaker says">Save name everywhere</button></div>` : ''}

@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 import fontdata
+import groupart
 import heroname
 import koname
 import labels
@@ -28,6 +29,8 @@ STUDIO = Path(__file__).resolve().parents[1]
 # where the Japanese and En+Ko ROMs are looked for; '1. Original ROM' may sit one or two levels up
 ROM_FOLDERS = [STUDIO.parent, STUDIO.parent/'1. Original ROM', STUDIO.parent.parent/'1. Original ROM']
 ROM_DIR = STUDIO/'rom'
+# Kiley's "5. Group Localization Files" (the group's own English graphics) sits next to the Studio folder
+GROUP_FOLDERS = [STUDIO.parent, STUDIO.parent.parent]
 WORKSPACE = STUDIO/'workspace'
 BUILDS = STUDIO/'builds'
 PROJECT = WORKSPACE/'project.json'
@@ -98,7 +101,16 @@ class Catalog:
     def __init__(self, rom_path):
         self.rom_path = Path(rom_path)
         self.rom = ndsrom.Rom(self.rom_path.read_bytes())
-        self.font_data = fontdata.tweak(self.rom.read(FONT_PATH))
+        # The group's own graphics, when Kiley's group folder sits next to the Studio
+        found = groupart.find(GROUP_FOLDERS)
+        self.group, self.group_problem = None, f'"{groupart.FOLDER_SUFFIX}" not found, so the group\'s graphics are not used'
+        if found:
+            missing = groupart.GroupArt(found).missing()
+            if missing:
+                self.group_problem = f'Group graphics not used; missing from {found}: ' + ', '.join(missing)
+            else:
+                self.group, self.group_problem = groupart.GroupArt(found), None
+        self.font_data = fontdata.tweak(self.rom.read(FONT_PATH), self.group.icons() if self.group else None)
         self.font = fontdata.Font(self.font_data)
         self.portraits = portraits.Portraits(self.rom)
         self.titles = titles.Titles(self.rom)
@@ -138,6 +150,11 @@ class Catalog:
                 'jp': jp, 'speaker': None, 'speaker_own_line': False, 'body': jp,
                 'lines': labels.max_lines(key), 'jp_width': labels.limit(key), 'file_width': labels.limit(key),
             }
+            if self.group and key in groupart.ART:
+                e['art'] = "The group's own picture is used; the English here is not drawn."
+            elif self.group and key in groupart.LETTERING:
+                e['art'] = "Drawn in the group's header lettering (letters: " + ''.join(sorted(self.group.letters())) + ')'
+
             self.entries.append(e)
             self.by_id[e['id']] = (None, None, e)
         for e in self.entries:
@@ -425,8 +442,12 @@ def compose(catalog, project):
     files = {MSG_DIR+name: catalog.files[name].build(repl) for name, repl in per_file.items()}
     files[FONT_PATH] = catalog.font_data
     texts = {key: project.entries.get(labels.entry_id(key), {}).get('en') for key in labels.LABELS}
-    graphics, graphic_problems = labels.compose(catalog.rom, catalog.font, texts)
+    graphics, graphic_problems = labels.compose(catalog.rom, catalog.font, texts, catalog.group)
     files.update(graphics)
+    if catalog.group:
+        files.update(catalog.group.screens())
+    else:
+        problems.append({'id': labels.entry_id('title_startmenu'), 'level': 'warning', 'message': catalog.group_problem})
     problems += graphic_problems
     overlay = f'overlay/{heroname.OVERLAY}'
     files[overlay] = catalog.rom.read(overlay)
@@ -482,6 +503,7 @@ def build(catalog, project, out_root=BUILDS, log=print):
         'translated_entries': translated, 'total_entries': len(catalog.entries),
         'hero_default_name': heroname.decode(check.read(f'overlay/{heroname.OVERLAY}')),
         'name_entry_screens': 'En+Ko patch' if catalog.ko_rom else 'Japanese',
+        'group_art': str(catalog.group.folder) if catalog.group else None,
         'mission_titles': sorted({p.split('/')[-1][:13] for p in images}),
         'files': report, 'warnings': [p for p in problems if p['level'] == 'warning'],
     }

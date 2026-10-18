@@ -94,6 +94,12 @@ spacing looks normal and straight double quotes work.
   points are glyph numbers, with control codes at U+E800–U+E8FF.
 * `tools/fontdata.py` reads the 12 px proportional font and its ASCII table.
 * `tools/portraits.py` decodes the character face graphics for the Studio.
+* `tools/groupart.py` uses the localization group's own English graphics when
+  the "5. Group Localization Files" folder sits next to the Studio folder: the
+  title and base headers and base map rooms they drew, the opening demo
+  captions, the RESULTS screen and the terrain panel, plus 12 icons in unused
+  font slots. HQ and sortie headers get the Studio's English in the group's
+  lettering. Nothing from that folder is stored in this repository.
 * `tools/vcdiff.py` writes and checks the xdelta (VCDIFF) patch in pure Python.
 * `tools/test_studio.py` checks all of this against the real ROM.
 

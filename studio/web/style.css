@@ -102,3 +102,4 @@ textarea.note{min-height:0;height:auto;font-family:inherit;font-size:14px}
 .title-cell .buttons{margin-top:8px}
 .muted{color:var(--muted)}
 .bad{color:var(--red)}
+.editor .sub.art{color:var(--accent);margin-top:-8px}

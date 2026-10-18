@@ -235,7 +235,7 @@ def _msur_join(d, offs, nsc, ncg):
 
 # ---- kinds ----
 
-def _bar(screen, font, text, key):
+def _bar(screen, font, text, key, draw=None):
     w = 0
     while screen.tile_px(w, 0)[0][0] == 0xB and w < screen.tw:
         w += 1
@@ -246,25 +246,29 @@ def _bar(screen, font, text, key):
         for x in range(1, width-1):
             if rows[y][x] >= 0xC:
                 rows[y][x] = base
-    for x, y in _ink(font, text, 4, 3):
-        if 1 <= x < width-1 and 3 <= y < 15:
-            rows[y][x] = 0xF
+    if draw:
+        draw(rows)
+    else:
+        for x, y in _ink(font, text, 4, 3):
+            if 1 <= x < width-1 and 3 <= y < 15:
+                rows[y][x] = 0xF
     screen.put(0, 0, rows, pal)
 
 
-def bar_file(data, font, text, key, loose=None):
-    """New file(s) for a header bar: a .msur.pk, or (ncg, nsc) bins when loose=(ncg, nsc)."""
+def bar_file(data, font, text, key, loose=None, draw=None):
+    """New file(s) for a header bar: a .msur.pk, or (ncg, nsc) bins when loose=(ncg, nsc).
+    draw(rows) paints the text instead of the game's font (groupart.py's lettering)."""
     if loose:
         ncg_raw, nsc_raw = loose
         screen = Screen(_lz(ncg_raw), _lz(nsc_raw))
-        _bar(screen, font, text, key)
+        _bar(screen, font, text, key, draw)
         ncg = titles.lz10_compress(screen.ncg()) if ncg_raw[:1] == b'\x10' else screen.ncg()
         nsc = titles.lz10_compress(screen.nsc()) if nsc_raw[:1] == b'\x10' else screen.nsc()
         return ncg, nsc
     d, offs = _msur_split(data)
     a, b, c, e = offs
     screen = Screen(d[c:e], d[a:c])
-    _bar(screen, font, text, key)
+    _bar(screen, font, text, key, draw)
     return _msur_join(d, offs, screen.nsc(), screen.ncg())
 
 
@@ -366,15 +370,31 @@ def ending_lines(text):
 
 # ---- build ----
 
-def compose(rom, font, texts):
-    """texts: {key: English}. Returns ({rom path: bytes}, problems)."""
+def compose(rom, font, texts, group=None):
+    """texts: {key: English}; group: a groupart.GroupArt, or None. Returns ({rom path: bytes}, problems)."""
+    import groupart
     files, problems = {}, []
     checks = []
     for key, (jp, default, kind, sources) in LABELS.items():
+        if group and key in groupart.ART:
+            files.update(group.label_files(key))
+            continue
         text = texts.get(key) or default
-        bad = missing_chars(font, text)
+        draw = None
+        if group and key in groupart.LETTERING:
+            bad = group.missing_letters(text)
+            wide = groupart.X0 + group.text_width(text)
+            if bad or wide > groupart.BAR_RIGHT or '\n' in text:
+                why = f'the group lettering has no {" ".join(bad)}' if bad else 'it is too wide for the bar'
+                problems.append({'id': entry_id(key), 'level': 'warning',
+                                 'message': f'Drawn in the game font instead of the group lettering: {why}'})
+            else:
+                draw = group.draw(text)
+        bad = [] if draw else missing_chars(font, text)
         lines = text.split('\n')
         wide = max(text_width(font, line) for line in lines)
+        if draw:
+            wide = 0
         if bad or wide > limit(key) or len(lines) > max_lines(key):
             why = (f'the font has no {" ".join(bad)}' if bad else
                    f'{len(lines)} lines (max {max_lines(key)})' if len(lines) > max_lines(key) else
@@ -387,10 +407,10 @@ def compose(rom, font, texts):
             continue
         for src in sources:
             if kind == 'bar' and isinstance(src, dict):
-                ncg, nsc = bar_file(None, font, text, key, (rom.read(src['ncg']), rom.read(src['nsc'])))
+                ncg, nsc = bar_file(None, font, text, key, (rom.read(src['ncg']), rom.read(src['nsc'])), draw)
                 files[src['ncg']], files[src['nsc']] = ncg, nsc
             elif kind == 'bar':
-                files[src] = bar_file(rom.read(src), font, text, key)
+                files[src] = bar_file(rom.read(src), font, text, key, draw=draw)
             elif kind == 'icon':
                 files[src] = icon_file(rom.read(src), font, text)
             elif kind == 'ending':

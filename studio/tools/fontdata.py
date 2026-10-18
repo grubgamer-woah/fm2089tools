@@ -34,8 +34,9 @@ def _pack(rows, width, height=12):
     return bytes([width, rb]) + bytes(out)
 
 
-def tweak(data):
-    """Return msgcmn.fnt with a narrower space and a straight double quote."""
+def tweak(data, extra=None):
+    """Return msgcmn.fnt with a narrower space and a straight double quote.
+    extra: {glyph: record} put in as well (the group's icons, groupart.py)."""
     count = struct.unpack_from('<H', data, 0x0A)[0]
     offsets = struct.unpack_from(f'<{count}I', data, 0x10C)
     records = []
@@ -46,6 +47,8 @@ def tweak(data):
         records.append(data[o:o+2+rb*data[8]])
     records[SPACE_GLYPH] = _pack([], SPACE_WIDTH)
     records[QUOTE_GLYPH] = _pack(['...'] + QUOTE_ROWS, 3)
+    for g, rec in (extra or {}).items():
+        records[g] = rec
     head = bytearray(data[:0x10C])
     table = bytearray()
     body = bytearray()
