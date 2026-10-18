@@ -76,6 +76,12 @@ function translated(e) { return S.project[e.id] && S.project[e.id].en !== undefi
 function progress() {
   const t = S.entries.filter(translated).length;
   $('#progress').textContent = `${fmt(t)} of ${fmt(S.entries.length)} strings translated (${(100 * t / S.entries.length).toFixed(1)}%)`;
+  // How much of the English is still Claude's machine translation (MTL), out of everything translated
+  const mtl = S.entries.filter(e => translated(e) && S.project[e.id].mtl).length;
+  const edited = S.entries.filter(e => S.project[e.id] && S.project[e.id].edited).length;
+  const pct = t ? 100 * mtl / t : 0;
+  $('#mtl-text').textContent = `MTL ${pct.toFixed(1)}% · ${fmt(mtl)} of ${fmt(t)} translated strings · ${fmt(edited)} edited by a person`;
+  $('#mtl-fill').style.width = pct + '%';
 }
 
 function renderTabs() {
@@ -122,6 +128,9 @@ function applyFilter() {
     if (status === 'done' && !p.done) return false;
     if (status === 'notdone' && (p.en === undefined || p.done)) return false;
     if (status === 'noted' && !p.note) return false;
+    if (status === 'mtl' && !(p.mtl && p.en !== undefined)) return false;
+    if (status === 'human' && (p.mtl || p.en === undefined)) return false;
+    if (status === 'edited' && !p.edited) return false;
     if (q) return (e.id + '\n' + e.jp + '\n' + (p.en || '') + '\n' + (p.note || '') + '\n' + (e.speaker ? speakerEn(e.speaker) : '')).toLowerCase().includes(q);
     return true;
   });
@@ -153,7 +162,9 @@ function rowEl(e) {
   const b = document.createElement('button');
   b.className = 'row' + (e.speaker ? ' has-face' : '') + (S.current === e.id ? ' active' : '');
   b.dataset.id = e.id;
-  const badges = (p.done ? '<span class="badge done">done</span> ' : '') + (p.note ? '<span class="badge">note</span>' : '');
+  const badges = (p.mtl ? '<span class="badge warn" title="Claude\'s machine translation">MTL</span> ' : '') +
+    (p.edited ? '<span class="badge person" title="Edited by a person">edited</span> ' : '') +
+    (p.done ? '<span class="badge done">done</span> ' : '') + (p.note ? '<span class="badge">note</span>' : '');
   b.innerHTML = (e.speaker ? faceImg(e.speaker) + '<div class="row-text">' : '') + `<div class="meta"><span>${esc(e.file.replace('MsgLabels_', ''))} #${e.index}</span><span>${badges}</span></div>` +
     (e.speaker ? `<div class="speaker">${esc(speakerLabel(e))}</div>` : '') +
     `<div class="jp">${esc(e.speaker ? e.body : e.jp) || '<i>(empty)</i>'}</div>` +
@@ -208,15 +219,17 @@ function renderEditor() {
     <div class="buttons">
       <button id="save" class="primary" title="Ctrl+Enter">Save entry</button>
       <label class="check"><input id="done" type="checkbox" ${p.done ? 'checked' : ''}> Done</label>
+      <label class="check" title="The English is Claude's machine translation (unticks itself when you change the English)"><input id="mtl" type="checkbox" ${p.mtl ? 'checked' : ''}> MTL</label>
+      <label class="check" title="A person has edited this English"><input id="edited" type="checkbox" ${p.edited ? 'checked' : ''}> Edited by a person</label>
       <button id="copy-jp" title="Copy the Japanese (with its codes) into the English box">Copy Japanese</button>
       <button id="clear" title="Remove the English so the game keeps the Japanese">Use Japanese</button>
       <span class="spacer"></span>
       <button id="prev" title="Alt+Up">◀ Previous</button><button id="next" title="Alt+Down">Next ▶</button>
     </div>`;
   const en = $('#en');
-  en.oninput = () => { S.dirty = true; scheduleCheck(); };
+  en.oninput = () => { S.dirty = true; personEdit(); scheduleCheck(); };
   $('#note').oninput = () => { S.dirty = true; };
-  $('#done').onchange = () => save(true);
+  $('#done').onchange = $('#mtl').onchange = $('#edited').onchange = () => save(true);
   $('#save').onclick = () => save(true);
   $('#clear').onclick = async () => { en.value = ''; S.dirty = true; await save(true, true); };
   if (e.speaker) {
@@ -224,17 +237,20 @@ function renderEditor() {
     $('#face-pick').onclick = () => showFacePicker(e.speaker);
     $('#speaker-en').onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); saveSpeaker(e.speaker, $('#speaker-en').value); } };
   }
-  $('#copy-jp').onclick = () => { en.value = e.body; S.dirty = true; scheduleCheck(); en.focus(); };
+  $('#copy-jp').onclick = () => { en.value = e.body; S.dirty = true; personEdit(); scheduleCheck(); en.focus(); };
   $('#prev').onclick = () => step(-1); $('#next').onclick = () => step(1);
   document.querySelectorAll('[data-insert], .tag').forEach(b => b.onclick = () => insert(b.dataset.insert || b.dataset.tag));
   scheduleCheck(0);
 }
 
+// Typing in the English box makes it a person's edit, so it is no longer MTL
+function personEdit() { $('#mtl').checked = false; $('#edited').checked = true; }
+
 function insert(text) {
   const en = $('#en'); const [a, b] = [en.selectionStart, en.selectionEnd];
   en.value = en.value.slice(0, a) + text + en.value.slice(b);
   en.selectionStart = en.selectionEnd = a + text.length; en.focus();
-  S.dirty = true; scheduleCheck();
+  S.dirty = true; personEdit(); scheduleCheck();
 }
 
 function step(d) {
@@ -317,7 +333,7 @@ function drawPreview(text, e) {
 
 async function save(explicit, clearing = false) {
   const id = S.current; const en = $('#en').value; const note = $('#note').value; const done = $('#done').checked;
-  const body = {id, note, done, en: clearing ? '' : (en === '' ? '' : en)};
+  const body = {id, note, done, mtl: $('#mtl').checked, edited: $('#edited').checked, en: clearing ? '' : (en === '' ? '' : en)};
   if (!clearing && en === '' && (S.project[id] || {}).en === undefined) delete body.en;
   const r = await api('/api/entry', body);
   if (!r.ok) {

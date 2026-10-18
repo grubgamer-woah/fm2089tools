@@ -213,7 +213,8 @@ class Handler(BaseHTTPRequestHandler):
                 if res['errors'] and not data.get('force'):
                     return self.send(200, {'ok': False, **res})
                 with STATE.lock:
-                    STATE.project.set(sid, en=data.get('en'), note=data.get('note'), done=data.get('done'))
+                    STATE.project.set(sid, en=data.get('en'), note=data.get('note'), done=data.get('done'),
+                                      mtl=data.get('mtl'), edited=data.get('edited'))
                     STATE.project.save()
                     saved = STATE.project.entries.get(sid, {})
                 return self.send(200, {'ok': True, 'entry': saved, **res})

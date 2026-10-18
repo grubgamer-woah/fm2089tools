@@ -355,8 +355,17 @@ class Project:
         else:
             self.speakers.pop(jp, None)
 
-    def set(self, entry_id, en=None, note=None, done=None):
+    def set(self, entry_id, en=None, note=None, done=None, mtl=None, edited=None):
+        """mtl = the English is Claude's machine translation; edited = a person changed the English.
+        Any change to the English counts as a person's edit, which also clears mtl."""
         cur = dict(self.entries.get(entry_id, {}))
+        if en is not None and en != cur.get('en', ''):
+            edited, mtl = True, False
+        for key, value in (('mtl', mtl), ('edited', edited)):
+            if value:
+                cur[key] = True
+            elif value is not None:
+                cur.pop(key, None)
         if en is not None:
             if en == '':
                 cur.pop('en', None)
@@ -439,7 +448,8 @@ def import_project(catalog, project, text):
     for sid, p in data.get('entries', {}).items():
         if sid not in catalog.by_id:
             unknown.append(sid); continue
-        project.set(sid, en=p.get('en'), note=p.get('note'), done=p.get('done'))
+        project.set(sid, en=p.get('en'), note=p.get('note'), done=p.get('done'),
+                    mtl=p.get('mtl') if p.get('en') == project.entries.get(sid, {}).get('en') else None)
         count += 'en' in p
     for jp, en in data.get('speakers', {}).items():
         project.set_speaker(jp, en)

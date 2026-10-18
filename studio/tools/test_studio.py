@@ -43,6 +43,13 @@ def main():
             if e['file'] == 'MsgLabels_station_01' and e['jp']:
                 project.set(e['id'], en=f'«E801:00» says line {e["index"]} in English.')
         project.set(labels.entry_id('title_startmenu'), en='Main Menu')
+        # Changing the English makes an MTL entry a person's edit; saving it unchanged doesn't
+        mtl_id = labels.entry_id('title_startmenu')
+        project.set(mtl_id, mtl=True, edited=False)
+        project.set(mtl_id, en='Main Menu', note='checked')
+        assert project.entries[mtl_id].get('mtl') and not project.entries[mtl_id].get('edited')
+        project.set(mtl_id, en='Start Menu', mtl=True)
+        assert project.entries[mtl_id].get('edited') and not project.entries[mtl_id].get('mtl')
         project.save()
         tsv = core.export_tsv(cat, project)
         fresh = core.Project(Path(tmp)/'imported.json')

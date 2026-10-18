@@ -120,3 +120,7 @@ label.pick small{color:var(--muted)}
 .merge-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .merge-auto{margin-top:12px}
 .merge-auto summary{cursor:pointer;color:var(--accent)}
+.mtlbar{display:flex;align-items:center;gap:12px;padding:7px 28px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}
+.mtlbar .meter{flex:0 0 220px;height:8px;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--panel)}
+#mtl-fill{height:100%;width:0;background:var(--orange)}
+.badge.person{border-color:#8fc2ff;color:#8fc2ff}

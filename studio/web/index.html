@@ -23,6 +23,7 @@
   </div>
 </header>
 <div class="basebar"><span id="base">Loading…</span><span id="progress"></span><span id="saved" role="status"></span></div>
+<div class="mtlbar" title="Share of the translated strings whose English is still Claude's machine translation (MTL). Editing an entry's English makes it a person's edit."><div class="meter"><div id="mtl-fill"></div></div><span id="mtl-text"></span></div>
 <nav id="tabs" aria-label="Text groups"></nav>
 <main>
   <section id="rom-missing" class="notice" hidden>
@@ -42,6 +43,9 @@
         <option value="done">Marked done</option>
         <option value="notdone">Translated, not marked done</option>
         <option value="noted">Has a note</option>
+        <option value="mtl">MTL (machine translation)</option>
+        <option value="human">Not MTL</option>
+        <option value="edited">Edited by a person</option>
       </select></label>
       <label class="check"><input id="empty" type="checkbox"> Include empty entries</label>
     </section>
