@@ -49,7 +49,11 @@ JAPANESE = re.compile('[\u3001-\u30ff\u3400-\u9fff\uff66-\uff9f]')
 # text the game never shows (the Studio hides it unless asked); graphics replaced by pictures are marked in Catalog
 NOT_IN_GAME = {
     'MsgLabels_WindowMessageForTest': 'test messages',
+    'MsgLabels_GeInfo_msg_001': 'unused slot ("Dummy")',
 }
+LONE_SYMBOLS = {'+', '一', '：', '∞'}
+# the Japanese name keyboard's kana and marks; the English name screen types letters instead
+KEY_SYMBOLS = {'', 'ー', '！', '？', '.', '='}
 
 CLEAN_MD5 = 'e965ed696171d327656dac3adf6c6221'  # Front Mission 2089 - Border of Madness (Japan), No-Intro
 MSG_DIR = 'data/font/'
@@ -192,7 +196,15 @@ class Catalog:
             text = re.sub(r'«[^»]*»', '', e['body'])
             if re.search('[0-9A-Za-z０-９Ａ-Ｚａ-ｚ]', text) and not JAPANESE.search(text):
                 e['english'] = True
-            reason = NOT_IN_GAME.get(e['file']) or ('unused slot ("Dummy")' if text.strip() in ('Dummy', 'ダミー') else None)
+            # strings made only of codes are filled in by the game (names, numbers); there are no words to translate
+            if e['body'].strip() and not text.strip():
+                e['codes'] = True
+            reason = (NOT_IN_GAME.get(e['file']) or NOT_IN_GAME.get(e['id'])
+                      or ('unused slot ("Dummy")' if text.strip() in ('Dummy', 'ダミー') else None)
+                      or ('empty' if not e['jp'].strip() else None)
+                      or ('lone symbol, nothing to translate' if text.strip() in LONE_SYMBOLS else None)
+                      or ('name keyboard key' if e['file'] == 'MsgLabels_font' and not e.get('english')
+                          and (JAPANESE.search(text) or text in KEY_SYMBOLS) else None))
             if reason:
                 e['unused'] = reason
         self._play_order()

@@ -73,16 +73,16 @@ function fullText(e, body) {
 }
 
 // Text the game already shows in English (romaji names, part names like RAPTOR FX+1) counts as translated
-function translated(e) { return (S.project[e.id] && S.project[e.id].en !== undefined) || !!e.english; }
+function translated(e) { return (S.project[e.id] && S.project[e.id].en !== undefined) || !!e.english || !!e.codes; }
 // Text the game never shows (test messages, graphics replaced by pictures); a person can change it per entry
 function isHidden(e) { const p = S.project[e.id]; return p && p.hidden !== undefined ? p.hidden : !!e.unused; }
 // Hidden text is left out of every total, so the percentages are of what the player sees
 function inGame() { return S.entries.filter(e => !isHidden(e)); }
 function progress() {
   const all = inGame(), t = all.filter(translated).length;
-  const kept = all.filter(e => e.english && !(S.project[e.id] && S.project[e.id].en !== undefined)).length;
+  const kept = all.filter(e => (e.english || e.codes) && !(S.project[e.id] && S.project[e.id].en !== undefined)).length;
   $('#progress').textContent = `${fmt(t)} of ${fmt(all.length)} strings translated (${(100 * t / all.length).toFixed(1)}%)`;
-  $('#progress').title = `Includes ${fmt(kept)} strings the game already writes in English. ` +
+  $('#progress').title = `Includes ${fmt(kept)} strings the game already writes in English or fills in itself. ` +
     `Leaves out ${fmt(S.entries.length - all.length)} strings that are not shown in game.`;
   // How much of the typed English is still Claude's machine translation (MTL); the game's own English is not counted
   const typed = all.filter(e => S.project[e.id] && S.project[e.id].en !== undefined);
@@ -181,7 +181,7 @@ function rowEl(e) {
   b.innerHTML = (e.speaker ? faceImg(e.speaker) + '<div class="row-text">' : '') + `<div class="meta"><span>${esc(e.file.replace('MsgLabels_', ''))} #${e.index}</span><span>${badges}</span></div>` +
     (e.speaker ? `<div class="speaker">${esc(speakerLabel(e))}</div>` : '') +
     `<div class="jp">${esc(e.speaker ? e.body : e.jp) || '<i>(empty)</i>'}</div>` +
-    `<div class="en ${p.en === undefined ? 'none' : ''}">${p.en !== undefined ? esc(p.en) || '(blank)' : e.english ? 'Already English in game' : 'Not translated'}</div>` +
+    `<div class="en ${p.en === undefined ? 'none' : ''}">${p.en !== undefined ? esc(p.en) || '(blank)' : e.english ? 'Already English in game' : e.codes ? 'Only codes, filled in by the game' : 'Not translated'}</div>` +
     (e.speaker ? '</div>' : '');
   b.onclick = () => select(e.id);
   return b;
@@ -217,6 +217,7 @@ function renderEditor() {
     <h2>${esc(e.id)}</h2>
     <div class="sub">${esc(e.file)} · string ${e.index} · ${e.lines} line(s) · widest Japanese line ${e.jp_width} px (file max ${e.file_width} px)</div>
     ${e.art ? `<div class="sub art">${esc(e.art)}</div>` : ''}
+    ${e.codes ? '<div class="sub art">Only codes: the game fills these in (names, numbers), so there are no words to translate and it counts as translated.</div>' : ''}
     ${e.english ? '<div class="sub art">The game already shows this in English, so it counts as translated without any English typed here.</div>' : ''}
     ${e.speaker ? `<div class="speaker-bar"><button id="face-pick" class="face-button" title="Pick this speaker's portrait">${faceImg(e.speaker, 'face big')}</button><span>Speaker <b>${esc(e.speaker)}</b> · ${fmt(S.speakerCounts[e.speaker])} lines</span>
       <label class="inline">English name <input id="speaker-en" value="${esc(S.speakers[e.speaker] || '')}" placeholder="${esc(S.defaultSpeakers[e.speaker] || 'Not translated yet')}"></label>
