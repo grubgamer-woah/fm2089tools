@@ -150,7 +150,10 @@ class Catalog:
                 'jp': jp, 'speaker': None, 'speaker_own_line': False, 'body': jp,
                 'lines': labels.max_lines(key), 'jp_width': labels.limit(key), 'file_width': labels.limit(key),
             }
-            if self.group and key in groupart.ART:
+            if labels.LABELS[key][2] == 'button':
+                e['art'] = ("Drawn in serif capitals like the game's own COM button (A-Z, 0-9, - . & /); "
+                            "longer words are drawn narrower to fit.")
+            elif self.group and key in groupart.ART:
                 e['art'] = "The group's own picture is used; the English here is not drawn."
             elif self.group and key in groupart.LETTERING:
                 e['art'] = "Drawn in the group's header lettering (letters: " + ''.join(sorted(self.group.letters())) + ')'

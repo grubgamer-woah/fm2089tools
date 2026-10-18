@@ -13,6 +13,9 @@ Each label is redrawn with the game's own font (msgcmn.fnt) over the original ar
   check   the 16 px glyph sheet of the name check screens (data/name/EntryCheck_ncg.bin,
           32 tiles wide). Each label fills a run of 16 px cells in place.
   ending  data/Ending/ed_text.msur.pk, a 256 px wide picture of the closing narration.
+  button  the part buttons of the Wanzer setup screen (data/setup/BackGround/setup_bg_*).
+          The kanji are swapped for serif capitals like the game's own COM button
+          (buttonfont.py), narrowed to fit; the small English under them stays.
 """
 import struct
 from collections import Counter
@@ -59,6 +62,17 @@ LABELS = {
     'setup_stocksetup': ('所持品でセットアップ', 'Equip from Stock', 'bar', [_bins('data/setup/BackGround/stocksetup_bg')]),
     'setup_tradeitem': ('アイテム交換', 'Trade Items', 'bar', [_bins('data/setup/BackGround/tradeitem_bg')]),
     'setup_collection': ('パーツコレクション', 'Parts Collection', 'bar', [_bins('data/setup/BackGround/collection_bg_top')]),
+    # setup screen buttons: (left frame column, top frame row, right frame column) of each
+    'button_shoulder': ('肩武器', 'WEAPON', 'button', [(8, 16, 55), (136, 16, 183)]),
+    'button_rightarm': ('右腕', 'ARM', 'button', [(8, 48, 55)]),
+    'button_leftarm': ('左腕', 'ARM', 'button', [(136, 48, 183)]),
+    'button_grip': ('手武器', 'WEAPON', 'button', [(8, 80, 55), (136, 80, 183)]),
+    'button_back': ('背部', 'BACK', 'button', [(8, 112, 55)]),
+    'button_body': ('胴', 'BODY', 'button', [(72, 64, 119)]),
+    'button_legs': ('脚', 'LEGS', 'button', [(72, 96, 119)]),
+    'button_item': ('アイテム', 'ITEM', 'button', [(136, 112, 183)]),
+    'button_color': ('機体色', 'WANZER', 'button', [(200, 24, 247)]),
+    'button_attribute': ('属性防御', 'DEFENSE', 'button', [(200, 64, 247)]),
     'icon_office': ('司令部', 'HQ', 'icon', ['data/Base/Entrance/office_icon.mspr.pk']),
     'icon_station': ('傭兵詰所', 'Barracks', 'icon', ['data/Base/Entrance/station_icon.mspr.pk']),
     'icon_hangar': ('格納庫', 'Hangar', 'icon',
@@ -91,6 +105,13 @@ ICON_BAND = (18, 29)  # rows of the Japanese on the icons (row 26 is a white rul
 ICON_RULES = (26, 29)
 CHECK_CELL = 16
 ENDING_TOP, ENDING_PITCH, ENDING_W = 202, 16, 256
+SETUP_BG = 'data/setup/BackGround/setup_bg_'
+BUTTON_TEXT, BUTTON_RULE = 4, 16   # rows below a button's top frame: the capitals, the rule under them
+BUTTON_MAX = 42                    # widest word in px
+BUTTON_SQUEEZE = [n/100 for n in range(90, 44, -5)]   # how narrow the letters may get
+BUTTON_INK = (255, 74, 0)          # the frame's orange
+# the subtitle under 機体色 reads "WAP-Color": "Color" (columns 225-245) moves to the middle
+COLOR_SUBTITLE = (41, 47, 201, 247, 225, 246)   # rows, inside columns, "Color" columns
 
 
 def entry_id(key):
@@ -106,6 +127,8 @@ def limit(key):
         return ICON_W - 4
     if kind == 'check':
         return LABELS[key][3][0][2]*CHECK_CELL - 2
+    if kind == 'button':
+        return 96   # measured in the dialogue font; button_word() does the real check
     return ENDING_W - 8
 
 
@@ -364,6 +387,97 @@ def ending_file(data, font, text):
     return _msur_join(d, offs, screen.nsc(), screen.ncg())
 
 
+def button_word(text):
+    """Coverage rows (0-1) of a button word in the serif capitals, narrowed until it fits; None if it can't."""
+    import buttonfont
+    text = text.upper()
+    if any(ch != ' ' and ch not in buttonfont.GLYPHS for ch in text):
+        return None
+    for squeeze in BUTTON_SQUEEZE:
+        cols = []
+        for ch in text:
+            if ch == ' ':
+                cols += [[0]*buttonfont.HEIGHT]*3
+                continue
+            rows = buttonfont.GLYPHS[ch]
+            src = len(rows[0])
+            w = max(1, round(src*squeeze/buttonfont.OVER))
+            for j in range(w):
+                a, b = j*src/w, (j+1)*src/w
+                col = []
+                for r in rows:
+                    total = sum(int(r[i], 16)*(min(b, i+1) - max(a, i)) for i in range(int(a), min(src, int(b)+1)) if min(b, i+1) > max(a, i))
+                    col.append(min(1.0, total/(b-a)/15))
+                cols.append(col)
+            cols.append([0]*buttonfont.HEIGHT)
+        cols = cols[:-1]
+        if len(cols) <= BUTTON_MAX:
+            return [[c[y] for c in cols] for y in range(buttonfont.HEIGHT)]
+    return None
+
+
+def buttons_file(ncg_raw, nsc_raw, ncl_raw, labels):
+    """labels: [((left, top, right), text)]. Returns the new (ncg, nsc) of the setup screen."""
+    import random
+    screen = Screen(_lz(ncg_raw), _lz(nsc_raw))
+    n = struct.unpack_from('<I', ncl_raw, 4)[0]
+    colors = [_rgb(c) for c in struct.unpack_from(f'<{n}H', ncl_raw, 8)]
+    w, h = screen.tw*8, screen.th*8
+    img, pals = [[None]*w for _ in range(h)], {}
+    for ty in range(screen.th):
+        for tx in range(screen.tw):
+            px, p = screen.tile_px(tx, ty)
+            pals[tx, ty] = p
+            for k in range(64):
+                img[ty*8+k//8][tx*8+k % 8] = colors[p*16+px[k]]
+    touched = set()
+    rnd = random.Random(2089)
+
+    def erase(x0, x1, y0, y1, ink=lambda c: c[0] >= 0x60):
+        """Paint over the lettering with the button's own dark speckle."""
+        dark = [img[y][x] for y in range(y0, y1) for x in range(x0, x1) if not ink(img[y][x])]
+        for y in range(y0, y1):
+            for x in range(x0, x1):
+                if ink(img[y][x]):
+                    img[y][x] = rnd.choice(dark)
+                    touched.add((x//8, y//8))
+
+    for (left, top, right), text in labels:
+        erase(left+1, right, top+1, top+BUTTON_RULE)
+        word = button_word(text)
+        y0, x0 = top+BUTTON_TEXT, right-2-len(word[0])
+        for y, row in enumerate(word):
+            for x, a in enumerate(row):
+                if a > 0.08:
+                    b = img[y0+y][x0+x]
+                    img[y0+y][x0+x] = tuple(round(p+(q-p)*min(1, a*1.2)) for p, q in zip(b, BUTTON_INK))
+                    touched.add(((x0+x)//8, (y0+y)//8))
+        if (left, top) == (200, 24):
+            y0, y1, xa, xb, ca, cb = COLOR_SUBTITLE
+            keep = [img[y][ca:cb] for y in range(y0, y1)]
+            erase(xa, xb, y0, y1, lambda c: c[0]-c[2] >= 0x20 or c[0] >= 0x50)   # the speckle here is dark gray
+            at = xa + (xb-xa - (cb-ca))//2
+            for y, row in zip(range(y0, y1), keep):
+                img[y][at:at+len(row)] = row
+                touched |= {(x//8, y//8) for x in range(at, at+len(row))}
+    for tx, ty in sorted(touched):
+        p = pals[tx, ty]
+        pal = colors[p*16:p*16+16]
+        cache = {}
+        rows = []
+        for y in range(ty*8, ty*8+8):
+            row = []
+            for rgb in img[y][tx*8:tx*8+8]:
+                if rgb not in cache:
+                    cache[rgb] = min(range(1, 16), key=lambda i: sum((a-b)**2 for a, b in zip(pal[i], rgb)))
+                row.append(cache[rgb])
+            rows.append(row)
+        screen.put(tx*8, ty*8, rows, p)
+    ncg = titles.lz10_compress(screen.ncg()) if ncg_raw[:1] == b'\x10' else screen.ncg()
+    nsc = titles.lz10_compress(screen.nsc()) if nsc_raw[:1] == b'\x10' else screen.nsc()
+    return ncg, nsc
+
+
 def ending_lines(text):
     return len(text.split('\n'))
 
@@ -374,7 +488,7 @@ def compose(rom, font, texts, group=None):
     """texts: {key: English}; group: a groupart.GroupArt, or None. Returns ({rom path: bytes}, problems)."""
     import groupart
     files, problems = {}, []
-    checks = []
+    checks, buttons = [], []
     for key, (jp, default, kind, sources) in LABELS.items():
         if group and key in groupart.ART:
             files.update(group.label_files(key))
@@ -390,6 +504,14 @@ def compose(rom, font, texts, group=None):
                                  'message': f'Drawn in the game font instead of the group lettering: {why}'})
             else:
                 draw = group.draw(text)
+        if kind == 'button':
+            if button_word(text) is None:
+                problems.append({'id': entry_id(key), 'level': 'warning',
+                                 'message': f'Button keeps the default English "{default}": only A-Z, 0-9 and - . & / '
+                                            f'are drawn, in at most {BUTTON_MAX} px'})
+                text = default
+            buttons += [(s, text) for s in sources]
+            continue
         bad = [] if draw else missing_chars(font, text)
         lines = text.split('\n')
         wide = max(text_width(font, line) for line in lines)
@@ -417,4 +539,6 @@ def compose(rom, font, texts, group=None):
                 files[src] = ending_file(rom.read(src), font, text)
     path = 'data/name/EntryCheck_ncg.bin'
     files[path] = check_file(rom.read(path), font, checks)
+    ncg, nsc = buttons_file(rom.read(SETUP_BG+'ncg.bin'), rom.read(SETUP_BG+'nsc.bin'), rom.read(SETUP_BG+'ncl.bin'), buttons)
+    files[SETUP_BG+'ncg.bin'], files[SETUP_BG+'nsc.bin'] = ncg, nsc
     return files, problems

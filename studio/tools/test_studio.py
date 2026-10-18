@@ -57,9 +57,11 @@ def main():
         assert heroname.decode(check.read('overlay/14')) == 'Storm'
         for key, (_, _, kind, sources) in labels.LABELS.items():
             for src in sources:
-                for path in (src.values() if isinstance(src, dict) else [] if kind == 'check' else [src]):
+                for path in (src.values() if isinstance(src, dict) else [] if kind in ('check', 'button') else [src]):
                     assert check.read(path) != cat.rom.read(path), path
         assert check.read('data/name/EntryCheck_ncg.bin') != cat.rom.read('data/name/EntryCheck_ncg.bin')
+        for part in ('ncg', 'nsc'):
+            assert check.read(labels.SETUP_BG+part+'.bin') != cat.rom.read(labels.SETUP_BG+part+'.bin'), part
         if cat.ko_rom:
             assert check.read('data/name/fon00_ncg.bin') == cat.ko_rom.read('data/name/en/fon00_ncg.bin')
             ovt = struct.unpack_from('<I', patched, 0x50)[0]
