@@ -46,6 +46,10 @@ def main():
         fresh = core.Project(Path(tmp)/'imported.json')
         count, unknown = core.import_tsv(cat, fresh, tsv)
         assert count == sum('en' in p for p in project.entries.values()) and not unknown
+        if core.BUNDLED.is_file():
+            shipped = core.Project(Path(tmp)/'shipped.json')
+            count, unknown = core.import_text(cat, shipped, core.BUNDLED.read_text(encoding='utf-8'))
+            assert count > 9000 and not unknown, (count, unknown[:5])
 
         result = core.build(cat, project, Path(tmp)/'builds', log=lambda m: None)
         assert result['ok'], result

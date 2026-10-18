@@ -241,7 +241,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == '/api/import':
                 text = self.body().decode('utf-8', 'replace')
                 with STATE.lock:
-                    count, unknown = core.import_tsv(cat, STATE.project, text)
+                    count, unknown = core.import_text(cat, STATE.project, text)
                     STATE.project.save()
                 return self.send(200, {'imported': count, 'unknown': unknown[:20], 'unknown_count': len(unknown)})
             if path == '/api/build':

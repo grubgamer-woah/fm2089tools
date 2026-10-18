@@ -10,7 +10,7 @@
 <header>
   <div class="brand"><span class="mark">2089</span><div><h1>Translation Studio</h1><p>Front Mission 2089: Border of Madness</p></div></div>
   <div class="actions">
-    <button id="import" title="Import a .tsv or msgToTxt .txt file">Import TSV</button>
+    <button id="import" title="Import a .tsv, a msgToTxt .txt file, or another Studio's project.json (such as translation/project.json)">Import</button>
     <a id="export" class="button" href="/api/export.tsv" download>Export TSV</a>
     <button id="speakers" title="Translate each speaker's name once">Speakers</button>
     <button id="titles" title="English pictures for the mission title screens">Mission titles</button>
@@ -54,7 +54,7 @@
   </div>
 </main>
 <footer>Edits save to <code id="project-path">workspace/project.json</code> on this computer. Builds never overwrite earlier builds.</footer>
-<input id="import-file" type="file" accept=".tsv,.txt,.csv" hidden>
+<input id="import-file" type="file" accept=".tsv,.txt,.csv,.json" hidden>
 <input id="title-files" type="file" accept=".png,image/png" multiple hidden>
 <script src="/app.js"></script>
 </body>

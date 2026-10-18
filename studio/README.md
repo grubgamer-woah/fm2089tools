@@ -51,8 +51,15 @@ to their own copy of the game.
   as `project.previous.json`).
 
 **Export TSV** writes every string (ID, English, Japanese, note) for a
-spreadsheet. **Import TSV** reads that file back, or a `.txt` made by
-`msgToTxt.py` that already has English in it.
+spreadsheet. **Import** reads that file back, a `.txt` made by `msgToTxt.py`
+that already has English in it, or another Studio's `project.json`.
+
+The full English translation ships with the Studio in
+`translation/project.json` (every string and speaker name). The first time the
+Studio starts without a `workspace/project.json`, it starts from that file, so
+a fresh download already has the English. To bring a newer copy into a
+workspace you already have, **Import** `translation/project.json`: its English
+replaces yours string by string, and your other strings stay as they are.
 
 ## Mission titles
 

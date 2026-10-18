@@ -35,6 +35,8 @@ GROUP_FOLDERS = [STUDIO.parent, STUDIO.parent.parent]
 WORKSPACE = STUDIO/'workspace'
 BUILDS = STUDIO/'builds'
 PROJECT = WORKSPACE/'project.json'
+# Kiley's English, shipped with the Studio: a new workspace starts from it, and Import takes it too
+BUNDLED = STUDIO/'translation'/'project.json'
 
 CLEAN_MD5 = 'e965ed696171d327656dac3adf6c6221'  # Front Mission 2089 - Border of Madness (Japan), No-Intro
 MSG_DIR = 'data/font/'
@@ -263,8 +265,9 @@ class Project:
         self.speakers = {}  # Japanese speaker name -> English name, shared by every line
         self.faces = {}  # Japanese speaker name -> portrait picked in the Studio ('-' = none); never built
         self.images = {}  # mission title name -> replacement PNG, relative to the project folder
-        if self.path.exists():
-            data = json.loads(self.path.read_text(encoding='utf-8'))
+        source = self.path if self.path.exists() else BUNDLED if self.path == PROJECT and BUNDLED.is_file() else None
+        if source:
+            data = json.loads(source.read_text(encoding='utf-8'))
             self.entries = data.get('entries', {})
             self.speakers = data.get('speakers', {})
             self.faces = data.get('faces', {})
@@ -382,6 +385,30 @@ def import_tsv(catalog, project, text):
         if len(row) > 3 and row[3]:
             project.set(sid, note=row[3])
     return count, unknown
+
+
+def import_project(catalog, project, text):
+    """Takes another Studio's project.json (such as translation/project.json): its English,
+    notes, speaker names and faces replace this project's where it has them."""
+    data = json.loads(text.lstrip('\ufeff'))
+    count, unknown = 0, []
+    for sid, p in data.get('entries', {}).items():
+        if sid not in catalog.by_id:
+            unknown.append(sid); continue
+        project.set(sid, en=p.get('en'), note=p.get('note'), done=p.get('done'))
+        count += 'en' in p
+    for jp, en in data.get('speakers', {}).items():
+        project.set_speaker(jp, en)
+    for jp, face in data.get('faces', {}).items():
+        project.set_face(jp, face)
+    return count, unknown
+
+
+def import_text(catalog, project, text):
+    """A project.json or a .tsv/.txt, whichever the text is."""
+    if text.lstrip('\ufeff \r\n').startswith('{'):
+        return import_project(catalog, project, text)
+    return import_tsv(catalog, project, text)
 
 
 def title_files(catalog, project, name, png_bytes=None):
