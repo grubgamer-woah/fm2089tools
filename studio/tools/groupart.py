@@ -70,6 +70,8 @@ def _rows(data):
 
 # Letters cut out of the group's headers: header, first and last column. The
 # group's letters touch (their edges are blended), so these were picked by eye.
+# These headers sit one row higher than the rest; their letters move down to match.
+RAISED = {'Load game', 'Ops Records'}
 CUTS = {
     'S': ('Start menu', 3, 7), 'a': ('Start menu', 12, 16), 'm': ('Start menu', 27, 33),
     'e': ('Start menu', 34, 39), 'n': ('Config', 15, 19), 'H': ('HQ', 3, 9), 'Q': ('HQ', 10, 17),
@@ -131,7 +133,8 @@ class GroupArt:
                 if text not in headers:
                     headers[text] = _rows(self.read(by_text[text]))
                 rows, base = headers[text]
-                found[ch] = [{y: rows[y][x] for y in range(TOP, BOTTOM) if rows[y][x] != base[y]}
+                down = 1 if text in RAISED else 0
+                found[ch] = [{y+down: rows[y][x] for y in range(TOP, BOTTOM) if rows[y][x] != base[y]}
                              for x in range(x0, x1+1)]
             self._derive(found)
             self._letters = found
