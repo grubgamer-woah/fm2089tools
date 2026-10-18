@@ -539,8 +539,11 @@ def buttons_file(ncg_raw, nsc_raw, ncl_raw, labels, png=None):
     return pic.save()
 
 
-def setup_png(rom, labels_):
-    """The setup screen with the English buttons, as a PNG to edit."""
+def setup_png(rom, labels_, group=None):
+    """The setup screen with the English buttons (the group's own, if it has one), as a PNG to edit."""
+    screen = group and group.setup_screen()
+    if screen:
+        return Picture(*screen).png()
     pic = Picture(rom.read(SETUP_BG+'ncg.bin'), rom.read(SETUP_BG+'nsc.bin'), rom.read(SETUP_BG+'ncl.bin'))
     draw_buttons(pic, labels_)
     return pic.png()
@@ -558,7 +561,7 @@ def compose(rom, font, texts, group=None, setup=None):
     files, problems = {}, []
     checks, buttons = [], []
     for key, (jp, default, kind, sources) in LABELS.items():
-        if group and key in groupart.ART:
+        if group and group.uses(key):
             files.update(group.label_files(key))
             continue
         text = texts.get(key) or default
@@ -610,7 +613,15 @@ def compose(rom, font, texts, group=None, setup=None):
     if setup:
         problems.append({'id': entry_id('button_shoulder'), 'level': 'warning',
                          'message': 'The setup buttons come from setup_bg.png; the button entries are not drawn'})
-    ncg, nsc = buttons_file(rom.read(SETUP_BG+'ncg.bin'), rom.read(SETUP_BG+'nsc.bin'), rom.read(SETUP_BG+'ncl.bin'),
-                            buttons, setup)
+    screen = group and group.setup_screen()
+    if screen:
+        # the group's setup screen already has English buttons: an edited setup_bg.png still wins
+        ncg, nsc, ncl = screen
+        if setup:
+            ncg, nsc = buttons_file(ncg, nsc, ncl, [], setup)
+        files[SETUP_BG+'ncl.bin'] = ncl
+    else:
+        ncg, nsc = buttons_file(rom.read(SETUP_BG+'ncg.bin'), rom.read(SETUP_BG+'nsc.bin'),
+                                rom.read(SETUP_BG+'ncl.bin'), buttons, setup)
     files[SETUP_BG+'ncg.bin'], files[SETUP_BG+'nsc.bin'] = ncg, nsc
     return files, problems

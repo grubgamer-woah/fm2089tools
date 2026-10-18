@@ -62,7 +62,9 @@ def main():
         assert msgcodec.tokens_to_text(mf.tokens(99), cat.font).startswith('Initializing save data.')
         assert heroname.decode(check.read('overlay/14')) == 'Storm'
         for key, (_, _, kind, sources) in labels.LABELS.items():
-            if cat.group and key in groupart.ART:
+            if cat.group and cat.group.uses(key):
+                for path, data in cat.group.label_files(key).items():
+                    assert check.read(path) == data, path
                 continue  # the group's picture replaces only the files it drew
             for src in sources:
                 for path in (src.values() if isinstance(src, dict) else [] if kind in ('check', 'button') else [src]):
@@ -70,6 +72,9 @@ def main():
         assert check.read('data/name/EntryCheck_ncg.bin') != cat.rom.read('data/name/EntryCheck_ncg.bin')
         for part in ('ncg', 'nsc'):
             assert check.read(labels.SETUP_BG+part+'.bin') != cat.rom.read(labels.SETUP_BG+part+'.bin'), part
+        if cat.group and cat.group.setup_screen():
+            for path, data in zip(('ncg', 'nsc'), cat.group.setup_screen()):   # the shipped png changes nothing
+                assert labels._lz(check.read(labels.SETUP_BG+path+'.bin')) == labels._lz(data), path
         for name in tutorials.PICTURES:
             path = f'data/bg/{name}_ncg.bin'
             assert check.read(path) != cat.rom.read(path), path

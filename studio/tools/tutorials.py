@@ -6,7 +6,8 @@ pictures, so the text strings that translate the real menus don't reach them.
 Each Japanese piece is painted out and drawn again from the entry that
 translates the real thing, so the pictures follow those entries:
 
-  bar      the header in the top-left corner (a Graphics_setup_* entry)
+  bar      the header in the top-left corner (a Graphics_setup_* entry), or the
+           group's own header for that screen when the Studio uses it
   row      a menu line: the white Japanese is painted out, blending the row's
            background from just above and below it, and the English drawn white
   buttons  the part buttons of the setup screen (all Graphics_button_* entries)
@@ -14,12 +15,13 @@ translates the real thing, so the pictures follow those entries:
 import struct
 from collections import Counter
 
+import groupart
 import labels
 
 ROW_H = 12          # rows of a menu line's lettering
 MAX_TILES = 512     # the game puts the map right after 16 KB of tiles; more tiles overwrite it
 ROW_RIGHT = 222     # menu lines end before the OK marker
-BAR_W = 128
+BAR_W, BAR_H = 128, 16
 COM_BUTTON = (72, 32, 119)   # already English in the game, but an edited setup_bg.png may reword it
 
 
@@ -87,9 +89,23 @@ def _row(pic, font, box, text):
             pic.set(x, y, (255, 255, 255))
 
 
-def compose(rom, font, english, setup=None):
-    """english(entry id) -> the project's English or None; setup: the edited setup_bg.png, if any.
-    Returns ({rom path: bytes}, problems)."""
+def group_bars(rom, graphics, group):
+    """{entry id: RGB rows of the header} for the bars the group's pictures replace.
+    graphics: the files labels.compose made, which hold the group's tiles (and any fixed map)."""
+    bars = {}
+    for key in sorted(groupart.BACKGROUND_BARS):
+        if group and group.uses(key):
+            src = labels.LABELS[key][3][0]
+            ncl = src['ncg'].replace('_ncg.bin', '_ncl.bin')
+            pic = labels.Picture(graphics[src['ncg']], graphics.get(src['nsc']) or rom.read(src['nsc']), rom.read(ncl))
+            bars[labels.entry_id(key)] = [row[:BAR_W] for row in pic.img[:BAR_H]]
+    return bars
+
+
+def compose(rom, font, english, setup=None, bars=None):
+    """english(entry id) -> the project's English or None; setup: the edited setup_bg.png, if any;
+    bars: {entry id: RGB rows} of headers pasted as they are (group_bars). Returns ({rom path: bytes}, problems)."""
+    bars = bars or {}
     files, problems = {}, []
     buttons = []
     for key, (_, default, kind, sources) in labels.LABELS.items():
@@ -106,6 +122,12 @@ def compose(rom, font, english, setup=None):
                         pic.load_png(setup, (left+1, top+1, right, top+labels.BUTTON_RULE+7))
                 else:
                     labels.draw_buttons(pic, buttons)
+                continue
+            if kind == 'bar' and eid in bars:
+                for y, row in enumerate(bars[eid]):
+                    for x, rgb in enumerate(row):
+                        if pic.img[y][x] != rgb:
+                            pic.set(x, y, rgb)
                 continue
             text = english(eid)
             if not text or '\n' in text or labels.missing_chars(font, text):

@@ -12,6 +12,9 @@ graphic by graphic, which of them the patch uses (2026-10-18):
   SCREENS    screens the Studio has no text entry for, used as they are
   ICONS      12 icons the group added to unused font slots, plus their narrower ×
   NAME_KEYS  the Delete / Back / Ok keys of the name entry screen
+  BACKGROUND the Wanzer setup screens (Kiley's "Background" folder, 2026-10-18): the
+             header bars of the hangar menus and the setup screen with its part
+             buttons. Optional: without the folder these are drawn as before
 
 The files are read from Kiley's folder at build time when it sits next to the
 Studio, otherwise from the copy of the files used in studio/assets/Group
@@ -27,6 +30,18 @@ FONT = 'font/msgcmn.fnt'
 ICONS = range(0x62D, 0x639)
 TIMES = 0x4F                          # the group's narrower × (Kiley, 2026-10-18)
 NAME_KEYS = 'name/NameEntryEnv.NCGR'  # Delete / Back / Ok keys, put into the En+Ko keyboard
+# data/setup/BackGround/ files sit in the group folder's Background/; only their _ncg.bin
+# (the game's own map fits them), except the setup screen, which has its own map
+SETUP_DIR, BACKGROUND = 'setup/BackGround/', 'Background/'
+BACKGROUND_BARS = {'setup_hangar', 'setup_select', 'setup_attribute', 'setup_color', 'setup_buyitem',
+                   'setup_buysetup', 'setup_sellitem', 'setup_sellsetup', 'setup_sellparts',
+                   'setup_stocksetup', 'setup_tradeitem', 'setup_collection'}
+SETUP_SCREEN = [f'setup_bg_{k}.bin' for k in ('ncg', 'nsc', 'ncl')]
+# The group's sellsetup_bg_ncg.bin was saved with its tiles in a new order but no map of its
+# own, so the game's map scrambles it. This map, rebuilt from the tiles, ships with the Studio
+# and is used only with that exact file (sha1).
+FIXES = Path(__file__).resolve().parents[1]/'assets'/'fixes'
+MAP_FIXES = {'sellsetup_bg_ncg.bin': ('17c06ba422414ed502a3c731623f6fff1e230e0c', 'sellsetup_bg_nsc.bin')}
 
 ART = {'title_startmenu', 'title_newgame', 'title_nextnewgame', 'title_loadgame', 'title_config',
        'base_mercenarypost', 'base_arena', 'base_saveandload',
@@ -92,10 +107,14 @@ class GroupArt:
         self._letters = None
 
     def read(self, rel):
-        return (self.folder/rel).read_bytes()
+        return (self.folder/self._where(rel)).read_bytes()
 
     def has(self, rel):
-        return (self.folder/rel).is_file()
+        return (self.folder/self._where(rel)).is_file()
+
+    @staticmethod
+    def _where(rel):
+        return BACKGROUND + rel[len(SETUP_DIR):] if rel.startswith(SETUP_DIR) else rel
 
     @staticmethod
     def needed():
@@ -112,12 +131,36 @@ class GroupArt:
     # ---- files used as they are ----
 
     def label_files(self, key):
-        """{rom path: bytes} for a graphic in ART. Loose bars: the group's tiles fit the game's own map."""
+        """{rom path: bytes} for a graphic in ART or BACKGROUND_BARS. Loose bars: the group's tiles fit
+        the game's own map (or a map in MAP_FIXES)."""
         out = {}
         for src in labels.LABELS[key][3]:
             path = src['ncg'] if isinstance(src, dict) else src
             out[path] = self.read(path[len('data/'):])
+            fix = MAP_FIXES.get(path.rsplit('/', 1)[-1])
+            if fix:
+                out[src['nsc']] = (FIXES/BACKGROUND/fix[1]).read_bytes()
         return out
+
+    def uses(self, key):
+        """Is the group's picture used for this graphic?"""
+        if key in ART:
+            return True
+        if key not in BACKGROUND_BARS:
+            return False
+        ncg = labels.LABELS[key][3][0]['ncg']
+        if not self.has(ncg[len('data/'):]):
+            return False
+        fix = MAP_FIXES.get(ncg.rsplit('/', 1)[-1])
+        if fix:
+            import hashlib
+            return hashlib.sha1(self.read(ncg[len('data/'):])).hexdigest() == fix[0]
+        return True
+
+    def setup_screen(self):
+        """(ncg, nsc, ncl) of the group's Wanzer setup screen, or None."""
+        paths = [SETUP_DIR+f for f in SETUP_SCREEN]
+        return tuple(self.read(p) for p in paths) if all(self.has(p) for p in paths) else None
 
     def screens(self):
         return {'data/'+p: self.read(p) for p in SCREENS}

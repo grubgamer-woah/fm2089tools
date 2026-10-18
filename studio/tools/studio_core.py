@@ -162,7 +162,7 @@ class Catalog:
             if labels.LABELS[key][2] == 'button':
                 e['art'] = ("Drawn in serif capitals like the game's own COM button (A-Z, 0-9, - . & /); "
                             "longer words are drawn narrower to fit.")
-            elif self.group and key in groupart.ART:
+            elif self.group and self.group.uses(key):
                 e['art'] = "The group's own picture is used; the English here is not drawn."
             elif self.group and key in groupart.LETTERING:
                 e['art'] = "Drawn in the group's header lettering (letters: " + ''.join(sorted(self.group.letters())) + ')'
@@ -511,8 +511,11 @@ def compose(catalog, project):
         if sid.startswith(labels.ID_PREFIX) and key in labels.LABELS:
             return texts[key] or labels.LABELS[key][1]
         return project.entries.get(sid, {}).get('en')
-    # tutorial screenshots of the menus: redrawn from the same entries
-    pictures, picture_problems = tutorials.compose(catalog.rom, catalog.font, english, setup)
+    # tutorial screenshots of the menus: redrawn from the same entries, or with the group's own headers
+    screen = catalog.group and catalog.group.setup_screen()
+    pictures, picture_problems = tutorials.compose(
+        catalog.rom, catalog.font, english, setup or (screen and labels.Picture(*screen).png()),
+        tutorials.group_bars(catalog.rom, graphics, catalog.group))
     files.update(pictures)
     problems += picture_problems
     overlay = f'overlay/{heroname.OVERLAY}'
@@ -595,7 +598,7 @@ def setup_png(catalog, project):
         if kind == 'button':
             text = texts[key] or default
             buttons += [(src, text if labels.button_word(text) else default) for src in sources]
-    return labels.setup_png(catalog.rom, buttons)
+    return labels.setup_png(catalog.rom, buttons, catalog.group)
 
 
 def main():

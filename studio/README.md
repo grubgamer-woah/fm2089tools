@@ -25,8 +25,11 @@ to their own copy of the game.
   from them, so the first build already makes the finished patch.
 * `assets/Group Localization Files/`: the localization group's own English
   graphics (title and base headers, base map rooms, opening captions, RESULTS,
-  terrain panel, font icons and ×, the name screen's Delete / Back / Ok keys). Used when the group folder itself isn't next to
-  the Studio.
+  terrain panel, font icons and ×, the name screen's Delete / Back / Ok keys,
+  and in `Background/` the Wanzer setup screen and the hangar and shop
+  headers). Used when the group folder itself isn't next to the Studio.
+* `assets/fixes/`: a map for the group's "Sell Parts" header
+  (`Background/sellsetup_bg_ncg.bin`), whose tiles don't fit the game's own map.
 * `assets/En+Ko name screens/`: the name entry screens of the Korean/English
   fan patch (minus its page arrow, which does nothing on its one-page keyboard).
   Used when that patch's ROM isn't next to the Japanese one.
@@ -78,12 +81,14 @@ replaces yours string by string, and your other strings stay as they are.
 
 ## Setup buttons
 
-The Wanzer setup screen ships as a picture, `translation/images/setup_bg.png`
-(256×144, Kiley's "Right Shoulder / Computer / Color Select" design). Every
+The Wanzer setup screen is the group's own (`Background/setup_bg_*` in their
+folder, Kiley's "Right Shoulder / Computer / Color Select" design). It also
+ships as a picture, `translation/images/setup_bg.png` (256×144). Every
 build uses it for the real screen and for Yuji's tutorial picture of it. To
 change it, save your own as `workspace/images/setup_bg.png`, which wins over the
-shipped one. With neither file, the buttons are drawn from their entries in
-**Screen graphics** (WEAPON, ARM, BODY...).
+shipped one. With no picture, the group's screen is used as it is, and without
+that the buttons are drawn from their entries in **Screen graphics** (WEAPON,
+ARM, BODY...).
 `python studio/tools/studio_core.py setup-png` writes the screen there as the
 Studio draws it now, to start from. Each 8×8 block of the screen has its own
 16 colors, so draw with the colors already in that spot; others snap to the
@@ -142,7 +147,9 @@ spacing looks normal and straight double quotes work.
   the "5. Group Localization Files" folder sits next to the Studio folder: the
   title and base headers and base map rooms they drew, the opening demo
   captions, the RESULTS screen and the terrain panel, plus 12 icons in unused
-  font slots. HQ and sortie headers get the Studio's English in the group's
+  font slots, and (from its `Background` folder) the Wanzer setup screen and
+  the headers of the hangar and shop screens, which the tutorial pictures
+  reuse. HQ and sortie headers get the Studio's English in the group's
   lettering. Without the folder it uses the copy in `assets/`.
 * `tools/tutorials.py` redraws the menus in the tutorial screenshots (Yuji's
   hangar lesson, the battle lessons) from the entries that translate the real
