@@ -50,6 +50,15 @@ def main():
         assert project.entries[mtl_id].get('mtl') and not project.entries[mtl_id].get('edited')
         project.set(mtl_id, en='Start Menu', mtl=True)
         assert project.entries[mtl_id].get('edited') and not project.entries[mtl_id].get('mtl')
+        # Text already in English counts as translated; test messages and replaced graphics are not in game
+        by = {e['id']: e for e in cat.entries}
+        assert by['MsgLabels_parts_menu_shoulder_msg_010'].get('english')  # EGRET
+        assert not by['MsgLabels_tactics_02_msg_006'].get('english')  # …。
+        assert by['MsgLabels_WindowMessageForTest_msg_001'].get('unused')
+        project.set(mtl_id, hidden=True)
+        assert project.entries[mtl_id]['hidden'] is True
+        project.set(mtl_id, hidden='')
+        assert 'hidden' not in project.entries[mtl_id]
         project.save()
         tsv = core.export_tsv(cat, project)
         fresh = core.Project(Path(tmp)/'imported.json')

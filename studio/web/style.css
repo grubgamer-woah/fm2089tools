@@ -124,3 +124,4 @@ label.pick small{color:var(--muted)}
 .mtlbar .meter{flex:0 0 220px;height:8px;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--panel)}
 #mtl-fill{height:100%;width:0;background:var(--orange)}
 .badge.person{border-color:#8fc2ff;color:#8fc2ff}
+.badge.hidden{border-color:#888;color:#aaa}

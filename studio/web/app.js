@@ -72,22 +72,31 @@ function fullText(e, body) {
   return (speakerEn(e.speaker) || e.speaker) + ':' + (e.speaker_own_line ? '\n' : ' ') + body;
 }
 
-function translated(e) { return S.project[e.id] && S.project[e.id].en !== undefined; }
+// Text the game already shows in English (romaji names, part names like RAPTOR FX+1) counts as translated
+function translated(e) { return (S.project[e.id] && S.project[e.id].en !== undefined) || !!e.english; }
+// Text the game never shows (test messages, graphics replaced by pictures); a person can change it per entry
+function isHidden(e) { const p = S.project[e.id]; return p && p.hidden !== undefined ? p.hidden : !!e.unused; }
+// Hidden text is left out of every total, so the percentages are of what the player sees
+function inGame() { return S.entries.filter(e => !isHidden(e)); }
 function progress() {
-  const t = S.entries.filter(translated).length;
-  $('#progress').textContent = `${fmt(t)} of ${fmt(S.entries.length)} strings translated (${(100 * t / S.entries.length).toFixed(1)}%)`;
-  // How much of the English is still Claude's machine translation (MTL), out of everything translated
-  const mtl = S.entries.filter(e => translated(e) && S.project[e.id].mtl).length;
-  const edited = S.entries.filter(e => S.project[e.id] && S.project[e.id].edited).length;
-  const pct = t ? 100 * mtl / t : 0;
-  $('#mtl-text').textContent = `MTL ${pct.toFixed(1)}% · ${fmt(mtl)} of ${fmt(t)} translated strings · ${fmt(edited)} edited by a person`;
+  const all = inGame(), t = all.filter(translated).length;
+  const kept = all.filter(e => e.english && !(S.project[e.id] && S.project[e.id].en !== undefined)).length;
+  $('#progress').textContent = `${fmt(t)} of ${fmt(all.length)} strings translated (${(100 * t / all.length).toFixed(1)}%)`;
+  $('#progress').title = `Includes ${fmt(kept)} strings the game already writes in English. ` +
+    `Leaves out ${fmt(S.entries.length - all.length)} strings that are not shown in game.`;
+  // How much of the typed English is still Claude's machine translation (MTL); the game's own English is not counted
+  const typed = all.filter(e => S.project[e.id] && S.project[e.id].en !== undefined);
+  const mtl = typed.filter(e => S.project[e.id].mtl).length;
+  const edited = all.filter(e => S.project[e.id] && S.project[e.id].edited).length;
+  const pct = typed.length ? 100 * mtl / typed.length : 0;
+  $('#mtl-text').textContent = `MTL ${pct.toFixed(1)}% · ${fmt(mtl)} of ${fmt(typed.length)} translated strings · ${fmt(edited)} edited by a person`;
   $('#mtl-fill').style.width = pct + '%';
 }
 
 function renderTabs() {
   const nav = $('#tabs'); nav.innerHTML = '';
   for (const [key, label] of S.config.groups) {
-    const all = S.entries.filter(e => e.group === key);
+    const all = inGame().filter(e => e.group === key);
     const done = all.filter(translated).length;
     const b = document.createElement('button');
     b.className = key === S.group ? 'active' : '';
@@ -117,14 +126,17 @@ function fillFiles() {
 function applyFilter() {
   const q = $('#search').value.trim().toLowerCase();
   const file = $('#file').value, status = $('#status').value, empty = $('#empty').checked, speaker = $('#speaker').value;
+  const hide = $('#hide-unused').checked;
   S.filtered = S.entries.filter(e => {
+    if (status === 'hidden' ? !isHidden(e) : hide && isHidden(e)) return false;
     if (e.group !== S.group && !q) return false;
     if (file && e.file !== file) return false;
     if (speaker === '-' ? e.speaker : speaker && e.speaker !== speaker) return false;
     const p = S.project[e.id] || {};
     if (!empty && !e.jp.trim() && p.en === undefined) return false;
-    if (status === 'todo' && p.en !== undefined) return false;
-    if (status === 'translated' && p.en === undefined) return false;
+    if (status === 'todo' && translated(e)) return false;
+    if (status === 'translated' && !translated(e)) return false;
+    if (status === 'english' && !(e.english && p.en === undefined)) return false;
     if (status === 'done' && !p.done) return false;
     if (status === 'notdone' && (p.en === undefined || p.done)) return false;
     if (status === 'noted' && !p.note) return false;
@@ -164,11 +176,12 @@ function rowEl(e) {
   b.dataset.id = e.id;
   const badges = (p.mtl ? '<span class="badge warn" title="Claude\'s machine translation">MTL</span> ' : '') +
     (p.edited ? '<span class="badge person" title="Edited by a person">edited</span> ' : '') +
-    (p.done ? '<span class="badge done">done</span> ' : '') + (p.note ? '<span class="badge">note</span>' : '');
+    (p.done ? '<span class="badge done">done</span> ' : '') + (p.note ? '<span class="badge">note</span> ' : '') +
+    (isHidden(e) ? '<span class="badge hidden" title="Not shown in game; left out of the totals">not in game</span>' : '');
   b.innerHTML = (e.speaker ? faceImg(e.speaker) + '<div class="row-text">' : '') + `<div class="meta"><span>${esc(e.file.replace('MsgLabels_', ''))} #${e.index}</span><span>${badges}</span></div>` +
     (e.speaker ? `<div class="speaker">${esc(speakerLabel(e))}</div>` : '') +
     `<div class="jp">${esc(e.speaker ? e.body : e.jp) || '<i>(empty)</i>'}</div>` +
-    `<div class="en ${p.en === undefined ? 'none' : ''}">${p.en === undefined ? 'Not translated' : esc(p.en) || '(blank)'}</div>` +
+    `<div class="en ${p.en === undefined ? 'none' : ''}">${p.en !== undefined ? esc(p.en) || '(blank)' : e.english ? 'Already English in game' : 'Not translated'}</div>` +
     (e.speaker ? '</div>' : '');
   b.onclick = () => select(e.id);
   return b;
@@ -204,6 +217,7 @@ function renderEditor() {
     <h2>${esc(e.id)}</h2>
     <div class="sub">${esc(e.file)} · string ${e.index} · ${e.lines} line(s) · widest Japanese line ${e.jp_width} px (file max ${e.file_width} px)</div>
     ${e.art ? `<div class="sub art">${esc(e.art)}</div>` : ''}
+    ${e.english ? '<div class="sub art">The game already shows this in English, so it counts as translated without any English typed here.</div>' : ''}
     ${e.speaker ? `<div class="speaker-bar"><button id="face-pick" class="face-button" title="Pick this speaker's portrait">${faceImg(e.speaker, 'face big')}</button><span>Speaker <b>${esc(e.speaker)}</b> · ${fmt(S.speakerCounts[e.speaker])} lines</span>
       <label class="inline">English name <input id="speaker-en" value="${esc(S.speakers[e.speaker] || '')}" placeholder="${esc(S.defaultSpeakers[e.speaker] || 'Not translated yet')}"></label>
       <button id="speaker-save" title="Changes this name on every line this speaker says">Save name everywhere</button></div>` : ''}
@@ -221,6 +235,7 @@ function renderEditor() {
       <label class="check"><input id="done" type="checkbox" ${p.done ? 'checked' : ''}> Done</label>
       <label class="check" title="The English is Claude's machine translation (unticks itself when you change the English)"><input id="mtl" type="checkbox" ${p.mtl ? 'checked' : ''}> MTL</label>
       <label class="check" title="A person has edited this English"><input id="edited" type="checkbox" ${p.edited ? 'checked' : ''}> Edited by a person</label>
+      <label class="check" title="${e.unused ? 'The Studio lists this as not shown in game (' + esc(e.unused) + ')' : 'Tick if the game never shows this text'}; hidden text is left out of the totals"><input id="hidden" type="checkbox" ${isHidden(e) ? 'checked' : ''}> Not in game</label>
       <button id="copy-jp" title="Copy the Japanese (with its codes) into the English box">Copy Japanese</button>
       <button id="clear" title="Remove the English so the game keeps the Japanese">Use Japanese</button>
       <span class="spacer"></span>
@@ -229,7 +244,7 @@ function renderEditor() {
   const en = $('#en');
   en.oninput = () => { S.dirty = true; personEdit(); scheduleCheck(); };
   $('#note').oninput = () => { S.dirty = true; };
-  $('#done').onchange = $('#mtl').onchange = $('#edited').onchange = () => save(true);
+  $('#done').onchange = $('#mtl').onchange = $('#edited').onchange = $('#hidden').onchange = () => save(true);
   $('#save').onclick = () => save(true);
   $('#clear').onclick = async () => { en.value = ''; S.dirty = true; await save(true, true); };
   if (e.speaker) {
@@ -333,7 +348,7 @@ function drawPreview(text, e) {
 
 async function save(explicit, clearing = false) {
   const id = S.current; const en = $('#en').value; const note = $('#note').value; const done = $('#done').checked;
-  const body = {id, note, done, mtl: $('#mtl').checked, edited: $('#edited').checked, en: clearing ? '' : (en === '' ? '' : en)};
+  const body = {id, note, done, mtl: $('#mtl').checked, edited: $('#edited').checked, hidden: $('#hidden').checked, en: clearing ? '' : (en === '' ? '' : en)};
   if (!clearing && en === '' && (S.project[id] || {}).en === undefined) delete body.en;
   const r = await api('/api/entry', body);
   if (!r.ok) {
@@ -351,7 +366,7 @@ async function save(explicit, clearing = false) {
 function renderTabsCounts() {
   const buttons = $('#tabs').querySelectorAll('button');
   S.config.groups.forEach(([key], i) => {
-    const all = S.entries.filter(e => e.group === key);
+    const all = inGame().filter(e => e.group === key);
     buttons[i].querySelector('small').textContent = `${fmt(all.filter(translated).length)}/${fmt(all.length)}`;
   });
   progress();
@@ -604,6 +619,12 @@ setInterval(() => { if (!document.hidden) refreshProject().catch(() => {}); }, 5
 
 $('#search').oninput = () => { S.page = 0; applyFilter(); };
 $('#file').onchange = $('#status').onchange = $('#empty').onchange = () => { S.page = 0; applyFilter(); };
+// "Hide text not in game" is remembered in this browser; it starts ticked
+try { $('#hide-unused').checked = localStorage.getItem('hideUnused') !== 'no'; } catch (err) {}
+$('#hide-unused').onchange = () => {
+  try { localStorage.setItem('hideUnused', $('#hide-unused').checked ? 'yes' : 'no'); } catch (err) {}
+  S.page = 0; applyFilter();
+};
 $('#prev-page').onclick = () => { S.page--; renderRows(); $('#rows').scrollTop = 0; };
 $('#next-page').onclick = () => { S.page++; renderRows(); $('#rows').scrollTop = 0; };
 $('#validate').onclick = validate;

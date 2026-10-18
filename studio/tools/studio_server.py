@@ -214,7 +214,10 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(200, {'ok': False, **res})
                 with STATE.lock:
                     STATE.project.set(sid, en=data.get('en'), note=data.get('note'), done=data.get('done'),
-                                      mtl=data.get('mtl'), edited=data.get('edited'))
+                                      mtl=data.get('mtl'), edited=data.get('edited'),
+                                      # only kept when it differs from the Studio's own not-in-game list
+                                      hidden=None if 'hidden' not in data else
+                                      '' if bool(data['hidden']) == bool(cat.by_id[sid][2].get('unused')) else data['hidden'])
                     STATE.project.save()
                     saved = STATE.project.entries.get(sid, {})
                 return self.send(200, {'ok': True, 'entry': saved, **res})

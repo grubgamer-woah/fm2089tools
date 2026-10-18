@@ -44,6 +44,13 @@ PROJECT = WORKSPACE/'project.json'
 BUNDLED = STUDIO/'translation'/'project.json'
 SETUP_PNG = 'setup_bg.png'
 
+# kana, kanji and Japanese punctuation; text without any is already English (or romaji)
+JAPANESE = re.compile('[\u3001-\u30ff\u3400-\u9fff\uff66-\uff9f]')
+# text the game never shows (the Studio hides it unless asked); graphics replaced by pictures are marked in Catalog
+NOT_IN_GAME = {
+    'MsgLabels_WindowMessageForTest': 'test messages',
+}
+
 CLEAN_MD5 = 'e965ed696171d327656dac3adf6c6221'  # Front Mission 2089 - Border of Madness (Japan), No-Intro
 MSG_DIR = 'data/font/'
 FONT_PATH = 'data/font/msgcmn.fnt'
@@ -155,6 +162,9 @@ class Catalog:
         # "勝利条件：…" looks like a same-line speaker; only trust names that also speak on their own line
         real = {e['speaker'] for e in self.entries if e['speaker'] and e['speaker_own_line']}
         # Japanese drawn into graphics (screen headers, base icons...): edited like text, built by labels.py
+        # the setup screen's buttons come from a picture (the group's screen or setup_bg.png), not from the entries
+        setup_art = bool(self.group and self.group.setup_screen()) or any(
+            (d/SETUP_PNG).is_file() for d in (WORKSPACE/'images', BUNDLED.parent/'images'))
         for n, (key, (jp, _, _, _)) in enumerate(labels.LABELS.items(), 1):
             e = {
                 'id': labels.entry_id(key), 'file': labels.FILE, 'index': n, 'group': labels.GROUP,
@@ -164,8 +174,12 @@ class Catalog:
             if labels.LABELS[key][2] == 'button':
                 e['art'] = ("Drawn in serif capitals like the game's own COM button (A-Z, 0-9, - . & /); "
                             "longer words are drawn narrower to fit.")
+                if setup_art:
+                    e['art'] = "The setup screen picture's own buttons are used; the English here is not drawn."
+                    e['unused'] = 'setup screen picture'
             elif self.group and self.group.uses(key):
                 e['art'] = "The group's own picture is used; the English here is not drawn."
+                e['unused'] = "group's picture"
             elif self.group and key in groupart.LETTERING:
                 e['art'] = "Drawn in the group's header lettering (letters: " + ''.join(sorted(self.group.letters())) + ')'
 
@@ -174,6 +188,13 @@ class Catalog:
         for e in self.entries:
             if e['speaker'] and e['speaker'] not in real:
                 e.update(speaker=None, speaker_own_line=False, body=e['jp'])
+            # names and parts the game already writes in English (FALCON, RAPTOR FX+1...) need no translation
+            text = re.sub(r'«[^»]*»', '', e['body'])
+            if re.search('[0-9A-Za-z０-９Ａ-Ｚａ-ｚ]', text) and not JAPANESE.search(text):
+                e['english'] = True
+            reason = NOT_IN_GAME.get(e['file']) or ('unused slot ("Dummy")' if text.strip() in ('Dummy', 'ダミー') else None)
+            if reason:
+                e['unused'] = reason
         self._play_order()
 
     def _play_order(self):
@@ -355,10 +376,15 @@ class Project:
         else:
             self.speakers.pop(jp, None)
 
-    def set(self, entry_id, en=None, note=None, done=None, mtl=None, edited=None):
+    def set(self, entry_id, en=None, note=None, done=None, mtl=None, edited=None, hidden=None):
         """mtl = the English is Claude's machine translation; edited = a person changed the English.
-        Any change to the English counts as a person's edit, which also clears mtl."""
+        Any change to the English counts as a person's edit, which also clears mtl.
+        hidden = True/False overrides whether the entry counts as not shown in game; '' drops the override."""
         cur = dict(self.entries.get(entry_id, {}))
+        if hidden == '':
+            cur.pop('hidden', None)
+        elif hidden is not None:
+            cur['hidden'] = bool(hidden)
         if en is not None and en != cur.get('en', ''):
             edited, mtl = True, False
         for key, value in (('mtl', mtl), ('edited', edited)):
