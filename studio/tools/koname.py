@@ -2,9 +2,9 @@
 
 Kiley asked for that patch's screens after New Game: the intro that types out
 "Enter Pilot Name", the romaji keyboard with English buttons, and the confirmed
-screen. They are taken from the user's own copy of the patched ROM at build time
-("Front Mission 2089 - Border of Madness (En+Ko).nds", next to the Japanese ROM);
-nothing from it is stored in this repository.
+screen. They are taken from the patched ROM at build time ("Front Mission 2089 -
+Border of Madness (En+Ko).nds", next to the Japanese ROM) or, without it, from
+the copies of the files used saved in studio/assets/En+Ko name screens/.
 
 That patch's overlay 14 picks Korean, English or Japanese tables from a language
 setting its menus write to RAM. Here the reads of that setting load 2 (English)
@@ -21,6 +21,7 @@ the romaji keyboard has no kana keys, so nothing else uses those slots.
 """
 import hashlib
 import struct
+from pathlib import Path
 
 import msgcodec
 import portraits
@@ -76,6 +77,19 @@ SAME_PATH = ['data/name/CallCheckEnd_nsc.bin']  # changed in place by the patch
 
 def is_ko_rom(data):
     return hashlib.md5(data).hexdigest() == KO_MD5
+
+
+FOLDER = 'En+Ko name screens'
+
+
+class Folder:
+    """The files compose() reads, saved from the patched ROM at their ROM paths."""
+
+    def __init__(self, path):
+        self.path = Path(path)
+
+    def read(self, rel):
+        return (self.path/rel).read_bytes()
 
 
 def find(folders):

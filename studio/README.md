@@ -18,6 +18,20 @@ to their own copy of the game.
    Double-clicking `Launch Studio.pyw` while the Studio is running restarts it too
    (unless a build is running).
 
+## What comes with it
+
+* `translation/project.json`: the full English translation, and
+  `translation/images/`: the English mission titles. A new workspace starts
+  from them, so the first build already makes the finished patch.
+* `assets/Group Localization Files/`: the localization group's own English
+  graphics (title and base headers, base map rooms, opening captions, RESULTS,
+  terrain panel, font icons). Used when the group folder itself isn't next to
+  the Studio.
+* `assets/En+Ko name screens/`: the name entry screens of the Korean/English
+  fan patch. Used when that patch's ROM isn't next to the Japanese one.
+
+Only the Japanese ROM is needed from you; it is never stored here.
+
 ## Editing
 
 * Tabs split the 11,500 strings into the story, parts and items, names, and
@@ -106,7 +120,7 @@ spacing looks normal and straight double quotes work.
   title and base headers and base map rooms they drew, the opening demo
   captions, the RESULTS screen and the terrain panel, plus 12 icons in unused
   font slots. HQ and sortie headers get the Studio's English in the group's
-  lettering. Nothing from that folder is stored in this repository.
+  lettering. Without the folder it uses the copy in `assets/`.
 * `tools/tutorials.py` redraws the menus in the tutorial screenshots (Yuji's
   hangar lesson, the battle lessons) from the entries that translate the real
   menus, so the pictures always match them. `tools/buttonfont.py` holds the
@@ -114,4 +128,4 @@ spacing looks normal and straight double quotes work.
 * `tools/vcdiff.py` writes and checks the xdelta (VCDIFF) patch in pure Python.
 * `tools/test_studio.py` checks all of this against the real ROM.
 
-The ROM, builds and your workspace are ignored by git. Never commit the ROM.
+The ROM, builds and your workspace are ignored by git. Never commit the ROM itself.

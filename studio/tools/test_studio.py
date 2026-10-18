@@ -8,6 +8,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import groupart
 import heroname
 import koname
 import labels
@@ -61,6 +62,8 @@ def main():
         assert msgcodec.tokens_to_text(mf.tokens(99), cat.font).startswith('Initializing save data.')
         assert heroname.decode(check.read('overlay/14')) == 'Storm'
         for key, (_, _, kind, sources) in labels.LABELS.items():
+            if cat.group and key in groupart.ART:
+                continue  # the group's picture replaces only the files it drew
             for src in sources:
                 for path in (src.values() if isinstance(src, dict) else [] if kind in ('check', 'button') else [src]):
                     assert check.read(path) != cat.rom.read(path), path

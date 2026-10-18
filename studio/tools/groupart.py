@@ -13,8 +13,9 @@ graphic by graphic, which of them the patch uses (2026-10-18):
   ICONS      12 icons the group added to unused font slots; in the font, not used
              by any text yet
 
-The files are read from Kiley's folder at build time; nothing from them is stored
-in this repository. Without the folder every graphic is drawn by labels.py as before.
+The files are read from Kiley's folder at build time when it sits next to the
+Studio, otherwise from the copy of the files used in studio/assets/Group
+Localization Files/. Without either, every graphic is drawn by labels.py as before.
 """
 from collections import Counter
 from pathlib import Path
@@ -94,12 +95,17 @@ class GroupArt:
     def has(self, rel):
         return (self.folder/rel).is_file()
 
-    def missing(self):
+    @staticmethod
+    def needed():
+        """Every file of the group folder the Studio uses, relative to the folder."""
         need = [FONT, *SCREENS, *HEADERS]
         for key in ART:
             for src in labels.LABELS[key][3]:
                 need += [src['ncg']] if isinstance(src, dict) else [src]
-        return sorted({p[5:] if p.startswith('data/') else p for p in need if not self.has(p[5:] if p.startswith('data/') else p)})
+        return sorted({p[5:] if p.startswith('data/') else p for p in need})
+
+    def missing(self):
+        return [p for p in self.needed() if not self.has(p)]
 
     # ---- files used as they are ----
 

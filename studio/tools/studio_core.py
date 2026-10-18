@@ -31,7 +31,9 @@ STUDIO = Path(__file__).resolve().parents[1]
 ROM_FOLDERS = [STUDIO.parent, STUDIO.parent/'1. Original ROM', STUDIO.parent.parent/'1. Original ROM']
 ROM_DIR = STUDIO/'rom'
 # Kiley's "5. Group Localization Files" (the group's own English graphics) sits next to the Studio folder
-GROUP_FOLDERS = [STUDIO.parent, STUDIO.parent.parent]
+# the group's own graphics and the En+Ko name screens, shipped with the Studio
+ASSETS = STUDIO/'assets'
+GROUP_FOLDERS = [STUDIO.parent, STUDIO.parent.parent, ASSETS]
 WORKSPACE = STUDIO/'workspace'
 BUILDS = STUDIO/'builds'
 PROJECT = WORKSPACE/'project.json'
@@ -120,6 +122,8 @@ class Catalog:
         # The En+Ko fan patch's name entry screens are used when that ROM sits next to the Japanese one
         ko = koname.find([ROM_DIR, *ROM_FOLDERS, self.rom_path.parent])
         self.ko_rom = ndsrom.Rom(ko.read_bytes()) if ko else None
+        if not ko and (ASSETS/koname.FOLDER/koname.OVERLAY).is_file():
+            self.ko_rom = koname.Folder(ASSETS/koname.FOLDER)
         self.files = {}
         self.entries = []
         self.by_id = {}
@@ -275,7 +279,11 @@ class Project:
         # A PNG in images/ counts even if an older Studio saved the project without it
         for png in sorted(self.image_dir.glob('mtittle_bg_??.png')):
             self.images.setdefault(png.stem, f'images/{png.name}')
-        self.images = {k: v for k, v in self.images.items() if (self.path.parent/v).is_file()}
+        self.images = {k: v for k, v in self.images.items() if self.image_path(k, v).is_file()}
+
+    def image_path(self, name, rel=None):
+        """A title picture; the shipped project points at ../translation/images, so '..' is resolved first."""
+        return Path(os.path.normpath(self.path.parent/(rel or self.images[name])))
 
     @property
     def image_dir(self):
@@ -307,7 +315,7 @@ class Project:
         self.images[name] = f'images/{name}.png'
 
     def image_bytes(self, name):
-        return (self.path.parent/self.images[name]).read_bytes()
+        return self.image_path(name).read_bytes()
 
     def set_face(self, jp, face):
         if face:
