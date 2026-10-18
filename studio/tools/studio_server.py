@@ -28,6 +28,15 @@ class State:
         self.job = None
         self.load()
 
+    def fresh(self):
+        """Reload project.json if something else changed it (Claude, an import, a text editor), so a save
+        here never writes back an older copy over that change. Returns True when it reloaded."""
+        with self.lock:
+            if not self.project.changed_on_disk():
+                return False
+            self.project = core.Project(self.project.path)
+            return True
+
     def load(self):
         path, info = core.find_rom()
         if path is None:
@@ -78,6 +87,9 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
     def send(self, code, body, ctype='application/json; charset=utf-8', extra=None):
+        if isinstance(body, dict) and ctype.startswith('application/json'):
+            # lets the page tell its own saves from changes made elsewhere (see refreshProject in app.js)
+            body = {**body, '_stamp': list(STATE.project.stamp or []), '_reloaded': getattr(self, 'reloaded', False)}
         if not isinstance(body, (bytes, bytearray)):
             body = json.dumps(body, ensure_ascii=False).encode()
         self.send_response(code)
@@ -102,6 +114,9 @@ class Handler(BaseHTTPRequestHandler):
         url = urlparse(self.path)
         path = url.path
         try:
+            self.reloaded = STATE.fresh()
+            if path == '/api/stamp':
+                return self.send(200, {})
             if path == '/api/config':
                 cat = STATE.catalog
                 return self.send(200, {
@@ -173,6 +188,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get('Origin') not in (None, f'http://{self.headers.get("Host")}'):
             return self.send(403, {'error': 'cross-site request refused'})
         try:
+            self.reloaded = STATE.fresh()
             if path == '/api/restart':
                 threading.Thread(target=restart, daemon=True).start()
                 return self.send(200, {'ok': True, 'started': STARTED})

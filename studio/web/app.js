@@ -9,6 +9,12 @@ async function api(path, body) {
   const r = await fetch(path, opts);
   const data = await r.json();
   if (!r.ok) throw new Error(data.error || r.statusText);
+  if (data._stamp) {
+    const key = data._stamp.join(':');
+    // A save from this page moves the stamp on; anything else that moved it means the file changed elsewhere
+    if (S.stamp === undefined || (body !== undefined && !data._reloaded)) S.stamp = key;
+    else if (key !== S.stamp || data._reloaded) S.staleProject = true;
+  }
   return data;
 }
 const esc = s => s.replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
@@ -565,6 +571,20 @@ async function importFiles(fileList) {
     showJob(`<h3 class="ok">Import finished</h3><p>${fmt(r.changed)} change${r.changed === 1 ? '' : 's'} applied.${r.backup ? ` Your script before the import is saved as <code>${esc(r.backup)}</code>.` : ''}</p>`);
   };
 }
+
+// Pick up changes made to project.json outside this page (Claude, another tab, a text editor)
+async function refreshProject() {
+  if (!S.config || !S.config.rom) return;
+  await api('/api/stamp');
+  if (!S.staleProject) return;
+  S.staleProject = false; S.stamp = undefined;
+  const cat = await api('/api/catalog'); S.project = cat.project; S.speakers = cat.speakers; S.faces = cat.faces;
+  renderTabs(); applyFilter();
+  if (S.current) { const pending = $('#en') && $('#en').value; renderEditor(); if (pending !== undefined && S.dirty) $('#en').value = pending; }
+}
+window.addEventListener('focus', () => refreshProject().catch(() => {}));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshProject().catch(() => {}); });
+setInterval(() => { if (!document.hidden) refreshProject().catch(() => {}); }, 5000);
 
 $('#search').oninput = () => { S.page = 0; applyFilter(); };
 $('#file').onchange = $('#status').onchange = $('#empty').onchange = () => { S.page = 0; applyFilter(); };

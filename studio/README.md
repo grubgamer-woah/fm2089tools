@@ -17,6 +17,9 @@ to their own copy of the game.
    again, then reloads the page; use it after updating the Studio's files.
    Double-clicking `Launch Studio.pyw` while the Studio is running restarts it too
    (unless a build is running).
+   You don't need it after `workspace/project.json` is changed outside the Studio
+   (by hand, by a script or by Claude): the Studio notices, reloads the file before
+   its next save and refreshes the page within a few seconds, so those edits stay.
 
 ## What comes with it
 

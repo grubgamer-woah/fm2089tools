@@ -275,6 +275,7 @@ class Project:
         self.images = {}  # mission title name -> replacement PNG, relative to the project folder
         self.settings = {}  # build switches, such as staticons.SETTING
         source = self.path if self.path.exists() else BUNDLED if self.path == PROJECT and BUNDLED.is_file() else None
+        self.stamp = self.disk_stamp()
         if source:
             data = json.loads(source.read_text(encoding='utf-8'))
             self.entries = data.get('entries', {})
@@ -302,6 +303,17 @@ class Project:
     def image_dir(self):
         return self.path.parent/'images'
 
+    def disk_stamp(self):
+        """When and how big project.json was last written, to notice edits made outside the Studio."""
+        try:
+            st = self.path.stat()
+        except FileNotFoundError:
+            return None
+        return st.st_mtime_ns, st.st_size
+
+    def changed_on_disk(self):
+        return self.disk_stamp() != self.stamp
+
     def save(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
         if self.path.exists():
@@ -314,6 +326,7 @@ class Project:
                 'settings': self.settings, 'entries': self.entries}
         tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding='utf-8')
         os.replace(tmp, self.path)
+        self.stamp = self.disk_stamp()
 
     def set_image(self, name, png_bytes):
         """Store a replacement mission title (None removes it)."""
