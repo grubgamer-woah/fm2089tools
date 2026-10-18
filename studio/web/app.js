@@ -23,11 +23,11 @@ async function start() {
     $('#rom-missing').hidden = false; $('#app').hidden = true; $('#tabs').hidden = true;
     $('#rom-problem').textContent = S.config.rom_problem;
     $('#base').textContent = 'No ROM loaded';
-    for (const b of ['#build', '#validate', '#import', '#titles']) $(b).disabled = true;
+    for (const b of ['#build', '#validate', '#import', '#import-multi', '#export-script', '#titles']) $(b).disabled = true;
     return;
   }
   $('#rom-missing').hidden = true; $('#app').hidden = false; $('#tabs').hidden = false;
-  for (const b of ['#build', '#validate', '#import', '#titles']) $(b).disabled = false;
+  for (const b of ['#build', '#validate', '#import', '#import-multi', '#export-script', '#titles']) $(b).disabled = false;
   $('#base').textContent = 'ROM: ' + S.config.rom;
   const [cat, font] = await Promise.all([api('/api/catalog'), api('/api/font')]);
   S.entries = cat.entries; S.project = cat.project;
@@ -498,12 +498,72 @@ async function build() {
   $('#build').disabled = false;
 }
 
-async function importFile(file) {
-  const text = await file.text();
-  const r = await api('/api/import', text);
-  const cat = await api('/api/catalog'); S.project = cat.project; S.speakers = cat.speakers;
-  renderTabs(); applyFilter(); if (S.current) renderEditor();
-  showJob(`<h3>Import finished</h3><p>${fmt(r.imported)} English strings imported.${r.unknown_count ? ` ${r.unknown_count} rows had unknown IDs (for example ${esc(r.unknown.slice(0, 5).join(', '))}).` : ''}</p>`);
+// Script exports: the changes since the last export, as a .md others can import
+async function exportScript() {
+  if (S.dirty && !(await save(true))) return;
+  let author = S.config.author;
+  if (!author) {
+    author = prompt('Your name, so others can see who the script is from (optional):', '');
+    if (author === null) return;
+    S.config.author = author.trim();
+  }
+  const r = await api('/api/export-script', {author});
+  showJob(r.file
+    ? `<h3 class="ok">Script exported</h3><p>${fmt(r.count)} change${r.count === 1 ? '' : 's'} since ${esc(r.since)}, saved to <code>${esc(r.file)}</code>.
+       The next export starts from here.</p><button id="open-exports">Open exports folder</button>`
+    : `<h3>Nothing to export</h3><p>No changes since ${esc(r.since)}.</p><button id="open-exports">Open exports folder</button>`);
+  $('#open-exports').onclick = () => api('/api/open', {path: r.folder});
+}
+
+const textBox = (t, cls = '') => t ? `<div class="merge-text ${cls}">${esc(t)}</div>` : '<div class="merge-text none">(empty)</div>';
+const what = item => item.kind === 'English' || item.kind === 'note' ? `${esc(item.name)}${item.kind === 'note' ? ' <span class="badge">note</span>' : ''}` : `${item.kind === 'name' ? 'Speaker name' : 'Portrait'}: ${esc(item.name)}`;
+
+// Import one or several scripts: preview what changes, pick where they disagree, then apply
+async function importFiles(fileList) {
+  if (S.dirty && !(await save(true))) return;
+  const files = await Promise.all([...fileList].map(async f => ({name: f.name, text: await f.text()})));
+  flash('Reading ' + files.map(f => f.name).join(', ') + '…');
+  const plan = await api('/api/import/preview', {files});
+  if (!plan.ok) { showJob(`<h3 class="bad">Import stopped</h3><p>${esc(plan.error)}</p>`); return; }
+  const names = files.map(f => f.name);
+  const c = plan.conflicts, a = plan.auto;
+  if (!c.length && !a.length) {
+    showJob(`<h3>Nothing to import</h3><p>${names.map(esc).join(', ')} ${names.length === 1 ? 'has' : 'have'} nothing that differs from your script.</p>`);
+    return;
+  }
+  showJob(`<h3>Import ${names.length === 1 ? esc(names[0]) : names.length + ' scripts'}</h3>
+    <p>${fmt(a.length)} change${a.length === 1 ? '' : 's'} will go in automatically.
+    ${c.length ? `<b class="warn-text">${fmt(c.length)} line${c.length === 1 ? ' needs' : 's need'} your choice</b> (your current text is kept unless you pick another).` : ''}
+    ${plan.unknown.length ? `${fmt(plan.unknown.length)} unknown IDs are skipped (for example ${esc(plan.unknown.slice(0, 5).join(', '))}).` : ''}</p>
+    ${c.length ? `<div class="buttons">Choose for every line: <button data-all="-1">Keep mine</button>${names.map((n, i) => `<button data-all-file="${i}">${esc(n)}</button>`).join('')}</div>
+    <div class="merge-list">${c.map((item, i) => `<div class="merge-item">
+      <div class="merge-head"><b>${what(item)}</b><span>${esc(item.why)}</span></div>
+      ${item.jp ? `<div class="merge-jp">${item.speaker ? `<span class="speaker">${esc(item.speaker)}</span> ` : ''}${esc(item.jp)}</div>` : ''}
+      <label class="pick"><input type="radio" name="c${i}" value="-1" checked><span><small>Keep mine</small>${textBox(item.current)}</span></label>
+      ${item.options.map((o, j) => `<label class="pick"><input type="radio" name="c${i}" value="${j}" data-files="${esc(JSON.stringify(o.files))}"><span><small>${o.files.map(esc).join(', ')}</small>${textBox(o.value, 'new')}</span></label>`).join('')}
+    </div>`).join('')}</div>` : ''}
+    ${a.length ? `<details class="merge-auto"><summary>Show the ${fmt(a.length)} automatic change${a.length === 1 ? '' : 's'}</summary>
+      ${a.slice(0, 500).map(item => `<div class="merge-item small"><div class="merge-head"><b>${what(item)}</b><span>${item.files.map(esc).join(', ')}</span></div>
+      <div class="merge-pair">${textBox(item.current)}${textBox(item.new, 'new')}</div></div>`).join('')}
+      ${a.length > 500 ? `<p class="muted">…and ${fmt(a.length - 500)} more.</p>` : ''}</details>` : ''}
+    <div class="buttons"><button id="import-apply" class="primary">Apply</button><button id="import-cancel">Cancel</button>
+    <span class="muted">Your script is backed up first.</span></div>`);
+  document.querySelectorAll('[data-all]').forEach(b => b.onclick = () => document.querySelectorAll('.merge-item input[value="-1"]').forEach(r => r.checked = true));
+  document.querySelectorAll('[data-all-file]').forEach(b => b.onclick = () => {
+    const name = names[+b.dataset.allFile];
+    document.querySelectorAll('.merge-item input[data-files]').forEach(r => { if (JSON.parse(r.dataset.files).includes(name)) r.checked = true; });
+  });
+  $('#import-cancel').onclick = () => { $('#job').hidden = true; };
+  $('#import-apply').onclick = async () => {
+    const choices = {};
+    c.forEach((item, i) => { choices[item.key.join('\t')] = +document.querySelector(`input[name="c${i}"]:checked`).value; });
+    $('#import-apply').disabled = true;
+    const r = await api('/api/import/apply', {files, choices});
+    if (!r.ok) { showJob(`<h3 class="bad">Import stopped</h3><p>${esc(r.error)}</p>`); return; }
+    const cat = await api('/api/catalog'); S.project = cat.project; S.speakers = cat.speakers; S.faces = cat.faces;
+    renderTabs(); applyFilter(); if (S.current) renderEditor();
+    showJob(`<h3 class="ok">Import finished</h3><p>${fmt(r.changed)} change${r.changed === 1 ? '' : 's'} applied.${r.backup ? ` Your script before the import is saved as <code>${esc(r.backup)}</code>.` : ''}</p>`);
+  };
 }
 
 $('#search').oninput = () => { S.page = 0; applyFilter(); };
@@ -521,8 +581,15 @@ $('#stat-icons').onchange = async ev => {
   await api('/api/settings', {stat_icons: ev.target.checked});
   flash(ev.target.checked ? 'Builds use the stat icons' : 'Builds use the stat names (ATK, ACC…)');
 };
+$('#export-script').onclick = () => exportScript().catch(err => showJob(`<h3 class="bad">Export failed</h3><p>${esc(err.message)}</p>`));
 $('#import').onclick = () => $('#import-file').click();
-$('#import-file').onchange = ev => { if (ev.target.files[0]) importFile(ev.target.files[0]); ev.target.value = ''; };
+$('#import-multi').onclick = () => $('#import-files').click();
+for (const id of ['#import-file', '#import-files']) {
+  $(id).onchange = ev => {
+    const files = [...ev.target.files]; ev.target.value = '';
+    if (files.length) importFiles(files).catch(err => showJob(`<h3 class="bad">Import failed</h3><p>${esc(err.message)}</p>`));
+  };
+}
 $('#retry').onclick = async () => { await api('/api/reload', {}); start(); };
 document.addEventListener('keydown', ev => {
   if (!S.current) return;

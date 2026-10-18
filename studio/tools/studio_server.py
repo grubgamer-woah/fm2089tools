@@ -42,8 +42,11 @@ RESTART = False
 STARTED = time.time()
 
 
-def open_folder(path):
-    if os.name == 'nt':
+def open_folder(path, select=None):
+    """Open a folder in the file manager; on Windows select points Explorer at one file in it."""
+    if os.name == 'nt' and select:
+        subprocess.Popen(f'explorer /select,"{select}"')  # noqa: S602 - local desktop helper
+    elif os.name == 'nt':
         os.startfile(path)  # noqa: S606 - local desktop helper
     elif sys.platform == 'darwin':
         subprocess.Popen(['open', path])
@@ -104,7 +107,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, {
                     'application': APP, 'started': STARTED, 'rom': str(cat.rom_path) if cat else None, 'rom_problem': STATE.rom_problem,
                     'rom_dir': str(core.ROM_DIR), 'groups': [[k, label] for k, label, _ in core.GROUPS],
-                    'project': str(STATE.project.path), 'screen_width': core.SCREEN_WIDTH,
+                    'project': str(STATE.project.path), 'author': STATE.project.settings.get('author', ''), 'screen_width': core.SCREEN_WIDTH,
                     'stat_icons': STATE.project.settings.get(core.staticons.SETTING, True),
                     'controls': {f'{k:04X}': v for k, v in core.msgcodec.CONTROL_NAMES.items()}})
             if path == '/api/catalog':
@@ -246,12 +249,35 @@ class Handler(BaseHTTPRequestHandler):
                         STATE.project.settings[core.staticons.SETTING] = bool(data[core.staticons.SETTING])
                     STATE.project.save()
                 return self.send(200, {'ok': True, 'settings': STATE.project.settings})
-            if path == '/api/import':
-                text = self.body().decode('utf-8', 'replace')
+            if path == '/api/export-script':
+                data = json.loads(self.body() or b'{}')
+                author = (data.get('author') or '').strip()
                 with STATE.lock:
-                    count, unknown = core.import_text(cat, STATE.project, text)
+                    if author:
+                        STATE.project.settings['author'] = author
+                        STATE.project.save()
+                    file, count, since = core.export_script(cat, STATE.project, author)
+                core.EXPORTS.mkdir(parents=True, exist_ok=True)
+                if data.get('open', True):
+                    try:
+                        open_folder(str(core.EXPORTS), str(file) if file else None)
+                    except OSError:
+                        pass  # the page still shows where the file is
+                return self.send(200, {'file': str(file) if file else None, 'count': count, 'since': since, 'folder': str(core.EXPORTS)})
+            if path in ('/api/import/preview', '/api/import/apply'):
+                data = json.loads(self.body())
+                files = [(f['name'], f['text']) for f in data['files']]
+                with STATE.lock:
+                    try:
+                        plan = core.import_plan(cat, STATE.project, files)
+                    except ValueError as error:
+                        return self.send(200, {'ok': False, 'error': str(error)})
+                    if path.endswith('preview'):
+                        return self.send(200, {'ok': True, **plan})
+                    backup = core.backup_project(STATE.project)
+                    changed = core.scriptio.apply(STATE.project, plan, data.get('choices') or {})
                     STATE.project.save()
-                return self.send(200, {'imported': count, 'unknown': unknown[:20], 'unknown_count': len(unknown)})
+                return self.send(200, {'ok': True, 'changed': changed, 'backup': str(backup) if backup else None})
             if path == '/api/build':
                 if STATE.job and STATE.job.get('running'):
                     return self.send(409, {'error': 'A build is already running'})
@@ -261,8 +287,8 @@ class Handler(BaseHTTPRequestHandler):
             if path == '/api/open':
                 data = json.loads(self.body())
                 target = Path(data['path']).resolve()
-                if core.BUILDS.resolve() not in [target, *target.parents]:
-                    return self.send(403, {'error': 'only build folders can be opened'})
+                if not {core.BUILDS.resolve(), core.EXPORTS.resolve()} & {target, *target.parents}:
+                    return self.send(403, {'error': 'only build and export folders can be opened'})
                 open_folder(str(target))
                 return self.send(200, {'ok': True})
             self.send(404, {'error': 'not found'})

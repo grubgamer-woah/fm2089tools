@@ -22,6 +22,7 @@ import labels
 import msgcodec
 import ndsrom
 import portraits
+import scriptio
 import titles
 import staticons
 import tutorials
@@ -37,6 +38,7 @@ ASSETS = STUDIO/'assets'
 GROUP_FOLDERS = [STUDIO.parent, STUDIO.parent.parent, ASSETS]
 WORKSPACE = STUDIO/'workspace'
 BUILDS = STUDIO/'builds'
+EXPORTS = STUDIO/'exports'
 PROJECT = WORKSPACE/'project.json'
 # Kiley's English, shipped with the Studio: a new workspace starts from it, and Import takes it too
 BUNDLED = STUDIO/'translation'/'project.json'
@@ -378,31 +380,41 @@ def export_tsv(catalog, project):
     return buf.getvalue()
 
 
-def import_tsv(catalog, project, text):
-    """Accepts this Studio's export or msgToTxt.py .txt files (stringID<TAB>"text")."""
-    count, unknown = 0, []
-    rows = csv.reader(io.StringIO(text.lstrip('﻿')), delimiter='\t')
+def tsv_rows(catalog, project, text, unknown=None):
+    """(id, english, note, speaker_english) for each row of this Studio's export or a msgToTxt.py .txt
+    (stringID<TAB>"text"); English that is just the Japanese comes back empty."""
+    rows = csv.reader(io.StringIO(text.lstrip('\ufeff')), delimiter='\t')
     for row in rows:
         if not row or row[0] == 'stringID':
             continue
         sid = row[0].strip()
         if sid not in catalog.by_id:
-            unknown.append(sid); continue
+            if unknown is not None:
+                unknown.append(sid)
+            continue
         e = catalog.by_id[sid][2]
         en = row[1] if len(row) > 1 else ''
-        if len(row) > 5 and e['speaker'] and row[5]:
-            project.set_speaker(e['speaker'], row[5])
+        speaker_en = row[5] if len(row) > 5 and e['speaker'] else ''
         if e['speaker']:
             # msgToTxt-style rows still carry the "Name:" prefix; the Studio adds it itself
-            for prefix in (e['speaker']+'：', e['speaker']+':', (project.speakers.get(e['speaker']) or '\0')+':'):
+            for prefix in (e['speaker']+'：', e['speaker']+':', (speaker_en or project.speakers.get(e['speaker']) or '\0')+':'):
                 if en.startswith(prefix):
                     en = en[len(prefix):].lstrip(' ')
                     en = en[1:] if en.startswith('\n') and e['speaker_own_line'] else en
                     break
-        if en and en not in (e['jp'], e['body']):
+        yield sid, en if en not in (e['jp'], e['body']) else '', row[3] if len(row) > 3 else '', speaker_en
+
+
+def import_tsv(catalog, project, text):
+    """Accepts this Studio's export or msgToTxt.py .txt files (stringID<TAB>"text")."""
+    count, unknown = 0, []
+    for sid, en, note, speaker_en in tsv_rows(catalog, project, text, unknown):
+        if speaker_en:
+            project.set_speaker(catalog.by_id[sid][2]['speaker'], speaker_en)
+        if en:
             project.set(sid, en=en); count += 1
-        if len(row) > 3 and row[3]:
-            project.set(sid, note=row[3])
+        if note:
+            project.set(sid, note=note)
     return count, unknown
 
 
@@ -428,6 +440,43 @@ def import_text(catalog, project, text):
     if text.lstrip('\ufeff \r\n').startswith('{'):
         return import_project(catalog, project, text)
     return import_tsv(catalog, project, text)
+
+
+def export_script(catalog, project, author='', folder=EXPORTS):
+    """Write the changes since the last export (or since the shipped translation) as a .md in folder.
+    Returns (path or None when nothing changed, number of changes, what it compared against)."""
+    base, since = scriptio.baseline(project, BUNDLED)
+    changes = scriptio.diff(catalog, base, scriptio.state(project))
+    if not changes:
+        return None, 0, since
+    folder.mkdir(parents=True, exist_ok=True)
+    who = re.sub(r'[^\w .-]+', '', author).strip()
+    path = folder/f'FM2089 script{" - " + who if who else ""} - {dt.datetime.now():%Y-%m-%d %H%M%S}.md'
+    path.write_text(scriptio.to_md(catalog, project, changes, author, since), encoding='utf-8')
+    scriptio.write_snapshot(project)
+    return path, len(changes), since
+
+
+def import_plan(catalog, project, files):
+    """files = [(name, text)]: what importing them together would change, and where they conflict."""
+    sources = []
+    for name, text in files:
+        try:
+            sources.append((name, scriptio.parse(catalog, project, text, tsv_rows)))
+        except ValueError as error:
+            raise ValueError(f'{name}: {error}') from error
+    return scriptio.plan(catalog, project, sources)
+
+
+def backup_project(project):
+    """Copy project.json to workspace/backups before an import changes it; returns the copy's path."""
+    if not project.path.exists():
+        return None
+    folder = project.path.parent/'backups'
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder/f'project-before-import-{dt.datetime.now():%Y%m%d-%H%M%S}.json'
+    path.write_bytes(project.path.read_bytes())
+    return path
 
 
 def title_files(catalog, project, name, png_bytes=None):

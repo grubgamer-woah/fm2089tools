@@ -15,6 +15,7 @@ import labels
 import msgcodec
 import ndsrom
 import portraits
+import scriptio
 import tutorials
 import studio_core as core
 import vcdiff
@@ -51,6 +52,30 @@ def main():
             shipped = core.Project(Path(tmp)/'shipped.json')
             count, unknown = core.import_text(cat, shipped, core.BUNDLED.read_text(encoding='utf-8'))
             assert count > 9000 and not unknown, (count, unknown[:5])
+
+        # Script exports merge: base A A A, one script makes it A B A, another A A C -> A B C;
+        # a line both scripts change differently waits for a choice
+        a, b, c, d = (e['id'] for e in cat.entries[:4])
+        scripts = []
+        for who, sid in (('B', b), ('C', c)):
+            other = core.Project(Path(tmp)/who/'project.json')
+            for i in (a, b, c, d):
+                other.set(i, en='A')
+            scriptio.write_snapshot(other)
+            other.set(sid, en=who)
+            other.set(d, en=f'{who} says so')
+            path, n, _ = core.export_script(cat, other, who, Path(tmp)/'exports')
+            assert n == 2 and core.export_script(cat, other, who, Path(tmp)/'exports')[0] is None
+            scripts.append((path.name, path.read_text(encoding='utf-8')))
+        base = core.Project(Path(tmp)/'base.json')
+        for i in (a, b, c, d):
+            base.set(i, en='A')
+        plan = core.import_plan(cat, base, scripts)
+        assert len(plan['auto']) == 2 and len(plan['conflicts']) == 1, plan
+        scriptio.apply(base, plan, {'\t'.join(plan['conflicts'][0]['key']): 1})
+        assert [base.entries[i]['en'] for i in (a, b, c, d)] == ['A', 'B', 'C', 'C says so']
+        everything = scriptio.diff(cat, {}, scriptio.state(project))
+        assert scriptio.parse_md(scriptio.to_md(cat, project, everything, '', '')) == everything
 
         result = core.build(cat, project, Path(tmp)/'builds', log=lambda m: None)
         assert result['ok'], result

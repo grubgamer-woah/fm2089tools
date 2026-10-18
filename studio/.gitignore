@@ -3,5 +3,6 @@ rom/*
 !rom/PUT-ROM-HERE.txt
 *.nds
 builds/
+exports/
 workspace/
 __pycache__/

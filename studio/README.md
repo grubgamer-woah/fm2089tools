@@ -68,15 +68,37 @@ Only the Japanese ROM is needed from you; it is never stored here.
 * Edits are saved to `studio/workspace/project.json` (the save before it is kept
   as `project.previous.json`).
 
+## Sharing scripts
+
+**Export script** saves the changes made since your last export (English,
+notes, speaker names and portraits) as a readable `.md` file in
+`studio/exports/` and opens that folder, so you can send it to others. Each
+entry shows its ID, the Japanese, the old English and the new English. The
+first export compares against the translation shipped in
+`translation/project.json`.
+
+**Import script** loads one of those files (or a `.tsv`, a `.txt` made by
+`msgToTxt.py`, or another Studio's `project.json`). **Import multiple** loads
+several at once. Either way the Studio first shows what will change:
+
+* A line changed by only one file (or changed the same way by all of them) goes
+  in automatically. If the base says `A A A`, one script says `A B A` and
+  another says `A A C`, the result is `A B C`.
+* A line the files change in different ways, or one you changed too since the
+  sender exported, is listed with each version so you can pick which wins
+  (yours is kept unless you pick another).
+
+Nothing changes until you press **Apply**, and your `project.json` is copied to
+`workspace/backups/` first.
+
 **Export TSV** writes every string (ID, English, Japanese, note) for a
-spreadsheet. **Import** reads that file back, a `.txt` made by `msgToTxt.py`
-that already has English in it, or another Studio's `project.json`.
+spreadsheet.
 
 The full English translation ships with the Studio in
 `translation/project.json` (every string and speaker name). The first time the
 Studio starts without a `workspace/project.json`, it starts from that file, so
 a fresh download already has the English. To bring a newer copy into a
-workspace you already have, **Import** `translation/project.json`: its English
+workspace you already have, **Import script** `translation/project.json`: its English
 replaces yours string by string, and your other strings stay as they are.
 
 ## Setup buttons
