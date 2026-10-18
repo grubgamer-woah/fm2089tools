@@ -23,6 +23,7 @@ import msgcodec
 import ndsrom
 import portraits
 import titles
+import staticons
 import tutorials
 import vcdiff
 
@@ -270,6 +271,7 @@ class Project:
         self.speakers = {}  # Japanese speaker name -> English name, shared by every line
         self.faces = {}  # Japanese speaker name -> portrait picked in the Studio ('-' = none); never built
         self.images = {}  # mission title name -> replacement PNG, relative to the project folder
+        self.settings = {}  # build switches, such as staticons.SETTING
         source = self.path if self.path.exists() else BUNDLED if self.path == PROJECT and BUNDLED.is_file() else None
         if source:
             data = json.loads(source.read_text(encoding='utf-8'))
@@ -277,6 +279,7 @@ class Project:
             self.speakers = data.get('speakers', {})
             self.faces = data.get('faces', {})
             self.images = data.get('images', {})
+            self.settings = data.get('settings', {})
         # A PNG in images/ counts even if an older Studio saved the project without it
         for png in sorted(self.image_dir.glob('mtittle_bg_??.png')):
             self.images.setdefault(png.stem, f'images/{png.name}')
@@ -287,9 +290,11 @@ class Project:
         return Path(os.path.normpath(self.path.parent/(rel or self.images[name])))
 
     def setup_png(self):
-        """The edited Wanzer setup screen (images/setup_bg.png), or None."""
-        path = self.image_dir/SETUP_PNG
-        return path.read_bytes() if path.is_file() else None
+        """The edited Wanzer setup screen (images/setup_bg.png, else the shipped one), or None."""
+        for path in (self.image_dir/SETUP_PNG, BUNDLED.parent/'images'/SETUP_PNG):
+            if path.is_file():
+                return path.read_bytes()
+        return None
 
     @property
     def image_dir(self):
@@ -304,7 +309,7 @@ class Project:
         data = {'application': 'fm2089-translation-studio', 'version': 1, 'rom_md5': CLEAN_MD5,
                 'saved': dt.datetime.now().isoformat(timespec='seconds'),
                 'speakers': self.speakers, 'faces': self.faces, 'images': dict(sorted(self.images.items())),
-                'entries': self.entries}
+                'settings': self.settings, 'entries': self.entries}
         tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding='utf-8')
         os.replace(tmp, self.path)
 
@@ -464,11 +469,14 @@ def compose_images(catalog, project, log=print):
 def compose(catalog, project):
     """Return ({rom path: new .msg bytes}, problems)."""
     per_file, problems = {}, []
+    # the group's stat icons replace the stat names of the parts info (they come with the group's font)
+    icons = project.settings.get(staticons.SETTING, True) and catalog.group is not None
     for sid, p in project.entries.items():
         if 'en' not in p or sid not in catalog.by_id:
             continue
         name, i, e = catalog.by_id[sid]
-        res = catalog.check(sid, p['en'], project.speakers)
+        en = staticons.with_icons(p['en']) if icons and staticons.applies(sid) else p['en']
+        res = catalog.check(sid, en, project.speakers)
         if name is None:  # a graphic; labels.compose draws it
             problems += [{'id': sid, 'level': 'error', 'message': msg} for msg in res['errors']]
             continue
@@ -481,7 +489,8 @@ def compose(catalog, project):
     ko_files = {}
     if catalog.ko_rom:
         # digit and symbol keys of the patch's keyboard show these in dialogue
-        ko_files, name_chars = koname.compose(catalog.ko_rom, catalog.font)
+        ko_files, name_chars = koname.compose(catalog.ko_rom, catalog.font,
+                                              catalog.group.name_keys() if catalog.group else None)
         for i, ch in name_chars.items():
             per_file.setdefault('MsgLabels_font.msg', {})[i] = msgcodec.tokens_to_bytes([('g', catalog.font.char_glyph(ch))])
     files = {MSG_DIR+name: catalog.files[name].build(repl) for name, repl in per_file.items()}

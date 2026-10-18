@@ -10,8 +10,8 @@ graphic by graphic, which of them the patch uses (2026-10-18):
              letters are cut out of the group's own headers, so only letters
              that appear there (plus q, h and U, built from p, n+k and O) exist
   SCREENS    screens the Studio has no text entry for, used as they are
-  ICONS      12 icons the group added to unused font slots; in the font, not used
-             by any text yet
+  ICONS      12 icons the group added to unused font slots, plus their narrower ×
+  NAME_KEYS  the Delete / Back / Ok keys of the name entry screen
 
 The files are read from Kiley's folder at build time when it sits next to the
 Studio, otherwise from the copy of the files used in studio/assets/Group
@@ -25,6 +25,8 @@ import labels
 FOLDER_SUFFIX = 'Group Localization Files'
 FONT = 'font/msgcmn.fnt'
 ICONS = range(0x62D, 0x639)
+TIMES = 0x4F                          # the group's narrower × (Kiley, 2026-10-18)
+NAME_KEYS = 'name/NameEntryEnv.NCGR'  # Delete / Back / Ok keys, put into the En+Ko keyboard
 
 ART = {'title_startmenu', 'title_newgame', 'title_nextnewgame', 'title_loadgame', 'title_config',
        'base_mercenarypost', 'base_arena', 'base_saveandload',
@@ -98,7 +100,7 @@ class GroupArt:
     @staticmethod
     def needed():
         """Every file of the group folder the Studio uses, relative to the folder."""
-        need = [FONT, *SCREENS, *HEADERS]
+        need = [FONT, NAME_KEYS, *SCREENS, *HEADERS]
         for key in ART:
             for src in labels.LABELS[key][3]:
                 need += [src['ncg']] if isinstance(src, dict) else [src]
@@ -121,11 +123,14 @@ class GroupArt:
         return {'data/'+p: self.read(p) for p in SCREENS}
 
     def icons(self):
-        """{glyph: font record} of the group's icons."""
+        """{glyph: font record} of the group's icons and ×."""
         import fontdata
         font = fontdata.Font(self.read(FONT))
         return {g: bytes(font.data[font.offsets[g]:font.offsets[g]+2+font.data[font.offsets[g]+1]*font.height])
-                for g in ICONS if font.offsets[g]}
+                for g in [*ICONS, TIMES] if font.offsets[g]}
+
+    def name_keys(self):
+        return self.read(NAME_KEYS)
 
     # ---- lettering ----
 

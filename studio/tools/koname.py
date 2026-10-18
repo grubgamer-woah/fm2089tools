@@ -72,6 +72,12 @@ KEY_GLYPHS = {
     23: ['', '', '', '', '', '', '', '', '', '', '', '', '.############'],              # _
 }
 ENV_KINDS = ('NANR', 'NCER', 'NCGR', 'NCLR')
+# Tiles of NameEntryEnv.NCGR (32 bytes each after the 0x30 header): the page arrows (cells 0-1,
+# blanked: the romaji keyboard has one page) and the DEL / RET / OK. buttons (cells 2-4), which
+# Kiley wanted from the group's sheet (Delete / Back / Ok, same cell layout)
+ENV_TILES = 0x30
+ARROW_TILES = range(0, 2)
+BUTTON_TILES = range(4, 28)
 SAME_PATH = ['data/name/CallCheckEnd_nsc.bin']  # changed in place by the patch
 
 
@@ -143,9 +149,22 @@ def redraw_keys(data):
     return titles.lz10_compress(bytes(d))
 
 
-def compose(ko_rom, font):
+def env_sheet(ko_ncgr, group_ncgr=None):
+    """The patch's key sheet without the page arrow, with the group's Delete / Back / Ok if given."""
+    d = bytearray(portraits.lz10(ko_ncgr))
+    for t in ARROW_TILES:
+        d[ENV_TILES+t*32:ENV_TILES+t*32+32] = bytes(32)
+    if group_ncgr:
+        g = portraits.lz10(group_ncgr)
+        a, b = ENV_TILES+BUTTON_TILES[0]*32, ENV_TILES+(BUTTON_TILES[-1]+1)*32
+        d[a:b] = g[a:b]
+    return titles.lz10_compress(bytes(d))
+
+
+def compose(ko_rom, font, group_keys=None):
     """({rom path: bytes}, {MsgLabels_font index: character}) for the Japanese ROM.
-    ko_rom: ndsrom.Rom of the En+Ko ROM; font: fontdata.Font of the build."""
+    ko_rom: ndsrom.Rom of the En+Ko ROM; font: fontdata.Font of the build;
+    group_keys: the group's NameEntryEnv.NCGR (Delete / Back / Ok), if any."""
     ov = bytearray(ko_rom.read(OVERLAY))
     if len(ov) != SIZE:
         raise ValueError('overlay 14 of the En+Ko ROM is not the expected size')
@@ -176,6 +195,7 @@ def compose(ko_rom, font):
             files[jp[1:]] = redraw_keys(ko_rom.read(src)) if jp == KEY_SHEET else ko_rom.read(src)
     for kind in ENV_KINDS:
         files[f'data/name/NameEntryEnv.{kind}'] = ko_rom.read(f'data/name/en/env/NameEntryEnv.{kind}')
+    files['data/name/NameEntryEnv.NCGR'] = env_sheet(files['data/name/NameEntryEnv.NCGR'], group_keys)
     for path in SAME_PATH:
         files[path] = ko_rom.read(path)
     files[OVERLAY] = bytes(ov)

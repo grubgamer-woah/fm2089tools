@@ -18,6 +18,7 @@ function flash(text) { $('#saved').textContent = text; clearTimeout(flash.t); fl
 async function start() {
   S.config = await api('/api/config');
   $('#project-path').textContent = S.config.project;
+  $('#stat-icons').checked = S.config.stat_icons;
   if (!S.config.rom) {
     $('#rom-missing').hidden = false; $('#app').hidden = true; $('#tabs').hidden = true;
     $('#rom-problem').textContent = S.config.rom_problem;
@@ -516,6 +517,10 @@ $('#titles').onclick = () => showTitles();
 $('#title-files').onchange = ev => { const files = [...ev.target.files]; if (files.length) uploadTitles(files, ev.target.dataset.name); ev.target.value = ''; };
 $('#speaker').onchange = () => { S.page = 0; applyFilter(); };
 $('#build').onclick = build;
+$('#stat-icons').onchange = async ev => {
+  await api('/api/settings', {stat_icons: ev.target.checked});
+  flash(ev.target.checked ? 'Builds use the stat icons' : 'Builds use the stat names (ATK, ACC…)');
+};
 $('#import').onclick = () => $('#import-file').click();
 $('#import-file').onchange = ev => { if (ev.target.files[0]) importFile(ev.target.files[0]); ev.target.value = ''; };
 $('#retry').onclick = async () => { await api('/api/reload', {}); start(); };

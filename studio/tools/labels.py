@@ -232,6 +232,14 @@ class Screen:
                     self.tiles += key
                 self.map[(y0//8+ty)*self.tw + x0//8+tx] = self.known[key] | pal << 12
 
+    def compact(self):
+        """Drop the tiles no map entry uses any more (when no other map shares this tile sheet)."""
+        used = sorted({e & 0x3FF for e in self.map})
+        new = {old: i for i, old in enumerate(used)}
+        self.tiles = bytearray(b''.join(self.tiles[i*32:i*32+32] for i in used))
+        self.map = [e & ~0x3FF | new[e & 0x3FF] for e in self.map]
+        self.known = {}
+
     def ncg(self):
         count = len(self.tiles)//32
         if count > 1024:
@@ -457,8 +465,9 @@ class Picture:
                 if rgb != self.img[y][x]:
                     self.set(x, y, rgb)
 
-    def save(self):
-        """The new (ncg, nsc), compressed like the originals."""
+    def save(self, compact=False):
+        """The new (ncg, nsc), compressed like the originals.
+        compact: also drop the tiles the picture no longer uses (only for a tile sheet no other map shares)."""
         for tx, ty in sorted(self.touched):
             p = self.pals[tx, ty]
             pal = self.colors[p*16:p*16+16]
@@ -472,6 +481,8 @@ class Picture:
                     row.append(cache[rgb])
                 rows.append(row)
             self.screen.put(tx*8, ty*8, rows, p)
+        if compact:
+            self.screen.compact()
         ncg_raw, nsc_raw = self.raw
         ncg = titles.lz10_compress(self.screen.ncg()) if ncg_raw[:1] == b'\x10' else self.screen.ncg()
         nsc = titles.lz10_compress(self.screen.nsc()) if nsc_raw[:1] == b'\x10' else self.screen.nsc()

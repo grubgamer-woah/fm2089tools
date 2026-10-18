@@ -11,13 +11,16 @@ translates the real thing, so the pictures follow those entries:
            background from just above and below it, and the English drawn white
   buttons  the part buttons of the setup screen (all Graphics_button_* entries)
 """
+import struct
 from collections import Counter
 
 import labels
 
 ROW_H = 12          # rows of a menu line's lettering
+MAX_TILES = 512     # the game puts the map right after 16 KB of tiles; more tiles overwrite it
 ROW_RIGHT = 222     # menu lines end before the OK marker
 BAR_W = 128
+COM_BUTTON = (72, 32, 119)   # already English in the game, but an edited setup_bg.png may reword it
 
 
 def _rows(x, *ids, top=26, right=ROW_RIGHT):
@@ -99,7 +102,7 @@ def compose(rom, font, english, setup=None):
         for kind, box, eid in parts:
             if kind == 'buttons':
                 if setup:   # inside the buttons only: this picture's selected button has its own frame
-                    for (left, top, right), _ in buttons:
+                    for left, top, right in {src for src, _ in buttons} | {COM_BUTTON}:
                         pic.load_png(setup, (left+1, top+1, right, top+labels.BUTTON_RULE+7))
                 else:
                     labels.draw_buttons(pic, buttons)
@@ -118,5 +121,12 @@ def compose(rom, font, english, setup=None):
                 _bar(pic, font, text)
             else:
                 _row(pic, font, box, text)
-        files[base+'ncg.bin'], files[base+'nsc.bin'] = pic.save()
+        ncg, nsc = pic.save(compact=True)
+        count = struct.unpack_from('<I', labels._lz(ncg), 4)[0]
+        if count > MAX_TILES:   # would scramble the whole picture in game
+            problems.append({'id': name, 'level': 'warning',
+                             'message': f'The tutorial picture {name} stays Japanese: the English needs {count} tiles, '
+                                        f'more than the {MAX_TILES} the game has room for'})
+            continue
+        files[base+'ncg.bin'], files[base+'nsc.bin'] = ncg, nsc
     return files, problems

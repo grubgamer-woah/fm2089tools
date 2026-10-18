@@ -25,10 +25,11 @@ to their own copy of the game.
   from them, so the first build already makes the finished patch.
 * `assets/Group Localization Files/`: the localization group's own English
   graphics (title and base headers, base map rooms, opening captions, RESULTS,
-  terrain panel, font icons). Used when the group folder itself isn't next to
+  terrain panel, font icons and ×, the name screen's Delete / Back / Ok keys). Used when the group folder itself isn't next to
   the Studio.
 * `assets/En+Ko name screens/`: the name entry screens of the Korean/English
-  fan patch. Used when that patch's ROM isn't next to the Japanese one.
+  fan patch (minus its page arrow, which does nothing on its one-page keyboard).
+  Used when that patch's ROM isn't next to the Japanese one.
 
 Only the Japanese ROM is needed from you; it is never stored here.
 
@@ -77,15 +78,25 @@ replaces yours string by string, and your other strings stay as they are.
 
 ## Setup buttons
 
-The part buttons of the Wanzer setup screen (WEAPON, ARM, BODY...) are drawn
-from their entries in **Screen graphics**. To edit them as a picture instead,
-save the whole screen as `workspace/images/setup_bg.png` (256×144): every
-build then uses that picture, for the real screen and for Yuji's tutorial
-picture of it, and the button entries are not drawn. Delete the file to go back.
+The Wanzer setup screen ships as a picture, `translation/images/setup_bg.png`
+(256×144, Kiley's "Right Shoulder / Computer / Color Select" design). Every
+build uses it for the real screen and for Yuji's tutorial picture of it. To
+change it, save your own as `workspace/images/setup_bg.png`, which wins over the
+shipped one. With neither file, the buttons are drawn from their entries in
+**Screen graphics** (WEAPON, ARM, BODY...).
 `python studio/tools/studio_core.py setup-png` writes the screen there as the
 Studio draws it now, to start from. Each 8×8 block of the screen has its own
 16 colors, so draw with the colors already in that spot; others snap to the
 nearest of them.
+
+## Stat icons
+
+The parts info lines use the localization group's stat icons instead of the
+words, as their spreadsheet planned (ATK 5x2 ACC 78 becomes ⚙5x2 ⌖78, see
+`tools/staticons.py` for which icon goes with which stat). The project text
+keeps the words; the build swaps them. Untick **Stat icons** in the header to
+build with the words. The icons come with the group's font, so without the
+group files the words are kept.
 
 ## Mission titles
 

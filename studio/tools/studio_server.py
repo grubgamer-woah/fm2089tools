@@ -105,6 +105,7 @@ class Handler(BaseHTTPRequestHandler):
                     'application': APP, 'started': STARTED, 'rom': str(cat.rom_path) if cat else None, 'rom_problem': STATE.rom_problem,
                     'rom_dir': str(core.ROM_DIR), 'groups': [[k, label] for k, label, _ in core.GROUPS],
                     'project': str(STATE.project.path), 'screen_width': core.SCREEN_WIDTH,
+                    'stat_icons': STATE.project.settings.get(core.staticons.SETTING, True),
                     'controls': {f'{k:04X}': v for k, v in core.msgcodec.CONTROL_NAMES.items()}})
             if path == '/api/catalog':
                 if self.need_rom():
@@ -238,6 +239,13 @@ class Handler(BaseHTTPRequestHandler):
                 with STATE.lock:
                     _, problems = core.compose(cat, STATE.project)
                 return self.send(200, {'problems': problems})
+            if path == '/api/settings':
+                data = json.loads(self.body())
+                with STATE.lock:
+                    if core.staticons.SETTING in data:
+                        STATE.project.settings[core.staticons.SETTING] = bool(data[core.staticons.SETTING])
+                    STATE.project.save()
+                return self.send(200, {'ok': True, 'settings': STATE.project.settings})
             if path == '/api/import':
                 text = self.body().decode('utf-8', 'replace')
                 with STATE.lock:
