@@ -12,7 +12,7 @@
   "ファルコン": "Falcon",
   "ロイ": "Roy",
   "アイシャ": "Aisha",
-  "ヘパイスト": "Hephaestus",
+  "ヘパイスト": "Hepaist",
   "リッチ": "Lich",
   "レイチェル": "Rachel",
   "ユウジ・キノシタ": "Yuji Kinoshita",
@@ -13894,15 +13894,15 @@
    "done": true
   },
   "MsgLabels_station_36_msg_043": {
-   "en": "Which is why, starting with this\nmission, I'm attaching a dedicated\nsupply vehicle.\nThe driver's codename is Hephaestus.\nHe's a bit of a character, but he's\nan old friend of mine and a man you\ncan rely on.\nMeet up with him in the field and\nbegin the mission.",
+   "en": "Which is why, starting with this\nmission, I'm attaching a dedicated\nsupply vehicle.\nThe driver's codename is Hepaist.\nHe's a bit of a character, but he's\nan old friend of mine and a man you\ncan rely on.\nMeet up with him in the field and\nbegin the mission.",
    "done": true
   },
   "MsgLabels_station_36_msg_044": {
-   "en": "Hephaestus... the god of the forge.\nAs long as he does the job, his\ncharacter doesn't matter.\nRoger.\nWe sortie at once.",
+   "en": "Hepaist... the god of the forge.\nAs long as he does the job, his\ncharacter doesn't matter.\nRoger.\nWe sortie at once.",
    "done": true
   },
   "MsgLabels_station_36_msg_045": {
-   "en": "Starting with this mission, I'm\nattaching a dedicated supply vehicle.\nThe driver's codename is Hephaestus.\nHe's a bit of a character, but he's\nan old friend of mine and a man you\ncan rely on.\nMeet up with him in the field and\nbegin the mission.",
+   "en": "Starting with this mission, I'm\nattaching a dedicated supply vehicle.\nThe driver's codename is Hepaist.\nHe's a bit of a character, but he's\nan old friend of mine and a man you\ncan rely on.\nMeet up with him in the field and\nbegin the mission.",
    "done": true
   },
   "MsgLabels_station_36_msg_046": {
@@ -13934,7 +13934,7 @@
    "done": true
   },
   "MsgLabels_tactics_36_msg_005": {
-   "en": "Hephaestus, stay at the rear of the\nsquad.\nWe're counting on you for repairs and\nresupply.",
+   "en": "Hepaist, stay at the rear of the\nsquad.\nWe're counting on you for repairs and\nresupply.",
    "done": true
   },
   "MsgLabels_tactics_36_msg_006": {
@@ -14030,7 +14030,7 @@
    "done": true
   },
   "MsgLabels_tactics_36_msg_029": {
-   "en": "You did good work too, Hephaestus.\nI look forward to working with you.",
+   "en": "You did good work too, Hepaist.\nI look forward to working with you.",
    "done": true
   },
   "MsgLabels_tactics_36_msg_030": {
@@ -14042,7 +14042,7 @@
    "done": true
   },
   "MsgLabels_station_37_msg_001": {
-   "en": "I'm Rain. Good to have you,\nHephaestus.",
+   "en": "I'm Rain. Good to have you,\nHepaist.",
    "done": true
   },
   "MsgLabels_station_37_msg_002": {
@@ -14086,7 +14086,7 @@
    "done": true
   },
   "MsgLabels_station_37_msg_012": {
-   "en": "Hephaestus, you're a mechanic,\nright? Oh, I'm Oddeye.\nBecause my eyes are odd... huh?",
+   "en": "Hepaist, you're a mechanic,\nright? Oh, I'm Oddeye.\nBecause my eyes are odd... huh?",
    "done": true
   },
   "MsgLabels_station_37_msg_013": {
@@ -14098,7 +14098,7 @@
    "done": true
   },
   "MsgLabels_station_37_msg_015": {
-   "en": "...Hephaestus!",
+   "en": "...Hepaist!",
    "done": true
   },
   "MsgLabels_station_37_msg_016": {
@@ -14114,11 +14114,11 @@
    "done": true
   },
   "MsgLabels_station_37_msg_019": {
-   "en": "...That's it, I'm reporting this to\nthe Commander. Captain, please say\nsomething to Hephaestus.",
+   "en": "...That's it, I'm reporting this to\nthe Commander. Captain, please say\nsomething to Hepaist.",
    "done": true
   },
   "MsgLabels_station_37_msg_020": {
-   "en": "Rain, there's no need to report it.\nHephaestus is apparently an old\nfriend of the Commander's. He must\nalready know how the man behaves.",
+   "en": "Rain, there's no need to report it.\nHepaist is apparently an old\nfriend of the Commander's. He must\nalready know how the man behaves.",
    "done": true
   },
   "MsgLabels_station_37_msg_021": {
@@ -14130,7 +14130,7 @@
    "done": true
   },
   "MsgLabels_station_37_msg_023": {
-   "en": "Hephaestus, communication is fine,\nbut too much of it causes problems.\nKeep it in moderation.",
+   "en": "Hepaist, communication is fine,\nbut too much of it causes problems.\nKeep it in moderation.",
    "done": true
   },
   "MsgLabels_station_37_msg_024": {
@@ -14142,7 +14142,7 @@
    "done": true
   },
   "MsgLabels_station_37_msg_026": {
-   "en": "Huh.\nYou know about BATS, Hephaestus?",
+   "en": "Huh.\nYou know about BATS, Hepaist?",
    "done": true
   },
   "MsgLabels_station_37_msg_027": {
@@ -14198,7 +14198,7 @@
    "done": true
   },
   "MsgLabels_station_37_msg_040": {
-   "en": "Huh.\nYou know about BATS, Hephaestus?",
+   "en": "Huh.\nYou know about BATS, Hepaist?",
    "done": true
   },
   "MsgLabels_station_37_msg_041": {
@@ -14670,7 +14670,7 @@
    "done": true
   },
   "MsgLabels_station_38_msg_044": {
-   "en": "Sorry about that, Hephaestus.\nIf those symptoms keep showing up,\nI'm not fit to be captain.",
+   "en": "Sorry about that, Hepaist.\nIf those symptoms keep showing up,\nI'm not fit to be captain.",
    "done": true
   },
   "MsgLabels_station_38_msg_045": {
@@ -15490,7 +15490,7 @@
    "done": true
   },
   "MsgLabels_station_40_msg_010": {
-   "en": "Hey, Hephaestus!\nDon't bring books like that into\nthe barracks!",
+   "en": "Hey, Hepaist!\nDon't bring books like that into\nthe barracks!",
    "done": true
   },
   "MsgLabels_station_40_msg_011": {
@@ -15502,7 +15502,7 @@
    "done": true
   },
   "MsgLabels_station_40_msg_013": {
-   "en": "Huh!? C-Captain...\nHonestly, Hephaestus, showing the\nCaptain a book like that...\nGet rid of it, now!",
+   "en": "Huh!? C-Captain...\nHonestly, Hepaist, showing the\nCaptain a book like that...\nGet rid of it, now!",
    "done": true
   },
   "MsgLabels_station_40_msg_014": {
@@ -15522,7 +15522,7 @@
    "done": true
   },
   "MsgLabels_station_40_msg_018": {
-   "en": "Hephaestus throws me completely\noff balance... Honestly...\nAnd I am NOT a cow!",
+   "en": "Hepaist throws me completely\noff balance... Honestly...\nAnd I am NOT a cow!",
    "done": true
   },
   "MsgLabels_station_40_msg_019": {
@@ -15662,11 +15662,11 @@
    "done": true
   },
   "MsgLabels_station_40_msg_053": {
-   "en": "I heard from Hephaestus.\nHe says you've been diverting\nweapons and food somewhere.",
+   "en": "I heard from Hepaist.\nHe says you've been diverting\nweapons and food somewhere.",
    "done": true
   },
   "MsgLabels_station_40_msg_054": {
-   "en": "(Tch, so Hephaestus is here.)\nGa-ha-ha!\nNo, no, that's ancient history.\nI don't do that sort of thing now.",
+   "en": "(Tch, so Hepaist is here.)\nGa-ha-ha!\nNo, no, that's ancient history.\nI don't do that sort of thing now.",
    "done": true
   },
   "MsgLabels_station_40_msg_055": {
@@ -15686,7 +15686,7 @@
    "done": true
   },
   "MsgLabels_station_40_msg_059": {
-   "en": "Hephaestus told me about the medal.\nAnd about what you're probably\ndoing now.",
+   "en": "Hepaist told me about the medal.\nAnd about what you're probably\ndoing now.",
    "done": true
   },
   "MsgLabels_station_40_msg_060": {
@@ -15750,7 +15750,7 @@
    "done": true
   },
   "MsgLabels_station_40_msg_075": {
-   "en": "Right.\nSplit «E801:00» Squad into two teams\nand hit both sites at once.\nTeam A: Captain «E801:00», Oddeye.\nTeam B: Rain, Champ, Gray and\nHephaestus.",
+   "en": "Right.\nSplit «E801:00» Squad into two teams\nand hit both sites at once.\nTeam A: Captain «E801:00», Oddeye.\nTeam B: Rain, Champ, Gray and\nHepaist.",
    "done": true
   },
   "MsgLabels_station_40_msg_076": {
@@ -15802,7 +15802,7 @@
    "done": true
   },
   "MsgLabels_station_40_msg_088": {
-   "en": "Split «E801:00» Squad into two teams\nand hit both sites at once.\nTeam A: Captain «E801:00», Oddeye.\nTeam B: Rain, Champ, Gray and\nHephaestus.",
+   "en": "Split «E801:00» Squad into two teams\nand hit both sites at once.\nTeam A: Captain «E801:00», Oddeye.\nTeam B: Rain, Champ, Gray and\nHepaist.",
    "done": true
   },
   "MsgLabels_station_40_msg_089": {
@@ -16334,7 +16334,7 @@
    "done": true
   },
   "MsgLabels_station_42_msg_028": {
-   "en": "Hm? Hephaestus, what are\nyou mumbling about?\n...Wait... are you a spy!?",
+   "en": "Hm? Hepaist, what are\nyou mumbling about?\n...Wait... are you a spy!?",
    "done": true
   },
   "MsgLabels_station_42_msg_029": {
@@ -16350,7 +16350,7 @@
    "done": true
   },
   "MsgLabels_station_42_msg_032": {
-   "en": "Hephaestus, this looks exactly\nlike we're peeping.",
+   "en": "Hepaist, this looks exactly\nlike we're peeping.",
    "done": true
   },
   "MsgLabels_station_42_msg_033": {
@@ -16366,7 +16366,7 @@
    "done": true
   },
   "MsgLabels_station_42_msg_036": {
-   "en": "Captain...\nSee, Hephaestus was here and...\nNo, that just sounds like an excuse...",
+   "en": "Captain...\nSee, Hepaist was here and...\nNo, that just sounds like an excuse...",
    "done": true
   },
   "MsgLabels_station_42_msg_037": {
@@ -16386,7 +16386,7 @@
    "done": true
   },
   "MsgLabels_station_42_msg_041": {
-   "en": "Captain, that sounds like an\nexcuse too...\nDammit, Hephaestus...\nYou've landed us in a real mess...\nSorry for dragging you into this,\nCaptain...",
+   "en": "Captain, that sounds like an\nexcuse too...\nDammit, Hepaist...\nYou've landed us in a real mess...\nSorry for dragging you into this,\nCaptain...",
    "done": true
   },
   "MsgLabels_station_42_msg_042": {
@@ -16414,7 +16414,7 @@
    "done": true
   },
   "MsgLabels_station_42_msg_048": {
-   "en": "Hephaestus, Oddeye already got out.",
+   "en": "Hepaist, Oddeye already got out.",
    "done": true
   },
   "MsgLabels_station_42_msg_049": {
@@ -16422,7 +16422,7 @@
    "done": true
   },
   "MsgLabels_station_42_msg_050": {
-   "en": "Hm, looks like some other soldiers\nare coming in. Hephaestus, don't\nbother the other soldiers.",
+   "en": "Hm, looks like some other soldiers\nare coming in. Hepaist, don't\nbother the other soldiers.",
    "done": true
   },
   "MsgLabels_station_42_msg_051": {
@@ -16430,7 +16430,7 @@
    "done": true
   },
   "MsgLabels_station_42_msg_052": {
-   "en": "Hephaestus, the water seems hot.\nDon't overdo it.",
+   "en": "Hepaist, the water seems hot.\nDon't overdo it.",
    "done": true
   },
   "MsgLabels_station_42_msg_053": {
@@ -16442,7 +16442,7 @@
    "done": true
   },
   "MsgLabels_station_42_msg_055": {
-   "en": "Hephaestus got me good...\nI'll watch out from now on.",
+   "en": "Hepaist got me good...\nI'll watch out from now on.",
    "done": true
   },
   "MsgLabels_station_42_msg_056": {
@@ -16746,7 +16746,7 @@
    "done": true
   },
   "MsgLabels_tactics_42_msg_046": {
-   "en": "You are well informed, Hephaestus.",
+   "en": "You are well informed, Hepaist.",
    "done": true
   },
   "MsgLabels_tactics_42_msg_047": {
@@ -17250,7 +17250,7 @@
    "done": true
   },
   "MsgLabels_tactics_43_msg_051": {
-   "en": "Whaaat?\nIsn't that Hephaestus?",
+   "en": "Whaaat?\nIsn't that Hepaist?",
    "done": true
   },
   "MsgLabels_tactics_43_msg_052": {
@@ -17298,7 +17298,7 @@
    "done": true
   },
   "MsgLabels_tactics_43_msg_063": {
-   "en": "Are you sure, Hephaestus?\nThey appear to be attack\nhelicopters and old tanks...",
+   "en": "Are you sure, Hepaist?\nThey appear to be attack\nhelicopters and old tanks...",
    "done": true
   },
   "MsgLabels_tactics_43_msg_064": {
@@ -17338,7 +17338,7 @@
    "done": true
   },
   "MsgLabels_station_44_msg_003": {
-   "en": "Captain, Hephaestus did something\nthat borders on harassment...",
+   "en": "Captain, Hepaist did something\nthat borders on harassment...",
    "done": true
   },
   "MsgLabels_station_44_msg_004": {
@@ -17346,7 +17346,7 @@
    "done": true
   },
   "MsgLabels_station_44_msg_005": {
-   "en": "Is that true,\nHephaestus?",
+   "en": "Is that true,\nHepaist?",
    "done": true
   },
   "MsgLabels_station_44_msg_006": {
@@ -17378,7 +17378,7 @@
    "done": true
   },
   "MsgLabels_station_44_msg_013": {
-   "en": "Wait, why is Hephaestus wearing\nmy harness?",
+   "en": "Wait, why is Hepaist wearing\nmy harness?",
    "done": true
   },
   "MsgLabels_station_44_msg_014": {
@@ -17386,7 +17386,7 @@
    "done": true
   },
   "MsgLabels_station_44_msg_015": {
-   "en": "Hephaestus...\nIt IS harassment!\nGive that harness back this instant!",
+   "en": "Hepaist...\nIt IS harassment!\nGive that harness back this instant!",
    "done": true
   },
   "MsgLabels_station_44_msg_016": {
@@ -17398,7 +17398,7 @@
    "done": true
   },
   "MsgLabels_station_44_msg_018": {
-   "en": "It's right before the decisive\nbattle, and when I'm alone I end up\nthinking about all sorts of things...\nOh! Was Hephaestus being\nconsiderate of that...!?",
+   "en": "It's right before the decisive\nbattle, and when I'm alone I end up\nthinking about all sorts of things...\nOh! Was Hepaist being\nconsiderate of that...!?",
    "done": true
   },
   "MsgLabels_station_44_msg_019": {
@@ -17422,7 +17422,7 @@
    "done": true
   },
   "MsgLabels_station_44_msg_024": {
-   "en": "Hephaestus...\nThe smith god of mythology.\nAn old soldier who takes that name\nfor his codename.\nA force to be feared...",
+   "en": "Hepaist...\nThe smith god of mythology.\nAn old soldier who takes that name\nfor his codename.\nA force to be feared...",
    "done": true
   },
   "MsgLabels_station_44_msg_025": {
@@ -17430,7 +17430,7 @@
    "done": true
   },
   "MsgLabels_station_44_msg_026": {
-   "en": "(Hephaestus, as ever...\nLoosening up the squad before\nthe decisive battle, I suppose...)",
+   "en": "(Hepaist, as ever...\nLoosening up the squad before\nthe decisive battle, I suppose...)",
    "done": true
   },
   "MsgLabels_station_44_msg_027": {
@@ -17450,7 +17450,7 @@
    "done": true
   },
   "MsgLabels_station_44_msg_031": {
-   "en": "That old guy Hephaestus is supposed\nto be a famous merc, but... we keep\ngetting complaints about him from\nthe women on base.\nCould you do something about it?",
+   "en": "That old guy Hepaist is supposed\nto be a famous merc, but... we keep\ngetting complaints about him from\nthe women on base.\nCould you do something about it?",
    "done": true
   },
   "MsgLabels_station_44_msg_032": {
@@ -18058,7 +18058,7 @@
    "done": true
   },
   "MsgLabels_station_45_msg_048": {
-   "en": "Hold on, Captain «E801:00».\nI've got a mission for you.\nThe captured mercs... our comrades.\nChamp, Oddeye, Gray and Hephaestus.\nI want the four of them rescued.\nI'm asking you this as commander of\nthis base... no, as a friend.",
+   "en": "Hold on, Captain «E801:00».\nI've got a mission for you.\nThe captured mercs... our comrades.\nChamp, Oddeye, Gray and Hepaist.\nI want the four of them rescued.\nI'm asking you this as commander of\nthis base... no, as a friend.",
    "done": true
   },
   "MsgLabels_station_45_msg_049": {
@@ -18310,7 +18310,7 @@
    "done": true
   },
   "MsgLabels_tactics_45_msg_050": {
-   "en": "Sorry, we were right there and...\nOddeye and Hephaestus were moved\nsomewhere else as soon as we got here.",
+   "en": "Sorry, we were right there and...\nOddeye and Hepaist were moved\nsomewhere else as soon as we got here.",
    "done": true
   },
   "MsgLabels_tactics_45_msg_051": {
@@ -18362,7 +18362,7 @@
    "done": true
   },
   "MsgLabels_station_46_msg_006": {
-   "en": "Yeah.\n...By the way, Captain, any word on\nwhere Oddeye and Hephaestus are?",
+   "en": "Yeah.\n...By the way, Captain, any word on\nwhere Oddeye and Hepaist are?",
    "done": true
   },
   "MsgLabels_station_46_msg_007": {
@@ -18390,7 +18390,7 @@
    "done": true
   },
   "MsgLabels_station_46_msg_013": {
-   "en": "Come to think of it, Oddeye's and\nHephaestus's headaches hung on longer.",
+   "en": "Come to think of it, Oddeye's and\nHepaist's headaches hung on longer.",
    "done": true
   },
   "MsgLabels_station_46_msg_014": {
@@ -18454,7 +18454,7 @@
    "done": true
   },
   "MsgLabels_station_46_msg_029": {
-   "en": "Captain «E801:00», I have found Oddeye\nand Hephaestus.\nThey are being moved to another\nfacility by way of the port.\nYou had best sortie at once.",
+   "en": "Captain «E801:00», I have found Oddeye\nand Hepaist.\nThey are being moved to another\nfacility by way of the port.\nYou had best sortie at once.",
    "done": true
   },
   "MsgLabels_station_46_msg_030": {
@@ -18710,7 +18710,7 @@
    "done": true
   },
   "MsgLabels_station_47_msg_007": {
-   "en": "Captain «E801:00», word just came in\nfrom the investigator.\nOddeye and Hephaestus are confirmed\nalive at a medical facility near\nGrayrock. Also confirmed there is the\nVampires' mastermind, a man who calls\nhimself Lich.\nThe investigator is lying low around\nthe facility, and seems to mean to\nget them out when he sees an opening.\nBut against the mastermind, that's\nfar too dangerous...",
+   "en": "Captain «E801:00», word just came in\nfrom the investigator.\nOddeye and Hepaist are confirmed\nalive at a medical facility near\nGrayrock. Also confirmed there is the\nVampires' mastermind, a man who calls\nhimself Lich.\nThe investigator is lying low around\nthe facility, and seems to mean to\nget them out when he sees an opening.\nBut against the mastermind, that's\nfar too dangerous...",
    "done": true
   },
   "MsgLabels_station_47_msg_008": {
@@ -19418,7 +19418,7 @@
    "done": true
   },
   "MsgLabels_station_49_msg_005": {
-   "en": "Oh, it's Hephaestus's gravure\nmagazine...",
+   "en": "Oh, it's Hepaist's gravure\nmagazine...",
    "done": true
   },
   "MsgLabels_station_49_msg_006": {
@@ -19426,7 +19426,7 @@
    "done": true
   },
   "MsgLabels_station_49_msg_007": {
-   "en": "Hephaestus, honestly!\nDon't bring that kind of book\ninto the barracks!",
+   "en": "Hepaist, honestly!\nDon't bring that kind of book\ninto the barracks!",
    "done": true
   },
   "MsgLabels_station_49_msg_008": {
@@ -19650,7 +19650,7 @@
    "done": true
   },
   "MsgLabels_station_49_msg_063": {
-   "en": "She wishes to rejoin «E801:00»\nSquad.\nShe has just arrived near the\ntarget site.\nMeet up with her there.\nAlso, a wanzer repair backpack has\nbeen delivered to the hangar.\nIt won't replace Hephaestus, but\nit can stand in for his supply\ntruck.",
+   "en": "She wishes to rejoin «E801:00»\nSquad.\nShe has just arrived near the\ntarget site.\nMeet up with her there.\nAlso, a wanzer repair backpack has\nbeen delivered to the hangar.\nIt won't replace Hepaist, but\nit can stand in for his supply\ntruck.",
    "done": true
   },
   "MsgLabels_station_49_msg_064": {
@@ -31930,7 +31930,7 @@
    "done": true
   },
   "MsgLabels_name_msg_008": {
-   "en": "Hephaestus",
+   "en": "Hepaist",
    "done": true
   },
   "MsgLabels_name_msg_010": {
@@ -32118,7 +32118,7 @@
    "done": true
   },
   "MsgLabels_name_msg_116": {
-   "en": "Hephaestus",
+   "en": "Hepaist",
    "done": true
   },
   "MsgLabels_name_msg_117": {
