@@ -84,8 +84,9 @@ def _row(pic, font, box, text):
             pic.set(x, y, (255, 255, 255))
 
 
-def compose(rom, font, english):
-    """english(entry id) -> the project's English or None. Returns ({rom path: bytes}, problems)."""
+def compose(rom, font, english, setup=None):
+    """english(entry id) -> the project's English or None; setup: the edited setup_bg.png, if any.
+    Returns ({rom path: bytes}, problems)."""
     files, problems = {}, []
     buttons = []
     for key, (_, default, kind, sources) in labels.LABELS.items():
@@ -97,7 +98,11 @@ def compose(rom, font, english):
         pic = labels.Picture(rom.read(base+'ncg.bin'), rom.read(base+'nsc.bin'), rom.read(base+'ncl.bin'))
         for kind, box, eid in parts:
             if kind == 'buttons':
-                labels.draw_buttons(pic, buttons)
+                if setup:   # inside the buttons only: this picture's selected button has its own frame
+                    for (left, top, right), _ in buttons:
+                        pic.load_png(setup, (left+1, top+1, right, top+labels.BUTTON_RULE+7))
+                else:
+                    labels.draw_buttons(pic, buttons)
                 continue
             text = english(eid)
             if not text or '\n' in text or labels.missing_chars(font, text):

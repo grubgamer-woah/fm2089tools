@@ -39,6 +39,7 @@ BUILDS = STUDIO/'builds'
 PROJECT = WORKSPACE/'project.json'
 # Kiley's English, shipped with the Studio: a new workspace starts from it, and Import takes it too
 BUNDLED = STUDIO/'translation'/'project.json'
+SETUP_PNG = 'setup_bg.png'
 
 CLEAN_MD5 = 'e965ed696171d327656dac3adf6c6221'  # Front Mission 2089 - Border of Madness (Japan), No-Intro
 MSG_DIR = 'data/font/'
@@ -285,6 +286,11 @@ class Project:
         """A title picture; the shipped project points at ../translation/images, so '..' is resolved first."""
         return Path(os.path.normpath(self.path.parent/(rel or self.images[name])))
 
+    def setup_png(self):
+        """The edited Wanzer setup screen (images/setup_bg.png), or None."""
+        path = self.image_dir/SETUP_PNG
+        return path.read_bytes() if path.is_file() else None
+
     @property
     def image_dir(self):
         return self.path.parent/'images'
@@ -481,7 +487,9 @@ def compose(catalog, project):
     files = {MSG_DIR+name: catalog.files[name].build(repl) for name, repl in per_file.items()}
     files[FONT_PATH] = catalog.font_data
     texts = {key: project.entries.get(labels.entry_id(key), {}).get('en') for key in labels.LABELS}
-    graphics, graphic_problems = labels.compose(catalog.rom, catalog.font, texts, catalog.group)
+    # an edited picture of the Wanzer setup buttons, if there is one (see README, "Setup buttons")
+    setup = project.setup_png()
+    graphics, graphic_problems = labels.compose(catalog.rom, catalog.font, texts, catalog.group, setup)
     files.update(graphics)
     if catalog.group:
         files.update(catalog.group.screens())
@@ -495,7 +503,7 @@ def compose(catalog, project):
             return texts[key] or labels.LABELS[key][1]
         return project.entries.get(sid, {}).get('en')
     # tutorial screenshots of the menus: redrawn from the same entries
-    pictures, picture_problems = tutorials.compose(catalog.rom, catalog.font, english)
+    pictures, picture_problems = tutorials.compose(catalog.rom, catalog.font, english, setup)
     files.update(pictures)
     problems += picture_problems
     overlay = f'overlay/{heroname.OVERLAY}'
@@ -570,9 +578,20 @@ def build(catalog, project, out_root=BUILDS, log=print):
             'titles': len(images)//3}
 
 
+def setup_png(catalog, project):
+    """The Wanzer setup screen with the project's button words, as a PNG."""
+    texts = {key: project.entries.get(labels.entry_id(key), {}).get('en') for key in labels.LABELS}
+    buttons = []
+    for key, (_, default, kind, sources) in labels.LABELS.items():
+        if kind == 'button':
+            text = texts[key] or default
+            buttons += [(src, text if labels.button_word(text) else default) for src in sources]
+    return labels.setup_png(catalog.rom, buttons)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('command', choices=['build', 'export'])
+    ap.add_argument('command', choices=['build', 'export', 'setup-png'])
     ap.add_argument('--project', default=str(PROJECT))
     ap.add_argument('--rom')
     ap.add_argument('--out', default=str(BUILDS))
@@ -584,6 +603,13 @@ def main():
     project = Project(args.project)
     if args.command == 'export':
         sys.stdout.write(export_tsv(catalog, project))
+        return
+    if args.command == 'setup-png':
+        # the Wanzer setup screen as this project draws it, to edit (see README, "Setup buttons")
+        out = Path(args.out) if args.out != str(BUILDS) else project.image_dir/SETUP_PNG
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(setup_png(catalog, project))
+        print(out)
         return
     result = build(catalog, project, args.out)
     for p in result['problems']:

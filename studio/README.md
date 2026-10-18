@@ -75,6 +75,18 @@ a fresh download already has the English. To bring a newer copy into a
 workspace you already have, **Import** `translation/project.json`: its English
 replaces yours string by string, and your other strings stay as they are.
 
+## Setup buttons
+
+The part buttons of the Wanzer setup screen (WEAPON, ARM, BODY...) are drawn
+from their entries in **Screen graphics**. To edit them as a picture instead,
+save the whole screen as `workspace/images/setup_bg.png` (256×144): every
+build then uses that picture, for the real screen and for Yuji's tutorial
+picture of it, and the button entries are not drawn. Delete the file to go back.
+`python studio/tools/studio_core.py setup-png` writes the screen there as the
+Studio draws it now, to start from. Each 8×8 block of the screen has its own
+16 colors, so draw with the colors already in that spot; others snap to the
+nearest of them.
+
 ## Mission titles
 
 The mission title screens ("Mission 01 / 実戦訓練1") are pictures, not text. Click

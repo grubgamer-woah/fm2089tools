@@ -437,6 +437,26 @@ class Picture:
         self.img[y][x] = rgb
         self.touched.add((x//8, y//8))
 
+    def png(self):
+        import portraits
+        h, w = len(self.img), len(self.img[0])
+        return portraits.png(w, h, b''.join(bytes((*c, 255)) for row in self.img for c in row))
+
+    def load_png(self, data, box=None):
+        """Take the pixels of a PNG the same size as the picture (only inside box=(x0, y0, x1, y1)).
+        Each changed tile keeps its palette, so colors snap to the nearest of its 16."""
+        w, h, rgba = titles.read_png(data)
+        if box is None and (w, h) != (len(self.img[0]), len(self.img)):
+            raise ValueError(f'the picture is {w}x{h}; it must be {len(self.img[0])}x{len(self.img)}')
+        x0, y0, x1, y1 = box or (0, 0, w, h)
+        if x1 > w or y1 > h:
+            raise ValueError(f'the picture is {w}x{h}; it must reach {x1}x{y1}')
+        for y in range(y0, y1):
+            for x in range(x0, x1):
+                rgb = tuple(rgba[(y*w+x)*4:(y*w+x)*4+3])
+                if rgb != self.img[y][x]:
+                    self.set(x, y, rgb)
+
     def save(self):
         """The new (ncg, nsc), compressed like the originals."""
         for tx, ty in sorted(self.touched):
@@ -447,7 +467,8 @@ class Picture:
                 row = []
                 for rgb in self.img[y][tx*8:tx*8+8]:
                     if rgb not in cache:
-                        cache[rgb] = min(range(1, 16), key=lambda i: sum((a-b)**2 for a, b in zip(pal[i], rgb)))
+                        cache[rgb] = pal.index(rgb) if rgb in pal else \
+                            min(range(1, 16), key=lambda i: sum((a-b)**2 for a, b in zip(pal[i], rgb)))
                     row.append(cache[rgb])
                 rows.append(row)
             self.screen.put(tx*8, ty*8, rows, p)
@@ -496,11 +517,22 @@ def draw_buttons(pic, labels):
                     pic.set(at+x, y, rgb)
 
 
-def buttons_file(ncg_raw, nsc_raw, ncl_raw, labels):
-    """labels: [((left, top, right), text)]. Returns the new (ncg, nsc) of the setup screen."""
+def buttons_file(ncg_raw, nsc_raw, ncl_raw, labels, png=None):
+    """labels: [((left, top, right), text)]. Returns the new (ncg, nsc) of the setup screen.
+    png: an edited picture of the whole screen (setup_bg.png), used instead of drawing the labels."""
     pic = Picture(ncg_raw, nsc_raw, ncl_raw)
-    draw_buttons(pic, labels)
+    if png:
+        pic.load_png(png)
+    else:
+        draw_buttons(pic, labels)
     return pic.save()
+
+
+def setup_png(rom, labels_):
+    """The setup screen with the English buttons, as a PNG to edit."""
+    pic = Picture(rom.read(SETUP_BG+'ncg.bin'), rom.read(SETUP_BG+'nsc.bin'), rom.read(SETUP_BG+'ncl.bin'))
+    draw_buttons(pic, labels_)
+    return pic.png()
 
 
 def ending_lines(text):
@@ -509,7 +541,7 @@ def ending_lines(text):
 
 # ---- build ----
 
-def compose(rom, font, texts, group=None):
+def compose(rom, font, texts, group=None, setup=None):
     """texts: {key: English}; group: a groupart.GroupArt, or None. Returns ({rom path: bytes}, problems)."""
     import groupart
     files, problems = {}, []
@@ -564,6 +596,10 @@ def compose(rom, font, texts, group=None):
                 files[src] = ending_file(rom.read(src), font, text)
     path = 'data/name/EntryCheck_ncg.bin'
     files[path] = check_file(rom.read(path), font, checks)
-    ncg, nsc = buttons_file(rom.read(SETUP_BG+'ncg.bin'), rom.read(SETUP_BG+'nsc.bin'), rom.read(SETUP_BG+'ncl.bin'), buttons)
+    if setup:
+        problems.append({'id': entry_id('button_shoulder'), 'level': 'warning',
+                         'message': 'The setup buttons come from setup_bg.png; the button entries are not drawn'})
+    ncg, nsc = buttons_file(rom.read(SETUP_BG+'ncg.bin'), rom.read(SETUP_BG+'nsc.bin'), rom.read(SETUP_BG+'ncl.bin'),
+                            buttons, setup)
     files[SETUP_BG+'ncg.bin'], files[SETUP_BG+'nsc.bin'] = ncg, nsc
     return files, problems
