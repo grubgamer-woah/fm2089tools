@@ -109,7 +109,6 @@ SETUP_BG = 'data/setup/BackGround/setup_bg_'
 BUTTON_TEXT, BUTTON_RULE = 4, 16   # rows below a button's top frame: the capitals, the rule under them
 BUTTON_MAX = 42                    # widest word in px
 BUTTON_SQUEEZE = [n/100 for n in range(90, 44, -5)]   # how narrow the letters may get
-BUTTON_INK = (255, 74, 0)          # the frame's orange
 # the subtitle under 機体色 reads "WAP-Color": "Color" (columns 225-245) moves to the middle
 COLOR_SUBTITLE = (41, 47, 201, 247, 225, 246)   # rows, inside columns, "Color" columns
 
@@ -416,66 +415,92 @@ def button_word(text):
     return None
 
 
-def buttons_file(ncg_raw, nsc_raw, ncl_raw, labels):
-    """labels: [((left, top, right), text)]. Returns the new (ncg, nsc) of the setup screen."""
+class Picture:
+    """A screen as RGB pixels; save() maps each changed tile back to its own palette."""
+
+    def __init__(self, ncg_raw, nsc_raw, ncl_raw):
+        self.raw = ncg_raw, nsc_raw
+        self.screen = Screen(_lz(ncg_raw), _lz(nsc_raw))
+        ncl = _lz(ncl_raw)
+        n = struct.unpack_from('<I', ncl, 4)[0]
+        self.colors = [_rgb(c) for c in struct.unpack_from(f'<{n}H', ncl, 8)]
+        s = self.screen
+        self.img, self.pals, self.touched = [[None]*s.tw*8 for _ in range(s.th*8)], {}, set()
+        for ty in range(s.th):
+            for tx in range(s.tw):
+                px, p = s.tile_px(tx, ty)
+                self.pals[tx, ty] = p
+                for k in range(64):
+                    self.img[ty*8+k//8][tx*8+k % 8] = self.colors[(p*16+px[k]) % len(self.colors)]
+
+    def set(self, x, y, rgb):
+        self.img[y][x] = rgb
+        self.touched.add((x//8, y//8))
+
+    def save(self):
+        """The new (ncg, nsc), compressed like the originals."""
+        for tx, ty in sorted(self.touched):
+            p = self.pals[tx, ty]
+            pal = self.colors[p*16:p*16+16]
+            cache, rows = {}, []
+            for y in range(ty*8, ty*8+8):
+                row = []
+                for rgb in self.img[y][tx*8:tx*8+8]:
+                    if rgb not in cache:
+                        cache[rgb] = min(range(1, 16), key=lambda i: sum((a-b)**2 for a, b in zip(pal[i], rgb)))
+                    row.append(cache[rgb])
+                rows.append(row)
+            self.screen.put(tx*8, ty*8, rows, p)
+        ncg_raw, nsc_raw = self.raw
+        ncg = titles.lz10_compress(self.screen.ncg()) if ncg_raw[:1] == b'\x10' else self.screen.ncg()
+        nsc = titles.lz10_compress(self.screen.nsc()) if nsc_raw[:1] == b'\x10' else self.screen.nsc()
+        return ncg, nsc
+
+
+def draw_buttons(pic, labels):
+    """labels: [((left, top, right), text)] on a picture of the setup screen."""
     import random
-    screen = Screen(_lz(ncg_raw), _lz(nsc_raw))
-    n = struct.unpack_from('<I', ncl_raw, 4)[0]
-    colors = [_rgb(c) for c in struct.unpack_from(f'<{n}H', ncl_raw, 8)]
-    w, h = screen.tw*8, screen.th*8
-    img, pals = [[None]*w for _ in range(h)], {}
-    for ty in range(screen.th):
-        for tx in range(screen.tw):
-            px, p = screen.tile_px(tx, ty)
-            pals[tx, ty] = p
-            for k in range(64):
-                img[ty*8+k//8][tx*8+k % 8] = colors[p*16+px[k]]
-    touched = set()
+    img = pic.img
     rnd = random.Random(2089)
 
-    def erase(x0, x1, y0, y1, ink=lambda c: c[0] >= 0x60):
-        """Paint over the lettering with the button's own dark speckle."""
+    def bright(c):
+        return max(c) >= 0x60
+
+    def erase(x0, x1, y0, y1, ink=bright):
+        """Paint over the lettering with the button's own dark speckle; returns its main color."""
         dark = [img[y][x] for y in range(y0, y1) for x in range(x0, x1) if not ink(img[y][x])]
+        lit = Counter()
         for y in range(y0, y1):
             for x in range(x0, x1):
                 if ink(img[y][x]):
-                    img[y][x] = rnd.choice(dark)
-                    touched.add((x//8, y//8))
+                    lit[img[y][x]] += max(img[y][x]) >= 0xC0
+                    pic.set(x, y, rnd.choice(dark))
+        return lit.most_common(1)[0][0]
 
     for (left, top, right), text in labels:
-        erase(left+1, right, top+1, top+BUTTON_RULE)
+        color = erase(left+1, right, top+1, top+BUTTON_RULE)   # orange, or green on a selected button
         word = button_word(text)
         y0, x0 = top+BUTTON_TEXT, right-2-len(word[0])
         for y, row in enumerate(word):
             for x, a in enumerate(row):
                 if a > 0.08:
                     b = img[y0+y][x0+x]
-                    img[y0+y][x0+x] = tuple(round(p+(q-p)*min(1, a*1.2)) for p, q in zip(b, BUTTON_INK))
-                    touched.add(((x0+x)//8, (y0+y)//8))
+                    pic.set(x0+x, y0+y, tuple(round(p+(q-p)*min(1, a*1.2)) for p, q in zip(b, color)))
         if (left, top) == (200, 24):
             y0, y1, xa, xb, ca, cb = COLOR_SUBTITLE
             keep = [img[y][ca:cb] for y in range(y0, y1)]
             erase(xa, xb, y0, y1, lambda c: c[0]-c[2] >= 0x20 or c[0] >= 0x50)   # the speckle here is dark gray
             at = xa + (xb-xa - (cb-ca))//2
             for y, row in zip(range(y0, y1), keep):
-                img[y][at:at+len(row)] = row
-                touched |= {(x//8, y//8) for x in range(at, at+len(row))}
-    for tx, ty in sorted(touched):
-        p = pals[tx, ty]
-        pal = colors[p*16:p*16+16]
-        cache = {}
-        rows = []
-        for y in range(ty*8, ty*8+8):
-            row = []
-            for rgb in img[y][tx*8:tx*8+8]:
-                if rgb not in cache:
-                    cache[rgb] = min(range(1, 16), key=lambda i: sum((a-b)**2 for a, b in zip(pal[i], rgb)))
-                row.append(cache[rgb])
-            rows.append(row)
-        screen.put(tx*8, ty*8, rows, p)
-    ncg = titles.lz10_compress(screen.ncg()) if ncg_raw[:1] == b'\x10' else screen.ncg()
-    nsc = titles.lz10_compress(screen.nsc()) if nsc_raw[:1] == b'\x10' else screen.nsc()
-    return ncg, nsc
+                for x, rgb in enumerate(row):
+                    pic.set(at+x, y, rgb)
+
+
+def buttons_file(ncg_raw, nsc_raw, ncl_raw, labels):
+    """labels: [((left, top, right), text)]. Returns the new (ncg, nsc) of the setup screen."""
+    pic = Picture(ncg_raw, nsc_raw, ncl_raw)
+    draw_buttons(pic, labels)
+    return pic.save()
 
 
 def ending_lines(text):

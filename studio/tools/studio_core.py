@@ -23,6 +23,7 @@ import msgcodec
 import ndsrom
 import portraits
 import titles
+import tutorials
 import vcdiff
 
 STUDIO = Path(__file__).resolve().parents[1]
@@ -452,6 +453,16 @@ def compose(catalog, project):
     else:
         problems.append({'id': labels.entry_id('title_startmenu'), 'level': 'warning', 'message': catalog.group_problem})
     problems += graphic_problems
+
+    def english(sid):
+        key = sid[len(labels.ID_PREFIX):]
+        if sid.startswith(labels.ID_PREFIX) and key in labels.LABELS:
+            return texts[key] or labels.LABELS[key][1]
+        return project.entries.get(sid, {}).get('en')
+    # tutorial screenshots of the menus: redrawn from the same entries
+    pictures, picture_problems = tutorials.compose(catalog.rom, catalog.font, english)
+    files.update(pictures)
+    problems += picture_problems
     overlay = f'overlay/{heroname.OVERLAY}'
     files[overlay] = catalog.rom.read(overlay)
     if catalog.ko_rom:

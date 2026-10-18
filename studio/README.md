@@ -100,6 +100,10 @@ spacing looks normal and straight double quotes work.
   captions, the RESULTS screen and the terrain panel, plus 12 icons in unused
   font slots. HQ and sortie headers get the Studio's English in the group's
   lettering. Nothing from that folder is stored in this repository.
+* `tools/tutorials.py` redraws the menus in the tutorial screenshots (Yuji's
+  hangar lesson, the battle lessons) from the entries that translate the real
+  menus, so the pictures always match them. `tools/buttonfont.py` holds the
+  serif capitals of the Wanzer setup buttons (made by `dev/make_buttonfont.py`).
 * `tools/vcdiff.py` writes and checks the xdelta (VCDIFF) patch in pure Python.
 * `tools/test_studio.py` checks all of this against the real ROM.
 

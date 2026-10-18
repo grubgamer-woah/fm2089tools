@@ -14,6 +14,7 @@ import labels
 import msgcodec
 import ndsrom
 import portraits
+import tutorials
 import studio_core as core
 import vcdiff
 
@@ -62,6 +63,9 @@ def main():
         assert check.read('data/name/EntryCheck_ncg.bin') != cat.rom.read('data/name/EntryCheck_ncg.bin')
         for part in ('ncg', 'nsc'):
             assert check.read(labels.SETUP_BG+part+'.bin') != cat.rom.read(labels.SETUP_BG+part+'.bin'), part
+        for name in tutorials.PICTURES:
+            path = f'data/bg/{name}_ncg.bin'
+            assert check.read(path) != cat.rom.read(path), path
         if cat.ko_rom:
             assert check.read('data/name/fon00_ncg.bin') == cat.ko_rom.read('data/name/en/fon00_ncg.bin')
             ovt = struct.unpack_from('<I', patched, 0x50)[0]
