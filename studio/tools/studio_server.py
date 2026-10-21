@@ -315,6 +315,25 @@ class Handler(BaseHTTPRequestHandler):
                         STATE.project.settings[core.staticons.SETTING] = bool(data[core.staticons.SETTING])
                     STATE.project.save()
                 return self.send(200, {'ok': True, 'settings': STATE.project.settings})
+            if path == '/api/fonts':
+                # the game font as a sheet to draw over, and the folder whose sheets become the extra fonts
+                folder = STATE.project.path.parent/core.fontsheet.FOLDER
+                folder.mkdir(parents=True, exist_ok=True)
+                sheet = STATE.project.path.parent/core.FONT_SHEET
+                sheet.write_bytes(core.fontsheet.export(cat.font))
+                fonts = []
+                for name, file in core.fontsheet.find(STATE.project.path.parent):
+                    try:
+                        fonts.append({'name': name, 'letters': len(core.fontsheet.load(file.read_bytes()))})
+                    except ValueError as error:
+                        fonts.append({'name': name, 'error': str(error)})
+                if json.loads(self.body() or b'{}').get('open', True):
+                    try:
+                        open_folder(str(folder))
+                    except OSError:
+                        pass
+                return self.send(200, {'sheet': str(sheet), 'folder': str(folder), 'fonts': fonts,
+                                       'max': core.fontsheet.MAX_FONTS})
             if path == '/api/export-script':
                 data = json.loads(self.body() or b'{}')
                 author = (data.get('author') or '').strip()
@@ -353,7 +372,8 @@ class Handler(BaseHTTPRequestHandler):
             if path == '/api/open':
                 data = json.loads(self.body())
                 target = Path(data['path']).resolve()
-                if not {core.BUILDS.resolve(), core.EXPORTS.resolve()} & {target, *target.parents}:
+                fonts = (STATE.project.path.parent/core.fontsheet.FOLDER).resolve()
+                if not {core.BUILDS.resolve(), core.EXPORTS.resolve(), fonts} & {target, *target.parents}:
                     return self.send(403, {'error': 'only build and export folders can be opened'})
                 open_folder(str(target))
                 return self.send(200, {'ok': True})

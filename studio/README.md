@@ -128,6 +128,31 @@ keeps the words; the build swaps them. Untick **Stat icons** in the header to
 build with the words. The icons come with the group's font, so without the
 group files the words are kept.
 
+Players can switch the icons back to the words themselves: the patch adds a
+**Stat Display** option (Icons / Text) to the game's Config menu, on the title
+screen and in battle. Like the game's own options it is kept in each save, and
+a new game starts with Icons. Its name and help lines are the `Options_*`
+entries under Menus & system.
+
+## Fonts
+
+The patch also adds a **Font** option to the game's Config menu, so players can
+pick which font the game's text is drawn in. It only appears once there is a
+second font. To make one:
+
+1. Click **Fonts** in the header. It saves the game's own font as
+   `workspace/font sheet (Classic).png` and opens `workspace/fonts/`.
+2. Copy the sheet into `workspace/fonts/` and rename it; the file name is the
+   font's name in the game (for example `Serif.png` shows as "Serif").
+3. Draw over the letters. Each cell holds one character, from space to `~`:
+   black ink (two greys for soft edges), 12 px high from the cell's second row,
+   and the red line under it is the letter's width. Letters at most 16 px wide.
+   A cell you clear keeps the game's own letter.
+4. Build. Up to 3 extra fonts are used, in file name order.
+
+The build warns when story lines drawn in a new font would run past the text
+box. The font applies to all of the game's 12 px text (dialogue, menus, help).
+
 ## Mission titles
 
 The mission title screens ("Mission 01 / 実戦訓練1") are pictures, not text. Click
@@ -200,6 +225,11 @@ spacing looks normal and straight double quotes work.
   hangar lesson, the battle lessons) from the entries that translate the real
   menus, so the pictures always match them. `tools/buttonfont.py` holds the
   serif capitals of the Wanzer setup buttons (made by `dev/make_buttonfont.py`).
+* `tools/options.py` adds the Stat Display and Font options to the game's
+  Config menu: a little ARM code (assembled by `dev/make_optcode.py` into
+  `tools/optcode.py`) in overlay 3, where 154 copies of the font file's name
+  were, that the game's glyph width and draw functions (overlay 0) and the
+  Config menu call. `tools/fontsheet.py` reads and writes the font sheets.
 * `tools/vcdiff.py` writes and checks the xdelta (VCDIFF) patch in pure Python.
 * `tools/test_studio.py` checks all of this against the real ROM.
 

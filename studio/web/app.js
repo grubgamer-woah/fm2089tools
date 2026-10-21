@@ -29,11 +29,11 @@ async function start() {
     $('#rom-missing').hidden = false; $('#app').hidden = true; $('#tabs').hidden = true;
     $('#rom-problem').textContent = S.config.rom_problem;
     $('#base').textContent = 'No ROM loaded';
-    for (const b of ['#build', '#validate', '#import', '#import-multi', '#export-script', '#titles', '#credits']) $(b).disabled = true;
+    for (const b of ['#build', '#validate', '#import', '#import-multi', '#export-script', '#titles', '#credits', '#fonts']) $(b).disabled = true;
     return;
   }
   $('#rom-missing').hidden = true; $('#app').hidden = false; $('#tabs').hidden = false;
-  for (const b of ['#build', '#validate', '#import', '#import-multi', '#export-script', '#titles', '#credits']) $(b).disabled = false;
+  for (const b of ['#build', '#validate', '#import', '#import-multi', '#export-script', '#titles', '#credits', '#fonts']) $(b).disabled = false;
   $('#base').textContent = 'ROM: ' + S.config.rom;
   const [cat, font] = await Promise.all([api('/api/catalog'), api('/api/font')]);
   S.entries = cat.entries; S.project = cat.project;
@@ -621,6 +621,22 @@ async function exportScript() {
   $('#open-exports').onclick = () => api('/api/open', {path: r.folder});
 }
 
+// Extra fonts for the game's Config menu: the game font as a sheet, and the sheets already in fonts/
+async function showFonts() {
+  const r = await api('/api/fonts', {});
+  const list = r.fonts.length
+    ? '<ul>' + r.fonts.map(f => `<li><b>${esc(f.name)}</b>: ${f.error ? `<span class="bad">${esc(f.error)}</span>` : `${fmt(f.letters)} letters drawn`}</li>`).join('') + '</ul>'
+    : '<p>No extra fonts yet, so the game\'s Config menu has no Font option.</p>';
+  showJob(`<h3>Fonts</h3>
+    <p>Every PNG font sheet in <code>${esc(r.folder)}</code> is one more font players can pick in the game's Config menu
+       (up to ${r.max}, named after the file). The game's own font is called Classic.</p>${list}
+    <p>To make one, copy <code>${esc(r.sheet)}</code> into that folder, rename it (the name shows in the game)
+       and draw over the letters: black ink, 12 px high, and the red line under each letter is its width.
+       Letters you clear keep the game's own. Then build.</p>
+    <button id="open-fonts">Open fonts folder</button>`);
+  $('#open-fonts').onclick = () => api('/api/open', {path: r.folder});
+}
+
 const textBox = (t, cls = '') => t ? `<div class="merge-text ${cls}">${esc(t)}</div>` : '<div class="merge-text none">(empty)</div>';
 const what = item => item.kind === 'English' || item.kind === 'note' ? `${esc(item.name)}${item.kind === 'note' ? ' <span class="badge">note</span>' : ''}` : `${item.kind === 'name' ? 'Speaker name' : 'Portrait'}: ${esc(item.name)}`;
 
@@ -708,6 +724,7 @@ $('#stat-icons').onchange = async ev => {
   await api('/api/settings', {stat_icons: ev.target.checked});
   flash(ev.target.checked ? 'Builds use the stat icons' : 'Builds use the stat names (ATK, ACC…)');
 };
+$('#fonts').onclick = () => showFonts().catch(err => showJob(`<h3 class="bad">Fonts failed</h3><p>${esc(err.message)}</p>`));
 $('#export-script').onclick = () => exportScript().catch(err => showJob(`<h3 class="bad">Export failed</h3><p>${esc(err.message)}</p>`));
 $('#import').onclick = () => $('#import-file').click();
 $('#import-multi').onclick = () => $('#import-files').click();

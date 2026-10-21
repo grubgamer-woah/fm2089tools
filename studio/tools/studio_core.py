@@ -16,12 +16,14 @@ from pathlib import Path
 
 import credits
 import fontdata
+import fontsheet
 import groupart
 import heroname
 import koname
 import labels
 import msgcodec
 import ndsrom
+import options
 import portraits
 import scriptio
 import titles
@@ -44,6 +46,8 @@ PROJECT = WORKSPACE/'project.json'
 # Kiley's English, shipped with the Studio: a new workspace starts from it, and Import takes it too
 BUNDLED = STUDIO/'translation'/'project.json'
 SETUP_PNG = 'setup_bg.png'
+# the game font as a sheet to draw a new font on; sheets in workspace/fonts/ are the extra fonts
+FONT_SHEET = 'font sheet (Classic).png'
 
 # kana, kanji and Japanese punctuation; text without any is already English (or romaji)
 JAPANESE = re.compile('[\u3001-\u30ff\u3400-\u9fff\uff66-\uff9f]')
@@ -134,6 +138,10 @@ class Catalog:
             else:
                 self.group, self.group_problem = groupart.GroupArt(found), None
         self.font_data = fontdata.tweak(self.rom.read(FONT_PATH), self.group.icons() if self.group else None)
+        # copies of the stat icons, and the stat names as glyphs, for the game's Stat Display option
+        self.copy_base = None
+        if self.group:
+            self.font_data, self.copy_base = options.add_stat_glyphs(self.font_data, staticons.ICONS)
         self.font = fontdata.Font(self.font_data)
         self.portraits = portraits.Portraits(self.rom)
         self.titles = titles.Titles(self.rom)
@@ -190,6 +198,18 @@ class Catalog:
             elif self.group and key in groupart.LETTERING:
                 e['art'] = "Drawn in the group's header lettering (letters: " + ''.join(sorted(self.group.letters())) + ')'
 
+            self.entries.append(e)
+            self.by_id[e['id']] = (None, None, e)
+        # names and help lines of the options the patch adds to the game's Config menu
+        for n, (key, (what, default)) in enumerate(options.TEXTS.items(), 1):
+            width = 120 if key.endswith('label') else 240
+            e = {
+                'id': options.entry_id(key), 'file': options.FILE, 'index': n, 'group': 'menus',
+                'jp': default, 'speaker': None, 'speaker_own_line': False, 'body': default,
+                'lines': default.count('\n')+1, 'jp_width': width, 'file_width': width,
+                'art': f"New option the patch adds to the game's Config menu: {what}. "
+                       "The text shown here is the English it uses until you change it.",
+            }
             self.entries.append(e)
             self.by_id[e['id']] = (None, None, e)
         for e in self.entries:
@@ -585,13 +605,22 @@ def compose(catalog, project):
     """Return ({rom path: new .msg bytes}, problems)."""
     per_file, problems = {}, []
     # the group's stat icons replace the stat names of the parts info (they come with the group's font)
-    icons = project.settings.get(staticons.SETTING, True) and catalog.group is not None
+    icons = project.settings.get(staticons.SETTING, True) and catalog.copy_base is not None
     for sid, p in project.entries.items():
         if 'en' not in p or sid not in catalog.by_id:
             continue
         name, i, e = catalog.by_id[sid]
-        en = staticons.with_icons(p['en']) if icons and staticons.applies(sid) else p['en']
+        en = staticons.with_icons(p['en'], catalog.copy_base) if icons and staticons.applies(sid) else p['en']
         res = catalog.check(sid, en, project.speakers)
+        if icons and staticons.applies(sid) and not res['errors']:
+            # the game's Stat Display option can show the names again; they take more room
+            words = re.sub(r'«g:([0-9A-F]+)»', lambda m: '«g:%X»' % (
+                int(m.group(1), 16) + (options.ICON_COUNT if 0 <= int(m.group(1), 16) - catalog.copy_base < options.ICON_COUNT else 0)), en)
+            for n, (w, w_icons) in enumerate(zip(catalog.check(sid, words, project.speakers)['widths'], res['widths']), 1):
+                # the same width as the words without icons, so only the screen edge counts
+                if w > SCREEN_WIDTH >= w_icons:
+                    problems.append({'id': sid, 'level': 'warning', 'message':
+                                     f'With Stat Display set to Text in the game, line {n} is {w} px, past the screen edge'})
         if name is None:  # a graphic; labels.compose draws it
             problems += [{'id': sid, 'level': 'error', 'message': msg} for msg in res['errors']]
             continue
@@ -608,8 +637,28 @@ def compose(catalog, project):
                                               catalog.group.name_keys() if catalog.group else None)
         for i, ch in name_chars.items():
             per_file.setdefault('MsgLabels_font.msg', {})[i] = msgcodec.tokens_to_bytes([('g', catalog.font.char_glyph(ch))])
+    # the game's Config menu options (options.py): extra fonts from the workspace's font sheets
+    fonts, font_names = [], [options.DEFAULT_FONT_NAME]
+    for name, path in fontsheet.find(project.path.parent):
+        try:
+            letters = fontsheet.load(path.read_bytes())
+        except ValueError as error:
+            problems.append({'id': options.entry_id('font_label'), 'level': 'error', 'message': f'Font sheet {path.name}: {error}'})
+            continue
+        fonts.append(letters)
+        font_names.append(name)
+        problems += font_warnings(catalog, project, name, fontsheet.font_with(catalog.font_data, letters))
+    for slot, text in options.texts(project.entries, font_names).items():
+        toks, errors = msgcodec.text_to_tokens(text, catalog.font)
+        if errors:
+            problems += [{'id': options.entry_id('font_help'), 'level': 'error', 'message': msg} for msg in errors]
+            continue
+        per_file.setdefault(options.MSG_FILE, {})[slot] = msgcodec.tokens_to_bytes(toks)
     files = {MSG_DIR+name: catalog.files[name].build(repl) for name, repl in per_file.items()}
-    files[FONT_PATH] = catalog.font_data
+    files[FONT_PATH], font_tables = options.with_fonts(catalog.font_data, fonts, catalog.copy_base)
+    files[options.OV0], files[options.OV3] = options.patch_code(
+        catalog.rom.read(options.OV0), catalog.rom.read(options.OV3),
+        catalog.copy_base if icons else None, icons, font_tables)
     texts = {key: project.entries.get(labels.entry_id(key), {}).get('en') for key in labels.LABELS}
     # an edited picture of the Wanzer setup buttons, if there is one (see README, "Setup buttons")
     setup = project.setup_png()
@@ -653,6 +702,23 @@ def compose(catalog, project):
         name = HERO_DEFAULT
     files[overlay] = heroname.patch(files[overlay], name)
     return files, problems
+
+
+def font_warnings(catalog, project, name, font):
+    """Story lines that run past the text box when drawn in an extra font (one warning in all)."""
+    over = []
+    for sid, p in project.entries.items():
+        if 'en' not in p or sid not in catalog.by_id or catalog.by_id[sid][2]['group'] not in DIALOGUE_GROUPS:
+            continue
+        text, _ = catalog.full_text(catalog.by_id[sid][2], p['en'], project.speakers)
+        toks, errors = msgcodec.text_to_tokens(text.replace(HERO_NAME, HERO_DEFAULT), font)
+        if not errors and max(msgcodec.line_widths(toks, font)) > TEXT_BOX_WIDTH:
+            over.append(sid)
+    if not over:
+        return []
+    return [{'id': over[0], 'level': 'warning', 'message':
+             f'In the font "{name}", {len(over)} story lines run past the {TEXT_BOX_WIDTH} px text box '
+             f'(the game wraps them mid-word), for example ' + ', '.join(over[:5])}]
 
 
 def build(catalog, project, out_root=BUILDS, log=print):
@@ -723,7 +789,7 @@ def setup_png(catalog, project):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('command', choices=['build', 'export', 'setup-png'])
+    ap.add_argument('command', choices=['build', 'export', 'setup-png', 'font-sheet'])
     ap.add_argument('--project', default=str(PROJECT))
     ap.add_argument('--rom')
     ap.add_argument('--out', default=str(BUILDS))
@@ -735,6 +801,13 @@ def main():
     project = Project(args.project)
     if args.command == 'export':
         sys.stdout.write(export_tsv(catalog, project))
+        return
+    if args.command == 'font-sheet':
+        # the game font's English letters, to draw a new font over (see README, "Fonts")
+        out = Path(args.out) if args.out != str(BUILDS) else project.path.parent/FONT_SHEET
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(fontsheet.export(catalog.font))
+        print(out)
         return
     if args.command == 'setup-png':
         # the Wanzer setup screen as this project draws it, to edit (see README, "Setup buttons")

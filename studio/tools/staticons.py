@@ -7,10 +7,15 @@ The project keeps the English words; when the project's "stat_icons" setting is
 on (the default), the build swaps each stat name on the lines below the first of
 a parts info entry for its icon. Turn it off in the Studio to keep the words.
 
+The game's Config menu also gets a Stat Display option (options.py) that lets
+the player switch the icons back to the names.
+
 The icon for each stat comes from the spreadsheet (hanger sort labels and the
 parts_help sheets). SHRT uses the Japanese font's own short-range gun icon.
 """
 import re
+
+import options
 
 SETTING = 'stat_icons'
 FILE_PREFIX = 'MsgLabels_parts_help_'
@@ -26,8 +31,15 @@ def applies(sid):
     return sid.startswith(FILE_PREFIX)
 
 
-def with_icons(text):
-    """The text with the stat names after its first line turned into icons."""
+def with_icons(text, copy_base=None):
+    """The text with the stat names after its first line turned into icons.
+    copy_base: use the copies of the icons that the game's Stat Display option can
+    turn back into words (options.py) instead of the icons themselves."""
+    def icon(m):
+        stat = m.group(1)
+        if copy_base is None:
+            return f'«g:{ICONS[stat]:X}»'
+        return ''.join(f'«g:{g:X}»' for g in options.copy_glyphs(copy_base, stat))
     first, sep, rest = text.partition('\n')
-    rest = STAT.sub(lambda m: f'«g:{ICONS[m.group(1)]:X}»', rest)
+    rest = STAT.sub(icon, rest)
     return first + sep + re.sub(r' {2,}(?=«g:)', ' ', rest)   # icons need less room than the words

@@ -15,6 +15,8 @@ import koname
 import labels
 import msgcodec
 import ndsrom
+import fontsheet
+import options
 import portraits
 import scriptio
 import tutorials
@@ -27,7 +29,7 @@ def main():
     if rom is None:
         sys.exit(core.find_rom()[1])
     cat = core.Catalog(rom)
-    assert len(cat.entries) == 11500 + len(labels.LABELS), len(cat.entries)
+    assert len(cat.entries) == 11500 + len(labels.LABELS) + len(options.TEXTS), len(cat.entries)
 
     for name, mf in cat.files.items():
         assert mf.build({}) == mf.data, f'{name} does not rebuild byte for byte'
@@ -107,6 +109,15 @@ def main():
         assert credits.compose(cat.rom, {**credits.DEFAULT, **too_long})[1][0][0] == 'error'
         project.save()
         assert core.Project(project.path).credits == project.credits
+        # an extra font: every sheet letter comes back as drawn
+        sheet = fontsheet.export(cat.font)
+        letters = fontsheet.load(sheet)
+        for ch, rec in letters.items():
+            g = cat.font.char_glyph(ch)
+            w, rb, px = cat.font.record(g)
+            assert rec == options.pack(w, [[(px[y*rb+x//4] >> (x % 4*2)) & 3 for x in range(w)] for y in range(12)]), ch
+        (Path(tmp)/fontsheet.FOLDER).mkdir()
+        (Path(tmp)/fontsheet.FOLDER/'Test.png').write_bytes(sheet)
 
         result = core.build(cat, project, Path(tmp)/'builds', log=lambda m: None)
         assert result['ok'], result
@@ -139,6 +150,21 @@ def main():
             ovt = struct.unpack_from('<I', patched, 0x50)[0]
             assert any(struct.unpack_from('<3I', patched, ovt+32*i)[::2] == (14, koname.SIZE) for i in range(64))
         assert portraits.lz10(check.read(credits.PATH)).decode('cp932') == script
+        # Config menu options: the code is in, every message file shares one font name, two fonts
+        if cat.copy_base is not None:
+            ov0 = check.read(options.OV0)
+            assert ov0[options.WIDTH_FN-options.OV0_RAM:][:len(options.optcode.WIDTH)] == options.optcode.WIDTH
+            ov3 = check.read(options.OV3)
+            assert ov3[options.CAVE-options.OV3_RAM:][:16] != cat.rom.read(options.OV3)[options.CAVE-options.OV3_RAM:][:16]
+            font_count = struct.unpack_from('<I', ov3, options.CAVE-options.OV3_RAM+options.optcode.DATA['font_count'])[0]
+            assert font_count == 2, font_count
+            fnt = check.read(core.FONT_PATH)
+            assert struct.unpack_from('<H', fnt, 0x0A)[0] == cat.copy_base + 2*options.ICON_COUNT
+            help_ = msgcodec.MsgFile('x', check.read('data/font/'+options.MSG_FILE))
+            assert msgcodec.tokens_to_text(help_.tokens(options.SLOTS['font_1']), cat.font).replace('«g:62B»', '"') == 'Font setting\nCurrently "Test".'
+            for stat in options.STATS:  # every stat name fits its glyphs
+                for rec in options.word_records(options._records(fnt), struct.unpack_from('<95H', fnt, 0x4C), stat):
+                    assert rec[0] <= options.MAX_GLYPH_WIDTH, stat
         st = msgcodec.MsgFile('x', check.read('data/font/MsgLabels_station_01.msg'))
         assert msgcodec.tokens_to_text(st.tokens(1), cat.font) == '«E801:00»:\n«E801:00» says line 2 in English.'
 
