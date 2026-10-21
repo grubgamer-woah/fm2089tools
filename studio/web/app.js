@@ -29,11 +29,11 @@ async function start() {
     $('#rom-missing').hidden = false; $('#app').hidden = true; $('#tabs').hidden = true;
     $('#rom-problem').textContent = S.config.rom_problem;
     $('#base').textContent = 'No ROM loaded';
-    for (const b of ['#build', '#validate', '#import', '#import-multi', '#export-script', '#titles']) $(b).disabled = true;
+    for (const b of ['#build', '#validate', '#import', '#import-multi', '#export-script', '#titles', '#credits']) $(b).disabled = true;
     return;
   }
   $('#rom-missing').hidden = true; $('#app').hidden = false; $('#tabs').hidden = false;
-  for (const b of ['#build', '#validate', '#import', '#import-multi', '#export-script', '#titles']) $(b).disabled = false;
+  for (const b of ['#build', '#validate', '#import', '#import-multi', '#export-script', '#titles', '#credits']) $(b).disabled = false;
   $('#base').textContent = 'ROM: ' + S.config.rom;
   const [cat, font] = await Promise.all([api('/api/catalog'), api('/api/font')]);
   S.entries = cat.entries; S.project = cat.project;
@@ -381,7 +381,9 @@ function problemList(problems) {
 }
 function wireGoto() {
   document.querySelectorAll('[data-goto]').forEach(a => a.onclick = ev => {
-    ev.preventDefault(); const e = S.byId[a.dataset.goto];
+    ev.preventDefault();
+    if (a.dataset.goto === 'Credits') { showCredits(); return; }
+    const e = S.byId[a.dataset.goto];
     S.group = e.group; $('#search').value = ''; $('#file').value = ''; renderTabs(); fillFiles(); applyFilter();
     const i = S.filtered.findIndex(x => x.id === e.id); if (i >= 0) { S.page = Math.floor(i / PAGE); renderRows(); }
     select(e.id);
@@ -479,6 +481,72 @@ async function uploadTitles(files, name) {
   }
   showTitles(`${done.length} picture${done.length === 1 ? '' : 's'} added.` +
     (failed.length ? `<span class="bad"> Not added: ${failed.map(esc).join('; ')}</span>` : ''));
+}
+
+// Closing credits: the team's section (roles and names) and, for advanced edits, the game's whole credits script
+async function showCredits(note = '') {
+  const r = await api('/api/credits');
+  const c = r.credits;
+  const stamp = Date.now();
+  const around = r.team_at === null ? null : {first: Math.max(0, r.team_at - 4), count: r.team_lines + 8};
+  showJob(`<h3>Credits</h3>
+    <p>The game's closing credits roll in English already. Fill in the roles below and the build adds your team to them.
+      Roles with no names are left out. Each line holds ${r.width} characters (letters, digits and plain punctuation;
+      accents become plain letters).</p>
+    <div class="credits-grid"><div class="credits-form">
+      <label>Where in the credits<select id="cr-position">${Object.entries(r.positions).map(([k, v]) =>
+        `<option value="${k}"${k === c.position ? ' selected' : ''}>${esc(v)}</option>`).join('')}</select></label>
+      <label>Heading <input id="cr-title" value="${esc(c.title)}" maxlength="${r.width}" placeholder="English Translation"></label>
+      <label>Group name (optional) <input id="cr-group" value="${esc(c.group)}" maxlength="${r.width}" placeholder="Shown under the heading"></label>
+      <label class="check"><input id="cr-capitals" type="checkbox"${c.capitals ? ' checked' : ''}> Write names in capitals, like the game's own credits</label>
+      <div id="cr-roles">${c.roles.map((role, i) => creditRole(role, i, r.width)).join('')}</div>
+      <p><button id="cr-add">Add a role</button></p>
+      <details class="cr-script"${r.edited_script ? ' open' : ''}><summary>Edit the game's whole credits script (advanced)</summary>
+        <p class="muted">One credits line per <code>&lt;br&gt;</code>; <code>&lt;color 1&gt;</code> makes a line orange.
+        Your team's section is added on top of this script when you build. ${r.edited_script ? '<b class="warn-text">Edited.</b>' : 'This is the game\'s own script.'}</p>
+        <textarea id="cr-script" spellcheck="false">${esc(r.script)}</textarea>
+        <div class="buttons"><button id="cr-script-save">Save script</button><button id="cr-script-reset"${r.edited_script ? '' : ' disabled'}>Back to the game's script</button></div>
+      </details>
+    </div><div class="credits-preview">
+      <div class="muted">${r.changed ? `Preview of your section as the credits draw it (${fmt(r.lines)} lines in all).` : 'No names yet, so the game keeps its own credits.'}
+        <a href="#" id="cr-all">Show the whole roll</a></div>
+      ${around ? `<img id="cr-img" src="/api/credits.png?first=${around.first}&count=${around.count}&t=${stamp}" alt="Credits preview">` : ''}
+      <ul class="msgs">${r.problems.map(p => `<li class="${p.level}">${esc(p.message)}</li>`).join('')}</ul>
+      <p id="cr-note">${note}</p>
+    </div></div>`);
+  const save = async (extra = {}) => {
+    const roles = [...document.querySelectorAll('.cr-role')].map(d => ({role: d.querySelector('input').value, names: d.querySelector('textarea').value}));
+    await api('/api/credits', {position: $('#cr-position').value, title: $('#cr-title').value, group: $('#cr-group').value,
+      capitals: $('#cr-capitals').checked, roles, ...extra});
+    flash('Credits saved');
+    showCredits('Saved.');
+  };
+  for (const id of ['#cr-position', '#cr-title', '#cr-group', '#cr-capitals']) $(id).onchange = () => save();
+  document.querySelectorAll('.cr-role input, .cr-role textarea').forEach(i => i.onchange = () => save());
+  document.querySelectorAll('[data-cr-remove]').forEach(b => b.onclick = () => { b.closest('.cr-role').remove(); save(); });
+  document.querySelectorAll('[data-cr-move]').forEach(b => b.onclick = () => {
+    const row = b.closest('.cr-role'), other = +b.dataset.crMove < 0 ? row.previousElementSibling : row.nextElementSibling;
+    if (!other) return;
+    if (+b.dataset.crMove < 0) row.parentNode.insertBefore(row, other); else row.parentNode.insertBefore(other, row);
+    save();
+  });
+  $('#cr-add').onclick = () => { $('#cr-roles').insertAdjacentHTML('beforeend', creditRole({role: '', names: ''}, document.querySelectorAll('.cr-role').length, r.width)); save(); };
+  $('#cr-script-save').onclick = () => save({script: $('#cr-script').value});
+  $('#cr-script-reset').onclick = () => { if (confirm("Throw away your edits to the whole script and use the game's own again?")) save({script: null}); };
+  $('#cr-all').onclick = ev => {
+    ev.preventDefault();
+    const img = $('#cr-img') || $('.credits-preview').appendChild(Object.assign(document.createElement('img'), {id: 'cr-img', alt: 'Credits preview'}));
+    img.src = `/api/credits.png?t=${Date.now()}`;
+    img.parentNode.classList.add('all');
+  };
+}
+
+function creditRole(role, i, width) {
+  return `<div class="cr-role"><div class="cr-role-head">
+    <label>Role <input value="${esc(role.role)}" maxlength="${width}" placeholder="Translation"></label>
+    <button data-cr-move="-1" title="Move up">↑</button><button data-cr-move="1" title="Move down">↓</button>
+    <button data-cr-remove="${i}" title="Remove this role">✕</button></div>
+    <label>Names, one per line <textarea rows="3" spellcheck="false">${esc(role.names)}</textarea></label></div>`;
 }
 
 async function restartStudio() {
@@ -632,6 +700,7 @@ $('#validate').onclick = validate;
 $('#restart').onclick = restartStudio;
 $('#speakers').onclick = showSpeakers;
 $('#titles').onclick = () => showTitles();
+$('#credits').onclick = () => showCredits().catch(err => showJob(`<h3 class="bad">Credits</h3><p>${esc(err.message)}</p>`));
 $('#title-files').onchange = ev => { const files = [...ev.target.files]; if (files.length) uploadTitles(files, ev.target.dataset.name); ev.target.value = ''; };
 $('#speaker').onchange = () => { S.page = 0; applyFilter(); };
 $('#build').onclick = build;

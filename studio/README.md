@@ -143,6 +143,24 @@ The pictures are stored in `workspace/images/` and listed under `images` in
 project.json. The Studio turns each into the game's 16-color tiles once (about a
 second) and keeps the result in `workspace/cache/`; every build includes them.
 
+## Credits
+
+The closing credits after the Epilogue are already in English (a text script,
+`data/Ending/ClosingCredits.txt.pk`). Click **Credits** to add your team: a
+heading ("English Translation"), an optional group name, and roles with one name
+per line. Roles without names are left out, and with no names at all the game
+keeps its own credits. Pick whether the section rolls right after the game title
+or at the end, just before the copyright. The preview is drawn with the game's
+own credits font; a line holds 32 characters of plain ASCII (accents become plain
+letters, other characters are an error). Names are written in capitals like the
+game's own credits unless you untick that.
+
+The build makes the roll's total time longer by the lines it adds, so the
+scrolling speed stays the same (the music is not changed). For anything else,
+**Edit the game's whole credits script** opens the full script: one line per
+`<br>`, `<color 1>` makes a line orange. The team's section is added on top of it.
+The settings are saved under `credits` in project.json.
+
 ## Building the patch
 
 **Build xdelta** checks every entry, then writes a new folder in `studio/builds/`:
@@ -168,6 +186,8 @@ spacing looks normal and straight double quotes work.
   points are glyph numbers, with control codes at U+E800–U+E8FF.
 * `tools/fontdata.py` reads the 12 px proportional font and its ASCII table.
 * `tools/portraits.py` decodes the character face graphics for the Studio.
+* `tools/credits.py` adds the team to the closing credits script and draws the
+  preview with the credits font (`data/Ending/SR_00`).
 * `tools/groupart.py` uses the localization group's own English graphics when
   the "5. Group Localization Files" folder sits next to the Studio folder: the
   title and base headers and base map rooms they drew, the opening demo

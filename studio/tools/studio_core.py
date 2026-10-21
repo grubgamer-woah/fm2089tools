@@ -14,6 +14,7 @@ import re
 import sys
 from pathlib import Path
 
+import credits
 import fontdata
 import groupart
 import heroname
@@ -67,6 +68,8 @@ HERO_DEFAULT = 'Storm'
 # The name entry screen's preset name follows this string's English (ストーム in the names list).
 HERO_NAME_ID = 'MsgLabels_name_msg_110'
 PATCH_NAME = 'FM2089 English'
+# problems with the closing credits are listed under this id (it is not a text entry)
+CREDITS_ID = 'Credits'
 
 GROUPS = [
     ('story', 'Story (game order)', re.compile(r'^MsgLabels_(station|tactics)_\d')),
@@ -307,6 +310,7 @@ class Project:
         self.faces = {}  # Japanese speaker name -> portrait picked in the Studio ('-' = none); never built
         self.images = {}  # mission title name -> replacement PNG, relative to the project folder
         self.settings = {}  # build switches, such as staticons.SETTING
+        self.credits = {}  # the team's section in the closing credits (see credits.py); empty = the game's own
         source = self.path if self.path.exists() else BUNDLED if self.path == PROJECT and BUNDLED.is_file() else None
         self.stamp = self.disk_stamp()
         if source:
@@ -316,6 +320,7 @@ class Project:
             self.faces = data.get('faces', {})
             self.images = data.get('images', {})
             self.settings = data.get('settings', {})
+            self.credits = data.get('credits', {})
         # A PNG in images/ counts even if an older Studio saved the project without it
         for png in sorted(self.image_dir.glob('mtittle_bg_??.png')):
             self.images.setdefault(png.stem, f'images/{png.name}')
@@ -356,7 +361,7 @@ class Project:
         data = {'application': 'fm2089-translation-studio', 'version': 1, 'rom_md5': CLEAN_MD5,
                 'saved': dt.datetime.now().isoformat(timespec='seconds'),
                 'speakers': self.speakers, 'faces': self.faces, 'images': dict(sorted(self.images.items())),
-                'settings': self.settings, 'entries': self.entries}
+                'settings': self.settings, 'credits': self.credits, 'entries': self.entries}
         tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding='utf-8')
         os.replace(tmp, self.path)
         self.stamp = self.disk_stamp()
@@ -628,6 +633,10 @@ def compose(catalog, project):
         tutorials.group_bars(catalog.rom, graphics, catalog.group))
     files.update(pictures)
     problems += picture_problems
+    # the closing credits with the team's section (only when the Credits window has something in it)
+    roll, roll_problems = credits.build(catalog.rom, credits.settings(project))
+    files.update(roll)
+    problems += [{'id': CREDITS_ID, 'level': level, 'message': msg} for level, msg in roll_problems]
     overlay = f'overlay/{heroname.OVERLAY}'
     files[overlay] = catalog.rom.read(overlay)
     if catalog.ko_rom:
@@ -684,6 +693,7 @@ def build(catalog, project, out_root=BUILDS, log=print):
         'name_entry_screens': 'En+Ko patch' if catalog.ko_rom else 'Japanese',
         'group_art': str(catalog.group.folder) if catalog.group else None,
         'mission_titles': sorted({p.split('/')[-1][:13] for p in images}),
+        'credits': credits.PATH in files,
         'files': report, 'warnings': [p for p in problems if p['level'] == 'warning'],
     }
     (out/'build-manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding='utf-8')

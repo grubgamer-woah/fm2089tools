@@ -125,3 +125,18 @@ label.pick small{color:var(--muted)}
 #mtl-fill{height:100%;width:0;background:var(--orange)}
 .badge.person{border-color:#8fc2ff;color:#8fc2ff}
 .badge.hidden{border-color:#888;color:#aaa}
+.credits-grid{display:grid;grid-template-columns:minmax(320px,1fr) 300px;gap:18px;align-items:start}
+@media (max-width:900px){.credits-grid{grid-template-columns:1fr}}
+.credits-form{display:flex;flex-direction:column;gap:10px}
+#cr-roles{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px}
+.cr-role{border:1px solid var(--line);border-radius:4px;background:#10191a;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.cr-role-head{display:flex;gap:6px;align-items:flex-end}
+.cr-role-head label{flex:1;min-width:0}
+.cr-role-head input{width:100%;min-width:0}
+.cr-role-head button{padding:6px 9px;flex:none}
+.cr-role textarea{min-height:60px;font-family:inherit;font-size:14px}
+.cr-script summary{cursor:pointer;color:var(--accent)}
+.cr-script textarea{min-height:320px;font-size:12px}
+.credits-preview{position:sticky;top:12px}
+.credits-preview img{display:block;width:256px;image-rendering:pixelated;border:1px solid var(--line);margin-top:6px;background:#000}
+.credits-preview.all{max-height:80vh;overflow:auto}

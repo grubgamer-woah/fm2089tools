@@ -82,6 +82,21 @@ def run_build():
         job.update(result={'ok': False, 'message': f'{error}', 'trace': traceback.format_exc()}, running=False)
 
 
+def credits_state(cfg):
+    """The Credits window's settings, the script it builds, problems, and where the team's lines are."""
+    rom = STATE.catalog.rom
+    script, problems = core.credits.compose(rom, cfg)
+    base = core.credits.original(rom)
+    roll = core.credits.lines(script or base)
+    team = [t for t, _ in core.credits.team_lines(cfg)]
+    # the first line of the team's section in the roll (to show it with a few lines around it)
+    at = next((i for i in range(len(roll)) if [t for t, _ in roll[i:i+len(team)]] == team), None) if team else None
+    return {'credits': cfg, 'positions': core.credits.POSITIONS, 'script': cfg['script'] or base,
+            'edited_script': bool(cfg['script']), 'lines': len(roll), 'team_at': at, 'team_lines': len(team),
+            'width': core.credits.WIDTH, 'changed': script is not None,
+            'problems': [{'level': level, 'message': msg} for level, msg in problems]}
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -162,6 +177,22 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     image = titles.original_png(name)
                 return self.send(200, image, 'image/png')
+            if path == '/api/credits':
+                if self.need_rom():
+                    return
+                with STATE.lock:
+                    cfg = core.credits.settings(STATE.project)
+                return self.send(200, credits_state(cfg))
+            if path == '/api/credits.png':
+                if self.need_rom():
+                    return
+                q = parse_qs(url.query)
+                with STATE.lock:
+                    cfg = core.credits.settings(STATE.project)
+                script = core.credits.compose(STATE.catalog.rom, cfg)[0] or core.credits.original(STATE.catalog.rom)
+                roll = core.credits.lines(script)
+                first, count = int(q.get('first', ['0'])[0]), int(q.get('count', ['0'])[0]) or None
+                return self.send(200, core.credits.render(STATE.catalog.rom, roll, first, count), 'image/png')
             if path == '/api/font':
                 if self.need_rom():
                     return
@@ -258,6 +289,21 @@ class Handler(BaseHTTPRequestHandler):
                     STATE.project.set_image(name, data)
                     STATE.project.save()
                 return self.send(200, {'ok': True})
+            if path == '/api/credits':
+                data = json.loads(self.body())
+                with STATE.lock:
+                    cfg = core.credits.settings(STATE.project)
+                    for key in ('position', 'title', 'group', 'capitals', 'roles', 'script'):
+                        if key in data:
+                            cfg[key] = data[key]
+                    if cfg['position'] not in core.credits.POSITIONS:
+                        cfg['position'] = core.credits.DEFAULT['position']
+                    if cfg['script'] == core.credits.original(cat.rom):
+                        cfg['script'] = None
+                    STATE.project.credits = cfg
+                    STATE.project.save()
+                    cfg = core.credits.settings(STATE.project)
+                return self.send(200, {'ok': True, **credits_state(cfg)})
             if path == '/api/validate':
                 with STATE.lock:
                     _, problems = core.compose(cat, STATE.project)
