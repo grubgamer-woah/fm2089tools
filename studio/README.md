@@ -204,3 +204,19 @@ spacing looks normal and straight double quotes work.
 * `tools/test_studio.py` checks all of this against the real ROM.
 
 The ROM, builds and your workspace are ignored by git. Never commit the ROM itself.
+
+## Download packages
+
+`python studio/dev/make_release.py --version 1.0` makes the files for a GitHub
+release in `studio/dist/` (ignored by git); it never publishes anything:
+
+* `FM2089-Translation-Studio-1.0-windows.zip`: brings its own Python (the Python
+  Software Foundation's Windows build, downloaded once and checked by SHA-256),
+  started with `Start Studio.cmd`, so nothing needs installing.
+* `FM2089-Translation-Studio-1.0.zip`: the same without Python, for macOS and Linux.
+* `RELEASE-NOTES-1.0.md`: text for the release page.
+
+Only files tracked by git go in (plus `conversionTables.py` and the LICENSE), so
+no ROM, build or workspace can end up in a package. `--translation PATH` ships
+another `project.json` (such as the latest `workspace/project.json`) as
+`translation/project.json`.

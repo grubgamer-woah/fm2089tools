@@ -79,5 +79,9 @@ if __name__ == '__main__':
     except Exception as error:
         if sys.stdout is not None:
             raise
-        from tkinter.messagebox import showerror
-        showerror('FM2089 Translation Studio', str(error))
+        if os.name == 'nt':  # the Python that comes with the Windows download has no tkinter
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(None, str(error), 'FM2089 Translation Studio', 0x10)
+        else:
+            from tkinter.messagebox import showerror
+            showerror('FM2089 Translation Studio', str(error))
