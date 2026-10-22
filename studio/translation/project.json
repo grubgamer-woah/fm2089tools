@@ -178,15 +178,15 @@
    "edited": true
   },
   "MsgLabels_station_01_msg_040": {
-   "en": "2089\nEarly summer\n\nOCU Ground Defense Force\n1st Army Mechanized Division\nBorder Guard Unit",
+   "en": "The year 2089.\nEarly summer.\n\nOCU Ground Defense Force,\n1st Army Mechanized Division,\nBorder Guard Unit.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Year 2089 AD. / Early summer. /  / O.C.U. Ground Defense Army, / 1st Army Mechanized Division, Border Maintenance Unit.",
+   "note": "Source: the group's revised English (human).\nLiteral: Year 2089 AD. / Early summer. /  / O.C.U. Ground Defense Army, / 1st Army Mechanized Division, Border Maintenance Unit.",
    "edited": true
   },
   "MsgLabels_station_01_msg_041": {
-   "en": "Barracks\n18th Mercenary Corps Base",
+   "en": "18th Mercenary Corps Base, Barracks.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: 18th Mercenary Unit base, guardroom (barracks).",
+   "note": "Source: Claude's machine translation (MTL).\nLiteral: 18th Mercenary Unit base, guardroom (barracks).",
    "edited": true
   },
   "MsgLabels_station_01_msg_001": {
