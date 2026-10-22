@@ -472,9 +472,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_01_msg_013": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
-   "note": "Source: the group's revised English (human).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down."
+   "note": "Source: the group's revised English (human).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
+   "edited": true
   },
   "MsgLabels_tactics_01_msg_014": {
    "en": "<Mission Start>",
@@ -819,10 +820,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_02_msg_008": {
-   "en": "Victory: Destroy all enemies\nor reach POINT B.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Reach POINT B OR\nneutralize all opponents.\nDefeat: «E801:00»'s wanzer disabled.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies or / reach Point B. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_02_msg_009": {
    "en": "<Mission Start>",
@@ -1206,10 +1207,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_03_msg_009": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_03_msg_010": {
    "en": "<Mission Start>",
@@ -1860,10 +1861,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_04_msg_007": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_04_msg_008": {
    "en": "<Mission Start>",
@@ -2502,10 +2503,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_05_msg_012": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_05_msg_013": {
    "en": "<Mission Start>",
@@ -3090,10 +3091,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_06_msg_004": {
-   "en": "Victory: Destroy the target and escape.\nDefeat: «E801:00» is destroyed or\nthe turn limit runs out.",
+   "en": "Victory: Target destroyed and\nescape.\nDefeat: «E801:00» unit destroyed or\nturn limit reached.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: destroy the target and escape. / Defeat condition: «E801:00»'s unit shot down, or / a set number of turns passing.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_06_msg_005": {
    "en": "<Mission Start>",
@@ -3798,10 +3799,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_07_msg_007": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_07_msg_008": {
    "en": "<Mission Start>",
@@ -4392,10 +4393,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_08_msg_009": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_08_msg_010": {
    "en": "<Mission Start>",
@@ -5052,10 +5053,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_09_msg_009": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_09_msg_010": {
    "en": "<Mission Start>",
@@ -5466,10 +5467,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_10_msg_008": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_10_msg_009": {
    "en": "<Mission Start>",
@@ -6174,10 +6175,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_11_msg_019": {
-   "en": "Victory: Delta completes its op.\nDefeat: «E801:00» is destroyed\nor Delta is wiped out.",
+   "en": "Victory: Delta completes its op.\nDefeat: «E801:00» unit destroyed\nor Delta wiped out.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: Delta's operation ends. / Defeat condition: «E801:00»'s unit shot down, or / Delta annihilated.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_11_msg_020": {
    "en": "<Mission Start>",
@@ -7086,10 +7087,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_12_msg_009": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_12_msg_010": {
    "en": "<Mission Start>",
@@ -7716,10 +7717,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_13_msg_012": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_13_msg_013": {
    "en": "<Mission Start>",
@@ -8544,10 +8545,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_14_msg_008": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_14_msg_009": {
    "en": "<Mission Start>",
@@ -9204,10 +9205,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_15_msg_014": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_15_msg_015": {
    "en": "<Mission Start>",
@@ -9570,10 +9571,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_16_msg_011": {
-   "en": "Victory: Transports leave the area.\nDefeat: «E801:00» is destroyed, or\nall transports are destroyed.",
+   "en": "Victory: Transports leave the area.\nDefeat: «E801:00» unit destroyed or\nall transports destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: transport vehicles escape the area. / Defeat condition: «E801:00»'s unit shot down, or / transport vehicles annihilated.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_16_msg_012": {
    "en": "<Mission Start>",
@@ -9996,10 +9997,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_17_msg_011": {
-   "en": "Victory: Destroy Alchemist.\nDefeat: «E801:00» is destroyed, or\nAlchemist escapes.",
+   "en": "Victory: Destroy Alchemist's unit.\nDefeat: «E801:00» unit destroyed or\nAlchemist escaped.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down Alchemist's unit. / Defeat condition: «E801:00»'s unit shot down, or / Alchemist escapes.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_17_msg_012": {
    "en": "<Mission Start>",
@@ -10584,10 +10585,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_18_msg_009": {
-   "en": "Victory: Destroy all enemies and\nrecover all containers.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units\nand recover all containers.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies and / recover all containers. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_18_msg_010": {
    "en": "<Mission Start>",
@@ -11016,10 +11017,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_19_msg_011": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_19_msg_012": {
    "en": "<Mission Start>",
@@ -11652,10 +11653,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_20_msg_011": {
-   "en": "Victory: Destroy Wizard.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy Wizard's unit.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down Wizard's unit. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_20_msg_012": {
    "en": "<Mission Start>",
@@ -12402,10 +12403,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_21_msg_013": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_21_msg_014": {
    "en": "<Mission Start>",
@@ -12960,10 +12961,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_22_msg_009": {
-   "en": "Victory: Defend the base for\n10 turns.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Defend the base for\n10 turns.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: defend the base for 10 turns. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_22_msg_010": {
    "en": "<Mission Start>",
@@ -13260,10 +13261,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_23_msg_007": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_23_msg_008": {
    "en": "<Mission Start>",
@@ -13638,10 +13639,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_24_msg_011": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_24_msg_012": {
    "en": "<Mission Start>",
@@ -14214,10 +14215,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_25_msg_009": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_25_msg_010": {
    "en": "<Mission Start>",
@@ -14844,10 +14845,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_26_msg_015": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_26_msg_016": {
    "en": "<Mission Start>",
@@ -15498,10 +15499,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_27_msg_010": {
-   "en": "Victory: Destroy all enemies, or\ndisarm all the bombs.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units\nor disarm all the bombs.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies or / dispose of all bombs. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_27_msg_011": {
    "en": "<Mission Start>",
@@ -15954,10 +15955,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_28_msg_011": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_28_msg_012": {
    "en": "<Mission Start>",
@@ -16746,10 +16747,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_29_msg_015": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_29_msg_016": {
    "en": "<Mission Start>",
@@ -17424,10 +17425,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_30_msg_014": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_30_msg_015": {
    "en": "<Mission Start>",
@@ -18090,10 +18091,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_31_msg_018": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» or Gray is\ndestroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit or\nGray unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down or / Gray's unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_31_msg_019": {
    "en": "<Mission Start>",
@@ -18738,10 +18739,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_32_msg_016": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» or Rachel's\nvehicle is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit or\nRachel's vehicle destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down or / Rachel's vehicle shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_32_msg_017": {
    "en": "<Mission Start>",
@@ -19320,10 +19321,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_33_msg_010": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» or Oddeye is\ndestroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit or\nOddeye unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down or / Oddeye's unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_33_msg_011": {
    "en": "<Mission Start>",
@@ -19884,10 +19885,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_34_msg_018": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» or Oddeye is\ndestroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit or\nOddeye unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down or / Oddeye's unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_34_msg_019": {
    "en": "<Mission Start>",
@@ -20298,10 +20299,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_35_msg_007": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» or Oddeye is\ndestroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit or\nOddeye unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down or / Oddeye's unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_35_msg_008": {
    "en": "<Mission Start>",
@@ -20838,10 +20839,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_36_msg_013": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_36_msg_014": {
    "en": "<Mission Start>",
@@ -21414,10 +21415,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_37_msg_014": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» or Rain is\ndestroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit or\nRain unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down or / Rain's unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_37_msg_015": {
    "en": "<Mission Start>",
@@ -22110,10 +22111,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_38_msg_009": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_38_msg_010": {
    "en": "<Mission Start>",
@@ -22884,10 +22885,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_39_msg_014": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_39_msg_015": {
    "en": "<Mission Start>",
@@ -23736,10 +23737,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_40_msg_012": {
-   "en": "Victory: Destroy all enemies.\nDefeat: Rain is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: Rain unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: Rain's unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_40_msg_013": {
    "en": "<Mission Start>",
@@ -23964,10 +23965,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_41_msg_015": {
-   "en": "Victory: Destroy all containers.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all containers.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: destroy all containers. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_41_msg_016": {
    "en": "<Mission Start>",
@@ -24834,10 +24835,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_42_msg_017": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_42_msg_018": {
    "en": "<Mission Start>",
@@ -25560,10 +25561,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_43_msg_017": {
-   "en": "Victory: Destroy the Numbers.\nDefeat: «E801:00» or Rain is\ndestroyed.",
+   "en": "Victory: Destroy the Numbers.\nDefeat: «E801:00» unit or\nRain unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down the Numbers. / Defeat condition: «E801:00»'s unit shot down or / Rain's unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_43_msg_018": {
    "en": "<Mission Start>",
@@ -26274,10 +26275,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_44_msg_024": {
-   "en": "Victory: Destroy the Mage Corps\nor X-00.\nDefeat: «E801:00» or Rain is\ndestroyed.",
+   "en": "Victory: Destroy the Mage Corps\nor X-00.\nDefeat: «E801:00» unit or\nRain unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down the Mage squad or / X-00. / Defeat condition: «E801:00»'s unit shot down or / Rain's unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_44_msg_025": {
    "en": "<Mission Start>",
@@ -27258,10 +27259,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_45_msg_034": {
-   "en": "Victory: Destroy all enemies except\nthe vehicle.\nDefeat: «E801:00» is destroyed or\nthe enemy vehicle escapes.",
+   "en": "Victory: Destroy all enemy units\nexcept the vehicle.\nDefeat: «E801:00» unit destroyed or\nenemy vehicle escaped.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies other than the vehicle. / Defeat condition: «E801:00»'s unit shot down or / the enemy vehicle withdraws.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_45_msg_035": {
    "en": "<Mission Start>",
@@ -27666,10 +27667,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_46_msg_010": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_46_msg_011": {
    "en": "<Mission Start>",
@@ -28170,10 +28171,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_47_msg_029": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_47_msg_030": {
    "en": "<Mission Start>",
@@ -29454,10 +29455,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_49_msg_012": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» or Oddeye\nis destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit or\nOddeye unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down or / Oddeye's unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_49_msg_013": {
    "en": "<Mission Start>",
@@ -30222,10 +30223,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_50_msg_028": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» or Aisha\nis destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit or\nAisha unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down or / Aisha's vehicle shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_50_msg_029": {
    "en": "<Mission Start>",
@@ -30696,10 +30697,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_51_msg_025": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_51_msg_026": {
    "en": "<Mission Start>",
@@ -31080,10 +31081,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_52_msg_008": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_52_msg_009": {
    "en": "<Mission Start>",
@@ -31710,10 +31711,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_53_1_msg_017": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_53_1_msg_018": {
    "en": "<Mission Start>",
@@ -32148,10 +32149,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_53_2_msg_020": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_53_2_msg_021": {
    "en": "<Mission Start>",
@@ -32796,10 +32797,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_54_msg_010": {
-   "en": "Victory: Rescue Aisha.\nDefeat: «E801:00» or the wanzer\ncarrying Aisha is destroyed.",
+   "en": "Victory: Rescue Aisha.\nDefeat: «E801:00» unit or the wanzer\ncarrying Aisha destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: rescue Aisha. / Defeat condition: «E801:00»'s unit shot down or / the WAP carrying Aisha shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_54_msg_011": {
    "en": "<Mission Start>",
@@ -33600,10 +33601,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_55_msg_008": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_55_msg_009": {
    "en": "<Mission Start>",
@@ -34170,10 +34171,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_56_msg_009": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_56_msg_010": {
    "en": "<Mission Start>",
@@ -34632,10 +34633,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_57_msg_016": {
-   "en": "Victory: Investigate the enemy\nfacility.\nDefeat: «E801:00» or Oddeye is\ndestroyed.",
+   "en": "Victory: Investigate the enemy\nfacility.\nDefeat: «E801:00» unit or\nOddeye unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: investigate the enemy facility. / Defeat condition: «E801:00»'s unit shot down or / Oddeye's unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_57_msg_017": {
    "en": "<Mission Start>",
@@ -35580,10 +35581,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_58_msg_012": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» or Aisha is\ndestroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit or\nAisha unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down or / Aisha's vehicle shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_58_msg_013": {
    "en": "<Mission Start>",
@@ -36318,10 +36319,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_59_msg_011": {
-   "en": "Victory: Destroy all enemies.\nDefeat: «E801:00» is destroyed.",
+   "en": "Victory: Destroy all enemy units.\nDefeat: «E801:00» unit destroyed.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies. / Defeat condition: «E801:00»'s unit shot down.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_59_msg_012": {
    "en": "<Mission Start>",
@@ -36648,10 +36649,10 @@
    "mtl": true
   },
   "MsgLabels_tactics_60_msg_009": {
-   "en": "Victory: Destroy all enemies.",
+   "en": "Victory: Destroy all enemy units.",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).\nLiteral: Victory condition: shoot down all enemies.",
-   "mtl": true
+   "edited": true
   },
   "MsgLabels_tactics_60_msg_010": {
    "en": "<Mission Start>",
