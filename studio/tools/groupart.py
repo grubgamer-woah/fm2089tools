@@ -1,7 +1,7 @@
-"""The localization group's own English graphics, from Kiley's "5. Group Localization Files".
+"""The localization group's own English graphics, from the group's "5. Group Localization Files".
 
 The group drew English into copies of the game's own files, saved at their ROM
-paths (title/startmenu.msur.pk is data/title/startmenu.msur.pk). Kiley picked,
+paths (title/startmenu.msur.pk is data/title/startmenu.msur.pk). The team picked,
 graphic by graphic, which of them the patch uses (2026-10-18):
 
   ART        screen graphics used exactly as the group drew them; the Studio's
@@ -12,11 +12,11 @@ graphic by graphic, which of them the patch uses (2026-10-18):
   SCREENS    screens the Studio has no text entry for, used as they are
   ICONS      12 icons the group added to unused font slots, plus their narrower ×
   NAME_KEYS  the Delete / Back / Ok keys of the name entry screen
-  BACKGROUND the Wanzer setup screens (Kiley's "Background" folder, 2026-10-18): the
+  BACKGROUND the Wanzer setup screens (the group's "Background" folder): the
              header bars of the hangar menus and the setup screen with its part
              buttons. Optional: without the folder these are drawn as before
 
-The files are read from Kiley's folder at build time when it sits next to the
+The files are read from the group's folder at build time when it sits next to the
 Studio, otherwise from the copy of the files used in studio/assets/Group
 Localization Files/. Without either, every graphic is drawn by labels.py as before.
 """
@@ -28,7 +28,7 @@ import labels
 FOLDER_SUFFIX = 'Group Localization Files'
 FONT = 'font/msgcmn.fnt'
 ICONS = range(0x62D, 0x639)
-TIMES = 0x4F                          # the group's narrower × (Kiley, 2026-10-18)
+TIMES = 0x4F                          # the group's narrower ×
 NAME_KEYS = 'name/NameEntryEnv.NCGR'  # Delete / Back / Ok keys, put into the En+Ko keyboard
 # data/setup/BackGround/ files sit in the group folder's Background/; only their _ncg.bin
 # (the game's own map fits them), except the setup screen, which has its own map

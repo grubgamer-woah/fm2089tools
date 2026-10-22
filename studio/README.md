@@ -23,7 +23,7 @@ to their own copy of the game.
 
 ## What comes with it
 
-* `translation/project.json`: the full English translation, and
+* `translation/project.json`: the draft English translation, and
   `translation/images/`: the English mission titles. A new workspace starts
   from them, so the first build already makes the finished patch.
 * `assets/Group Localization Files/`: the localization group's own English
@@ -31,13 +31,11 @@ to their own copy of the game.
   terrain panel, font icons and ×, the name screen's Delete / Back / Ok keys,
   and in `Background/` the Wanzer setup screen and the hangar and shop
   headers). Used when the group folder itself isn't next to the Studio.
-* `assets/fixes/`: a map for the group's "Sell Parts" header
-  (`Background/sellsetup_bg_ncg.bin`), whose tiles don't fit the game's own map.
 * `assets/En+Ko name screens/`: the name entry screens of the Korean/English
   fan patch (minus its page arrow, which does nothing on its one-page keyboard).
   Used when that patch's ROM isn't next to the Japanese one.
 
-Only the Japanese ROM is needed from you; it is never stored here.
+Only the Japanese ROM is needed.
 
 ## Editing
 
@@ -45,13 +43,13 @@ Only the Japanese ROM is needed from you; it is never stored here.
   menus/system text. The story tab is in the order the game plays it: each
   mission's base scenes (talks, briefing, cutscenes), then its battle, with a
   heading where each one starts. The **Mission** list jumps to one part.
-  Base talks you can do in any order keep the order the game stores them in.
+  Base talks you can do in any order keeps the order the game stores them in.
 * Pick an entry, type the English and press **Save entry** (Ctrl+Enter).
   Alt+Up / Alt+Down move between entries. Switching entries saves first.
 * **Enter** in the English box is a line break in the game.
 * Control codes from the Japanese show as tags such as `«E801:00»` (the main
   character's name) or `«E8F6»` (red text). Click a tag to insert it. Hover a tag
-  to see what it does. `«g:1A3»` is a glyph with no known character.
+  to see what it does. `«g:1A3»` is a glyph with no known character, don't use it.
 * **The player's name**: type `«E801:00»` where the name goes, for example
   `Nice to meet ya, «E801:00».` The game puts in whatever name the player chose
   (Storm by default). Always use the code, never type "Storm", or players who pick
@@ -66,15 +64,15 @@ Only the Japanese ROM is needed from you; it is never stored here.
   widest Japanese line in that file and the red line the 256 px screen edge.
   Lines past the screen edge are errors; lines past the blue line are warnings.
 * Untranslated entries keep their Japanese bytes exactly. **Use Japanese** removes
-  an English entry again.
+  an English entry.
 * Story and battle lines start with the speaker's name in the Japanese
   (`レイン：`). The Studio shows the speaker on each entry and leaves the name
   out of the text you translate, then adds it back as `Rain:` when it builds.
   Translate each name once, in the editor or under **Speakers**, and it is used
   on every line that speaker says. The **Speaker** filter lists one
   character's lines. A name with no English yet keeps its Japanese.
-* Each speaker's line shows their portrait, taken from the game's own face art.
-  The main cast is matched automatically. For anyone else, click the portrait
+* Each speaker's line shows their portrait, taken from the game.
+  Some of the cast is matched automatically. For anyone else, click the portrait
   (or the letter in its place) in the editor or under **Speakers** and pick a
   face. Portraits are only shown in the Studio; they never change the game.
 * Notes and the **Done** checkbox are only for you; they never go into the game.
@@ -107,44 +105,21 @@ Nothing changes until you press **Apply**, and your `project.json` is copied to
 **Export TSV** writes every string (ID, English, Japanese, note) for a
 spreadsheet.
 
-The full English translation ships with the Studio in
+The draft English translation ships with the Studio in
 `translation/project.json` (every string and speaker name). The first time the
 Studio starts without a `workspace/project.json`, it starts from that file, so
-a fresh download already has the English. To bring a newer copy into a
-workspace you already have, **Import script** `translation/project.json`: its English
-replaces yours string by string, and your other strings stay as they are.
-
-## Setup buttons
-
-The Wanzer setup screen is the group's own (`Background/setup_bg_*` in their
-folder, Kiley's "Right Shoulder / Computer / Color Select" design). It also
-ships as a picture, `translation/images/setup_bg.png` (256×144). Every
-build uses it for the real screen and for Yuji's tutorial picture of it. To
-change it, save your own as `workspace/images/setup_bg.png`, which wins over the
-shipped one. With no picture, the group's screen is used as it is, and without
-that the buttons are drawn from their entries in **Screen graphics** (WEAPON,
-ARM, BODY...).
-`python studio/tools/studio_core.py setup-png` writes the screen there as the
-Studio draws it now, to start from. Each 8×8 block of the screen has its own
-16 colors, so draw with the colors already in that spot; others snap to the
-nearest of them.
+a fresh download already has the English. 
 
 ## Stat icons
 
 The parts info lines use the localization group's stat icons instead of the
-words, as their spreadsheet planned (ATK 5x2 ACC 78 becomes ⚙5x2 ⌖78, see
-`tools/staticons.py` for which icon goes with which stat). The project text
-keeps the words; the build swaps them. Untick **Stat icons** in the header to
-build with the words. The icons come with the group's font, so without the
-group files the words are kept.
+words, as their spreadsheet planned (see
+`tools/staticons.py` for which icon goes with which stat). 
 
-Players can switch the icons back to the words themselves: the patch adds a
-**Stat Display** option (Icons / Text) to the game's Config menu, on the title
-screen and in battle. Like the game's own options it is kept in each save, and
-a new game starts with Icons. Its name and help lines are the `Options_*`
-entries under Menus & system.
 
-## Fonts
+## Fonts  NOT COMPLETELY TESTED
+
+Fonts is currently mostly untested (only one change was made), let me know if it works.
 
 The patch also adds a **Font** option to the game's Config menu, so players can
 pick which font the game's text is drawn in. It only appears once there is a
@@ -170,7 +145,7 @@ The mission title screens ("Mission 01 / 実戦訓練1") are pictures, not text.
 the game will draw it. **Add pictures…** takes several PNGs at once and matches them
 by number (`m10.png` or `mtittle_bg_10_nsc.png` goes to title 10); each card also has
 Replace and Remove. Pictures are 256×256 or 256×192 (the DS shows the top 256×192);
-magenta is see-through, as in the game's own art. Title numbers are the game's file
+magenta is see-through. Title numbers are the game's file
 numbers, not mission numbers (title 06 is "Mission 04", the sniper route), and 48 and
 61 are info screens, not titles.
 
@@ -178,10 +153,10 @@ The pictures are stored in `workspace/images/` and listed under `images` in
 project.json. The Studio turns each into the game's 16-color tiles once (about a
 second) and keeps the result in `workspace/cache/`; every build includes them.
 
-## Credits
+## Credits UNTESTED
 
 The closing credits after the Epilogue are already in English (a text script,
-`data/Ending/ClosingCredits.txt.pk`). Click **Credits** to add your team: a
+`data/Ending/ClosingCredits.txt.pk`). Click **Credits** to add your name: a
 heading ("English Translation"), an optional group name, and roles with one name
 per line. Roles without names are left out, and with no names at all the game
 keeps its own credits. Pick whether the section rolls right after the game title
@@ -253,7 +228,7 @@ release in `studio/dist/` (ignored by git); it never publishes anything:
 * `FM2089-Translation-Studio-1.0-windows.zip`: brings its own Python (the Python
   Software Foundation's Windows build, downloaded once and checked by SHA-256),
   started with `Start Studio.cmd`, so nothing needs installing.
-* `FM2089-Translation-Studio-1.0.zip`: the same without Python, for macOS and Linux.
+* `FM2089-Translation-Studio-1.0.zip`: the same without Python, for macOS and Linux (untested).
 * `RELEASE-NOTES-1.0.md`: text for the release page.
 
 Only files tracked by git go in (plus `conversionTables.py` and the LICENSE), so

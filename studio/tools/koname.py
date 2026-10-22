@@ -1,6 +1,6 @@
 """The name entry screens from the Korean/English fan patch, in English.
 
-Kiley asked for that patch's screens after New Game: the intro that types out
+The team asked for that patch's screens after New Game: the intro that types out
 "Enter Pilot Name", the romaji keyboard with English buttons, and the confirmed
 screen. They are taken from the patched ROM at build time ("Front Mission 2089 -
 Border of Madness (En+Ko).nds", next to the Japanese ROM) or, without it, from
@@ -74,7 +74,7 @@ KEY_GLYPHS = {
 ENV_KINDS = ('NANR', 'NCER', 'NCGR', 'NCLR')
 # Tiles of NameEntryEnv.NCGR (32 bytes each after the 0x30 header): the page arrows (cells 0-1,
 # blanked: the romaji keyboard has one page) and the DEL / RET / OK. buttons (cells 2-4), which
-# Kiley wanted from the group's sheet (Delete / Back / Ok, same cell layout)
+# the team wanted from the group's sheet (Delete / Back / Ok, same cell layout)
 ENV_TILES = 0x30
 ARROW_TILES = range(0, 2)
 BUTTON_TILES = range(4, 28)

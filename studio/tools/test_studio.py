@@ -100,10 +100,10 @@ def main():
         assert credits.compose(cat.rom, credits.settings(project)) == (None, [])
         roll = credits.lines(credits.original(cat.rom))
         assert len(roll) == 352 and max(len(t) for t, _ in roll) <= credits.WIDTH
-        project.credits = {'group': 'Some <Group>', 'roles': [{'role': 'Translation', 'names': 'Kiley\nJosé'}]}
+        project.credits = {'group': 'Some <Group>', 'roles': [{'role': 'Translation', 'names': 'Alex\nJosé'}]}
         script, problems = credits.compose(cat.rom, credits.settings(project))
-        assert not problems and '<color 1>Translation<br>\r\nKILEY<br>\r\nJOSE<br>' in script, script
-        assert ('Some <Group>', 0) in credits.lines(script) and script.index('KILEY') < script.index('Copyright<br>')
+        assert not problems and '<color 1>Translation<br>\r\nALEX<br>\r\nJOSE<br>' in script, script
+        assert ('Some <Group>', 0) in credits.lines(script) and script.index('ALEX') < script.index('Copyright<br>')
         assert credits.TOTAL.search(script).group(1) == str(316895 * len(credits.lines(script)) // 352)
         too_long = {'roles': [{'role': 'Translation', 'names': 'X'*33}]}
         assert credits.compose(cat.rom, {**credits.DEFAULT, **too_long})[1][0][0] == 'error'

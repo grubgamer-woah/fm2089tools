@@ -174,7 +174,7 @@
   "MsgLabels_station_01_msg_039": {
    "en": "This is the story of a mercenary band\ncaught in the shifting tides of empire...\n\nThey left no name in history but\nthe name of war itself.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: This is the record of a mercenary unit / toyed with by the schemes of great powers...... /  / the deeds of mercenaries / who left no name in history.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: This is the record of a mercenary unit / toyed with by the schemes of great powers...... /  / the deeds of mercenaries / who left no name in history.",
    "edited": true
   },
   "MsgLabels_station_01_msg_040": {
@@ -212,7 +212,7 @@
   "MsgLabels_station_01_msg_005": {
    "en": "Base rules. It cuts down on deserters...\nAnd complainers.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Yes, it's a countermeasure against army deserters. / It's the rule at this base. / Do you have some complaint?",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Yes, it's a countermeasure against army deserters. / It's the rule at this base. / Do you have some complaint?",
    "edited": true
   },
   "MsgLabels_station_01_msg_006": {
@@ -236,19 +236,19 @@
   "MsgLabels_station_01_msg_009": {
    "en": "Have you had a look around the base?",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: By the way, have you gotten used to the base?",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: By the way, have you gotten used to the base?",
    "edited": true
   },
   "MsgLabels_station_01_msg_010": {
    "en": "Not yet, I only just got here.\nIt's larger than I expected.\nLots of ground to cover.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: It's only been half a day since I was posted. / The base is also unexpectedly large. / Unfortunately I haven't got a full grasp of it.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: It's only been half a day since I was posted. / The base is also unexpectedly large. / Unfortunately I haven't got a full grasp of it.",
    "edited": true
   },
   "MsgLabels_station_01_msg_011": {
    "en": "Right.\nHave you been to headquarters yet?",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: I see. / Have you been to headquarters?",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: I see. / Have you been to headquarters?",
    "edited": true
   },
   "MsgLabels_station_01_msg_012": {
@@ -266,13 +266,13 @@
   "MsgLabels_station_01_msg_014": {
    "en": "Someone said it's next to this building.\nI'll go now.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: It was next to this building, right? / I'll go and see.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: It was next to this building, right? / I'll go and see.",
    "edited": true
   },
   "MsgLabels_station_01_msg_015": {
    "en": "If you have questions about the base, our\nmaintenance chief Yuji Kinoshita will be\nhappy to help. Touch the old man's icon\non the bottom screen if you need to get\nin touch with him. Confirm your selection\nby tapping \"OK\" or pressing the A button.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: If there is anything you don't understand about / the base facilities, touch the uncle icon / shown in the bar below. / The maintenance man Yuji Kinoshita will kindly / teach you. / Also, by the rules of this base, / when deciding on a choice, / touch the OK panel to the right of the choice, / or press the A Button.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: If there is anything you don't understand about / the base facilities, touch the uncle icon / shown in the bar below. / The maintenance man Yuji Kinoshita will kindly / teach you. / Also, by the rules of this base, / when deciding on a choice, / touch the OK panel to the right of the choice, / or press the A Button.",
    "edited": true
   },
   "MsgLabels_station_01_msg_016": {
@@ -300,7 +300,7 @@
   "MsgLabels_station_01_msg_020": {
    "en": "(I'm in the mercenary barracks now. The\nmission briefing is at headquarters. That\nshould be in the building next to this\none...)",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: (This is the mercenaries' guardroom. / Taking missions was at headquarters. / Headquarters is next to this building...)",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: (This is the mercenaries' guardroom. / Taking missions was at headquarters. / Headquarters is next to this building...)",
    "edited": true
   },
   "MsgLabels_station_01_msg_021": {
@@ -312,25 +312,25 @@
   "MsgLabels_station_01_msg_022": {
    "en": "(Sortie.)",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: (Sortie.)",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: (Sortie.)",
    "edited": true
   },
   "MsgLabels_station_01_msg_023": {
    "en": "You're the new hire, aren't ya?«g:24»\n«E801:00», right? Nice to meet ya. Call me\nPete. I'm the base mechanic.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: You the newcomer? / So you're called «E801:00». / Nice to meet ya. / I do the maintenance on the wanzers.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: You the newcomer? / So you're called «E801:00». / Nice to meet ya. / I do the maintenance on the wanzers.",
    "edited": true
   },
   "MsgLabels_station_01_msg_024": {
    "en": "You must be the new ace!«g:24»\nI'm Matt, one of the operators in this\ncompany. Pleased to meet you.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Are you the rumored hotshot? / I'm Matt, an operator. / Nice to meet you.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Are you the rumored hotshot? / I'm Matt, an operator. / Nice to meet you.",
    "edited": true
   },
   "MsgLabels_station_01_msg_025": {
    "en": "...Gabriel....\n\n...Operator...",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: ...Gabriel......... operator......",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: ...Gabriel......... operator......",
    "edited": true
   },
   "MsgLabels_station_01_msg_026": {
@@ -347,31 +347,31 @@
   "MsgLabels_station_01_msg_028": {
    "en": "We don't love to rush the newbies\nlike this, but I want to see what you\ncan do in a wanzer.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Sorry to do this right after you're posted, / but I'd like you to show me your ability.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Sorry to do this right after you're posted, / but I'd like you to show me your ability.",
    "edited": true
   },
   "MsgLabels_station_01_msg_029": {
    "en": "Roger that.\nWhat's the word on the enemy?\nAny intel?",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Understood. / The enemy's information?",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Understood. / The enemy's information?",
    "edited": true
   },
   "MsgLabels_station_01_msg_030": {
    "en": "...keep your britches on, kid. I know you\nhave experience, but we're not sending\nyou out on a mission just yet. You'll be\nrunning a live-ammo exercise in the\nKillhouse.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: ...No, wait. / It's not actual combat. / I'll have you do a live-ammo exercise / in the killhouse for WAPs.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: ...No, wait. / It's not actual combat. / I'll have you do a live-ammo exercise / in the killhouse for WAPs.",
    "edited": true
   },
   "MsgLabels_station_01_msg_031": {
    "en": "The Killhouse? You mean the\ntraining grounds? If you want\nme to prove my worth, put me\nin the field.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Killhouse... meaning the training ground. / I can't show my real ability in an exercise, though?",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Killhouse... meaning the training ground. / I can't show my real ability in an exercise, though?",
    "edited": true
   },
   "MsgLabels_station_01_msg_032": {
    "en": "Don't worry about your worth.\nAll our operators complete this\nexercise before they're cleared for\nfield deployment. It's a formality.\nYou'll find an outfitted wanzer in the\nhangar. All yours.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Don't say that. / The exercise content is extremely simple. / Try to put all the WAPs set up / in the killhouse out of action. / I've prepared a dedicated WAP in the hangar. / The setup is already complete.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Don't say that. / The exercise content is extremely simple. / Try to put all the WAPs set up / in the killhouse out of action. / I've prepared a dedicated WAP in the hangar. / The setup is already complete.",
    "edited": true
   },
   "MsgLabels_station_01_msg_033": {
@@ -392,7 +392,7 @@
   "MsgLabels_station_01_msg_036": {
    "en": "Fantastic.\nThat's all, then. Head to the\nKillhouse. Anything comes up,\nyou can talk to Rain.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: I see. / Then that makes it quick. / If there's anything you don't understand, / you'd do well to ask her at the killhouse.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: I see. / Then that makes it quick. / If there's anything you don't understand, / you'd do well to ask her at the killhouse.",
    "edited": true
   },
   "MsgLabels_station_01_msg_037": {
@@ -403,37 +403,37 @@
   "MsgLabels_station_01_msg_038": {
    "en": "Get moving.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Get ready for the live-ammo exercise.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Get ready for the live-ammo exercise.",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_001": {
    "en": "I trust your meeting with the\nCommander went well.\nYou'll have me with you on\nthis exercise.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: I will also join the exercise. / I'll support «E801:00»'s unit.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: I will also join the exercise. / I'll support «E801:00»'s unit.",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_002": {
    "en": "You know, this is a well-equipped\nwanzer for a merc outfit.\nThe gun looks brand new.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Understood. / Even so, for a mercenary base, / it's well stocked with WAPs with proper parts.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Understood. / Even so, for a mercenary base, / it's well stocked with WAPs with proper parts.",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_003": {
    "en": "Border control is a primary concern\nfor the OCU, so they don't have a\nproblem supplying us with proper\ngear. But nothing is issued.\nWe pay for it all. Individually.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Border guarding is an important duty, so / the supply of parts itself is done promptly. / However, they are not issued to mercenaries...",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Border guarding is an important duty, so / the supply of parts itself is done promptly. / However, they are not issued to mercenaries...",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_004": {
    "en": "Understood. That means they'll sell us the\nparts, so we better protect the border.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: I see. / \"We'll sell you the parts, / so guard the border properly,\" is that it.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: I see. / \"We'll sell you the parts, / so guard the border properly,\" is that it.",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_005": {
    "en": "More or less.\nNow, let's get this underway.\nYou'll notice your wanzer's armor\nis resistant to piercing damage.\nJust watch out for other\ndamage types.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Now, the exercise with live ammo begins. / The new parts have anti-piercing attribute. / Please be careful of attacks of other attributes.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Now, the exercise with live ammo begins. / The new parts have anti-piercing attribute. / Please be careful of attacks of other attributes.",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_006": {
@@ -444,31 +444,31 @@
   "MsgLabels_tactics_01_msg_007": {
    "en": "Command here. Looks like\nyou're in position.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Hm. / Seems you're in position.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Hm. / Seems you're in position.",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_008": {
    "en": "Alright, «E801:00».\nYou're up against four wanzers.\nIt shouldn't be a problem if\nyou keep your head straight.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: «E801:00». / Then let me see your skill. / There are 4 mock enemies. / I wish you luck.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: «E801:00». / Then let me see your skill. / There are 4 mock enemies. / I wish you luck.",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_009": {
    "en": "Commander! Four at once -- isn't that\nreckless in a live-ammo exercise? If the\nnew hire takes a direct hit...",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Please wait, Commander! / I think 4 units right away is reckless. / This time it's live ammo. / If he takes even a direct hit...",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Please wait, Commander! / I think 4 units right away is reckless. / This time it's live ammo. / If he takes even a direct hit...",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_010": {
    "en": "Sit back and relax, Rain.\nBased on his file, even four\nwanzers won't be enough.\n«E801:00», here's your chance.\nProve your worth!",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: No, you don't know his ability. / If the reports are true, even 4 units shouldn't be enough.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: No, you don't know his ability. / If the reports are true, even 4 units shouldn't be enough.",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_011": {
    "en": "Commander -- !",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Eh?",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Eh?",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_012": {
@@ -491,7 +491,7 @@
   "MsgLabels_tactics_01_msg_015": {
    "en": "Before the enemy is in range, move to\nthe point marked GREEN. Your movement\nrange is displayed in BLUE.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: First, before the mock enemies appear, / please head to that green point. / The range you can move is shown in blue.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: First, before the mock enemies appear, / please head to that green point. / The range you can move is shown in blue.",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_016": {
@@ -502,7 +502,7 @@
   "MsgLabels_tactics_01_msg_017": {
    "en": "Good -- you know how to move.\nDeploying squad Beta.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Quick, aren't you. / Then, mock enemies sortie.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Quick, aren't you. / Then, mock enemies sortie.",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_018": {
@@ -514,19 +514,19 @@
   "MsgLabels_tactics_01_msg_019": {
    "en": "When you select attack,\nyour attack range is shown in RED.\nSelect an enemy to target them...",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: When you select attack, / the attack range is shown in red. / Select an enemy you can attack......",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: When you select attack, / the attack range is shown in red. / Select an enemy you can attack......",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_020": {
    "en": "\"...then confirm the weapon.\nBattlefield terrain affects accuracy\nand movement cost.\"\nAre you seriously reading me the\nwanzer manual?",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: ......after that, decide the weapon. / The battlefield terrain affects hit rate / and movement cost, so be careful. / Are you reading the WAP manual?",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: ......after that, decide the weapon. / The battlefield terrain affects hit rate / and movement cost, so be careful. / Are you reading the WAP manual?",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_021": {
    "en": "I... my apologies.\nI'll let you take the lead from here.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Excuse me. / I was treating you as a newcomer without thinking...",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Excuse me. / I was treating you as a newcomer without thinking...",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_022": {
@@ -547,31 +547,31 @@
   "MsgLabels_tactics_01_msg_025": {
    "en": "Surgical precision.\nNot too often we find a\npilot of your caliber.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Precise attacks. / As one might say, as expected of a seasoned mercenary.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Precise attacks. / As one might say, as expected of a seasoned mercenary.",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_026": {
    "en": "It wasn't much of a challenge.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: This level. / It's nothing much.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: This level. / It's nothing much.",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_027": {
    "en": "It was. We gave you a wanzer\nwith only a right-hand weapon.\nAnd our trainer pilots are all\nex-army. You routed them\nlike they were children.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: ...Strong. / Even if they're exercise pilots, / they're pilots with plenty of training... / And to win completely with this kind of equipment...",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: ...Strong. / Even if they're exercise pilots, / they're pilots with plenty of training... / And to win completely with this kind of equipment...",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_028": {
    "en": "Simulated combat like this is\nonly so useful. Real training\nhappens in the field.\nIn a real battle, your weapon\nbreaks. Your squadmates die.\nThe enemy is unpredictable.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: No matter how much training you pile up, if you / haven't experienced real combat, it's pointless. / In real combat you're also expected to / handle the enemy's poorly maintained weapons. / This level is easy.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: No matter how much training you pile up, if you / haven't experienced real combat, it's pointless. / In real combat you're also expected to / handle the enemy's poorly maintained weapons. / This level is easy.",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_029": {
    "en": "You're the real deal, that's for\ndamn sure.\nYou'll be compensated for this\nexercise, by the way.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: I see, so your ability is the real thing... / Even though this was an exercise, there's a reward.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: I see, so your ability is the real thing... / Even though this was an exercise, there's a reward.",
    "edited": true
   },
   "MsgLabels_tactics_01_msg_030": {
@@ -582,7 +582,7 @@
   "MsgLabels_tactics_01_msg_031": {
    "en": "Consider it a bonus.\nYou'll find it helpful when it's\ntime to outfit your wanzer.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Mercenaries basically pay for / their WAP setup themselves. / It's not much, but put it toward that.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Mercenaries basically pay for / their WAP setup themselves. / It's not much, but put it toward that.",
    "edited": true
   },
   "MsgLabels_station_02_msg_003": {
@@ -594,67 +594,67 @@
   "MsgLabels_station_02_msg_004": {
    "en": "Yeah.\nIf it's something I have an answer for.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Yeah. / If it's something I can answer.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Yeah. / If it's something I can answer.",
    "edited": true
   },
   "MsgLabels_station_02_msg_005": {
    "en": "I've seen your file. You were a decorated\nmember of a certain army unit. «E801:00»,\nwhat kind of battles have you been\nthrough?",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: The documents said that before coming here / you \"earned distinction in a certain unit.\" / What kind of battlefields / have you experienced?",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: The documents said that before coming here / you \"earned distinction in a certain unit.\" / What kind of battlefields / have you experienced?",
    "edited": true
   },
   "MsgLabels_station_02_msg_006": {
    "en": "Some of the missions I've participated in\ncould create conflict between us\nmercenaries. Even close friends don't\nreveal their past jobs, isn't that the rule?",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: ...Depending on the operations one took part in, / it creates feuds between mercenaries. / Isn't it the rule of mercenaries / not to reveal past jobs / even to mercenaries you're close to?",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: ...Depending on the operations one took part in, / it creates feuds between mercenaries. / Isn't it the rule of mercenaries / not to reveal past jobs / even to mercenaries you're close to?",
    "edited": true
   },
   "MsgLabels_station_02_msg_007": {
    "en": "Yes, I understand...\nThen I'll change my question\nto a theoretical one:\nWhat does it take to survive in\nactual combat?",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Yes, I understand... / Then I'll change the question. / What is the condition needed to survive / in real combat?",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Yes, I understand... / Then I'll change the question. / What is the condition needed to survive / in real combat?",
    "edited": true
   },
   "MsgLabels_station_02_msg_008": {
    "en": "Hmm...",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Let's see...",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Let's see...",
    "edited": true
   },
   "MsgLabels_station_02_msg_001": {
    "en": "Guess it's just luck.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Luck.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Luck.",
    "edited": true
   },
   "MsgLabels_station_02_msg_009": {
    "en": "Luck, I guess. I survived on the battlefield\nbecause I was lucky. Nothing more than\nthat.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Luck. / That I survived on the battlefield / is nothing more than having been lucky.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Luck. / That I survived on the battlefield / is nothing more than having been lucky.",
    "edited": true
   },
   "MsgLabels_station_02_msg_010": {
    "en": "Luck...?\nIt takes more than luck to pilot\na wanzer the way you do.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Luck...? / No, with luck alone you couldn't / pilot a WAP like that.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Luck...? / No, with luck alone you couldn't / pilot a WAP like that.",
    "edited": true
   },
   "MsgLabels_station_02_msg_011": {
    "en": "No. It's luck. Even the toughest veteran\nsoldier, if they take one stray bullet, will\ndie in battle. You can't predict the path of\nevery bullet flying across the battlefield.\nSuch a person does not exist. With good\ntechnique, it's possible to lower the\nchances of getting hit. However, there is\nno guarantee that you can survive 100%.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: No. It's luck. / Any tough veteran soldier, if he takes / a single stray bullet, dies in action. / There's no one who can see through every one / of the countless bullets flying across the battlefield. / So you don't get hit by a stray bullet, with technique / it's probably possible to lower the odds. / But there's no guarantee anywhere / of surviving 100%.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: No. It's luck. / Any tough veteran soldier, if he takes / a single stray bullet, dies in action. / There's no one who can see through every one / of the countless bullets flying across the battlefield. / So you don't get hit by a stray bullet, with technique / it's probably possible to lower the odds. / But there's no guarantee anywhere / of surviving 100%.",
    "edited": true
   },
   "MsgLabels_station_02_msg_012": {
    "en": "There is no perfect soldier.\nBut you've honed your skill.\nAnd you've survived this long.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: There is no strongest soldier... / That's why you polished your WAP piloting / technique and came through real combat.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: There is no strongest soldier... / That's why you polished your WAP piloting / technique and came through real combat.",
    "edited": true
   },
   "MsgLabels_station_02_msg_002": {
    "en": "Rules are rules.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Rules.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Rules.",
    "edited": true
   },
   "MsgLabels_station_02_msg_013": {
@@ -666,19 +666,19 @@
   "MsgLabels_station_02_msg_014": {
    "en": "Yeah, I suppose so.\nMy apologies...\nMaybe it was your discipline that\nallowed you to survive.\nYour dedication to the mission.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: That's right. / I'm sorry... / It's precisely because you're faithful to duty and rules / that you were able to survive the battlefield, / is that it.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: That's right. / I'm sorry... / It's precisely because you're faithful to duty and rules / that you were able to survive the battlefield, / is that it.",
    "edited": true
   },
   "MsgLabels_station_02_msg_015": {
    "en": "Maybe.\nDoes that answer your question?",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Maybe so. / Is that answer to your question good enough?",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Maybe so. / Is that answer to your question good enough?",
    "edited": true
   },
   "MsgLabels_station_02_msg_016": {
    "en": "Yeah, I feel that I understand your\nstrength... There's talk of an upcoming\nexercise. The Commander will brief you.\nI'll be occupied elsewhere, so I can't join\nthis time. Also, you are now cleared for\nthe hangar. Go there to modify your\nwanzer's configuration and access the\nshop. Yuji Kinoshita can instruct you\nfurther.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Yes, I feel like I understand / your strength... / By the way, word of an exercise has come. / Please ask the Commander directly for details. / I have a different duty, so / I can't take part this time. / Also, from this time the hangar / has become usable. / The hangar is a facility where you can change WAP equipment / and buy and sell parts. / Please ask Yuji Kinoshita / how to use it.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Yes, I feel like I understand / your strength... / By the way, word of an exercise has come. / Please ask the Commander directly for details. / I have a different duty, so / I can't take part this time. / Also, from this time the hangar / has become usable. / The hangar is a facility where you can change WAP equipment / and buy and sell parts. / Please ask Yuji Kinoshita / how to use it.",
    "edited": true
   },
   "MsgLabels_station_02_msg_017": {
@@ -689,43 +689,43 @@
   "MsgLabels_station_02_msg_018": {
    "en": "Commander Falcon will brief you on the\nexercise. Remember to visit the hangar\nnow that you have clearance. There, you\ncan modify your wanzer. For instruction,\njust speak to Yuji Kinoshita.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Please ask the Commander directly about the exercise content. / Also, from this time the hangar / has become usable. / The hangar is a facility where you can change WAP equipment / and buy and sell parts. / Please ask Yuji Kinoshita / how to use it.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Please ask the Commander directly about the exercise content. / Also, from this time the hangar / has become usable. / The hangar is a facility where you can change WAP equipment / and buy and sell parts. / Please ask Yuji Kinoshita / how to use it.",
    "edited": true
   },
   "MsgLabels_station_02_msg_019": {
    "en": "I'm heading out on a mission.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: I'm heading out on a different duty.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: I'm heading out on a different duty.",
    "edited": true
   },
   "MsgLabels_station_02_msg_020": {
    "en": "(Nice of them to pay me for training...)",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: (I didn't think I could earn money in training...)",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: (I didn't think I could earn money in training...)",
    "edited": true
   },
   "MsgLabels_station_02_msg_021": {
    "en": "(I should take some time to modify my\nwanzer's loadout.)",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: (Let's do some setup right away.)",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: (Let's do some setup right away.)",
    "edited": true
   },
   "MsgLabels_station_02_msg_022": {
    "en": "(Alright. Let's roll.)",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: (Alright. Sortie.)",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: (Alright. Sortie.)",
    "edited": true
   },
   "MsgLabels_station_02_msg_023": {
    "en": "Hey there, «E801:00».\nI just finished some work on your wanzer.\nThe joints were basically shot.\nHow'd you manage that?«g:24»\nI know it's war and everything,\nbut maybe you could try...\na gentler approach?",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Yo, «E801:00». / I did maintenance on your wanzer, but... / how do the joint parts get this damaged? / Treat it a little more gently, gennntly, / would ya.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Yo, «E801:00». / I did maintenance on your wanzer, but... / how do the joint parts get this damaged? / Treat it a little more gently, gennntly, / would ya.",
    "edited": true
   },
   "MsgLabels_station_02_msg_024": {
    "en": "I hate to say \"looks like the\nrumors were true,\" but...\nWell, it looks like the rumors\nwere true! The whole\nbase is drooling over you.\nRipper job you did at the\nKillhouse.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Looks like the rumors about your skill were true. / The whole base can't stop talking about you.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Looks like the rumors about your skill were true. / The whole base can't stop talking about you.",
    "edited": true
   },
   "MsgLabels_station_02_msg_025": {
@@ -737,7 +737,7 @@
   "MsgLabels_station_02_msg_026": {
    "en": "We're receiving some guests. Officers\nfresh from the academy. I'm making you\ntheir sparring partner... You're to show\nthem the ropes down at the Killhouse.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Yesterday, allied NCOs were posted to Huffman. / So I'd like you, rich in combat experience, / to lecture them on the feel of real combat / in WAP battles.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Yesterday, allied NCOs were posted to Huffman. / So I'd like you, rich in combat experience, / to lecture them on the feel of real combat / in WAP battles.",
    "edited": true
   },
   "MsgLabels_station_02_msg_027": {
@@ -749,13 +749,13 @@
   "MsgLabels_station_02_msg_028": {
    "en": "Not quite. We added some\nobstacles.\nMore interesting that way.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Yes. / This time some obstacles have been placed.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Yes. / This time some obstacles have been placed.",
    "edited": true
   },
   "MsgLabels_station_02_msg_029": {
    "en": "How many wanzers?",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: The number of participating units?",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: The number of participating units?",
    "edited": true
   },
   "MsgLabels_station_02_msg_030": {
@@ -767,7 +767,7 @@
   "MsgLabels_station_02_msg_031": {
    "en": "\"Real combat,\" huh...\nAnd if I happen to\nmiscalculate my shot and\nkill this officer?",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Unable to attack means destroying / everything other than the body part.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Unable to attack means destroying / everything other than the body part.",
    "edited": true
   },
   "MsgLabels_station_02_msg_032": {
@@ -779,7 +779,7 @@
   "MsgLabels_station_02_msg_033": {
    "en": "Roger.\nMoving out.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Understood. / I'll prepare at once.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Understood. / I'll prepare at once.",
    "edited": true
   },
   "MsgLabels_station_02_msg_034": {
@@ -791,31 +791,31 @@
   "MsgLabels_tactics_02_msg_001": {
    "en": "«E801:00», the drill is over\nonce you reach POINT B.\nDisabling all opponents will\nalso get you the win.\nYou've exceeded my expectations\nso far. Don't screw this up.\nTreat it like a real mission.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: The moment «E801:00»'s unit reaches Point B, / or all 3 units are put out of action, / it's the second lieutenants' loss. / It's an important exercise that will affect future postings. / Go at it with resolve.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: The moment «E801:00»'s unit reaches Point B, / or all 3 units are put out of action, / it's the second lieutenants' loss. / It's an important exercise that will affect future postings. / Go at it with resolve.",
    "edited": true
   },
   "MsgLabels_tactics_02_msg_002": {
    "en": "Lieutenant Rick here.\nWe're all strapped in.\nAwaiting instructions.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: This is 2nd Lt. Rick. / We were allowed to do full setup. / Awaiting instructions.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: This is 2nd Lt. Rick. / We were allowed to do full setup. / Awaiting instructions.",
    "edited": true
   },
   "MsgLabels_tactics_02_msg_003": {
    "en": "«E801:00» -- POINT B\nis marked on your map.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: «E801:00», Point B is here.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: «E801:00», Point B is here.",
    "edited": true
   },
   "MsgLabels_tactics_02_msg_004": {
    "en": "Roger.\nI can either make a beeline\nfor it, or cripple their wanzers.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Roger.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Roger.",
    "edited": true
   },
   "MsgLabels_tactics_02_msg_005": {
    "en": "(There's no way we can lose to\none washed-up merc.)\nWeapons free, boys.\nIf he's so skilled, it won't\nmatter if we shoot to kill.\nBesides... losing this means\nI lose a promotion.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: There's no way we elite soldiers would be / beaten by a mere mercenary, but... / This posting is tied to promotion too, / so we'll shoot without holding back.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: There's no way we elite soldiers would be / beaten by a mere mercenary, but... / This posting is tied to promotion too, / so we'll shoot without holding back.",
    "edited": true
   },
   "MsgLabels_tactics_02_msg_006": {
@@ -827,7 +827,7 @@
   "MsgLabels_tactics_02_msg_007": {
    "en": "All units at the ready...\nCommence exercise.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Begin the training.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Begin the training.",
    "edited": true
   },
   "MsgLabels_tactics_02_msg_008": {
@@ -850,19 +850,19 @@
   "MsgLabels_tactics_02_msg_011": {
    "en": "Your setup... it's all wrong. Assault: you're\npacking a close-quarters setup. You need\nto know each weapon's characteristics.\nThe shotgun delivers high IMPACT\ndamage by firing a spread of small\npellets, chipping away at armor. Your\nmachine gun fires a stream of bullets that\ndo PIERCING damage. And that\nflamethrower... It's an excellent tool, if\nused appropriately. It delivers massive\nFIRE damage to your opponent's\ninternals. Those are the basic three. And\nmind each armor's type.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: ...Your setup is no good. / Assault, if it's close combat, understand / the traits of each firearm. / The shotgun scatters countless pellets / and shaves armor with the impact. / And the machine gun, weak per shot / but able to pour in many rounds. / The flamethrower physically burns the armor / and destroys internal functions. / Those 3 types are the basics. / Pay attention to each armor's attribute too.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: ...Your setup is no good. / Assault, if it's close combat, understand / the traits of each firearm. / The shotgun scatters countless pellets / and shaves armor with the impact. / And the machine gun, weak per shot / but able to pour in many rounds. / The flamethrower physically burns the armor / and destroys internal functions. / Those 3 types are the basics. / Pay attention to each armor's attribute too.",
    "edited": true
   },
   "MsgLabels_tactics_02_msg_012": {
    "en": "Hmm...",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Hmm...",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Hmm...",
    "edited": true
   },
   "MsgLabels_tactics_02_msg_013": {
    "en": "From what I just saw,\nI'm guessing you also haven't\nstudied how your COM works.\nDo you even know what a\nCOM is? It enhances your\nperformance based on your\nwanzer's specs.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Match it to the unit's specs, / and pay attention to the traits of the COM / that improves performance.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Match it to the unit's specs, / and pay attention to the traits of the COM / that improves performance.",
    "edited": true
   },
   "MsgLabels_tactics_02_msg_014": {
@@ -880,31 +880,31 @@
   "MsgLabels_tactics_02_msg_016": {
    "en": "This guy...",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Kh...",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Kh...",
    "edited": true
   },
   "MsgLabels_tactics_02_msg_017": {
    "en": "You should already know your\nshoulder-mounted launchers are\nmore versatile and more reliable\nat range.\nBut they're useless up close,\nand their ammunition is limited.\nYou won't always get a resupply in\nreal deployments. Remember that.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Also, a launcher equipped on the shoulder / has long range and is easy to use. / But ammo count is limited. / In battles where you can't resupply, / judge carefully when you use it.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Also, a launcher equipped on the shoulder / has long range and is easy to use. / But ammo count is limited. / In battles where you can't resupply, / judge carefully when you use it.",
    "edited": true
   },
   "MsgLabels_tactics_02_msg_018": {
    "en": "He's... some kind of ace!",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: N... no way!",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: N... no way!",
    "edited": true
   },
   "MsgLabels_tactics_02_msg_019": {
    "en": "And you, Lieutenant...\nYou're using a Striker-class wanzer,\nbut you're not taking advantage of\nits inherent mobility. Light equipment\nmakes it highly maneuverable.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: You're not making use of the Striker's / natural mobility from light equipment.",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: You're not making use of the Striker's / natural mobility from light equipment.",
    "edited": true
   },
   "MsgLabels_tactics_02_msg_020": {
    "en": "So it's not just about the pilot's skill...",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: So it's not just / the pilot's skill...",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: So it's not just / the pilot's skill...",
    "edited": true
   },
   "MsgLabels_tactics_02_msg_021": {
@@ -921,19 +921,19 @@
   "MsgLabels_tactics_02_msg_023": {
    "en": "That's it, huh... real combat.\nSo much for the simulations.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: So this is real combat... / Isn't it different from the simulations!",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: So this is real combat... / Isn't it different from the simulations!",
    "edited": true
   },
   "MsgLabels_tactics_02_msg_024": {
    "en": "Lieutenant Rick...\nReport to headquarters later.\nYour CO has requested a conference\nwith you.",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: Hm. 2nd Lt. Rick? / Report to headquarters later. / You know what about, right?",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: Hm. 2nd Lt. Rick? / Report to headquarters later. / You know what about, right?",
    "edited": true
   },
   "MsgLabels_tactics_02_msg_025": {
    "en": "R-right, understood...",
    "done": true,
-   "note": "Source: the group's revised English (human), picked by Kiley.\nLiteral: R-roger...",
+   "note": "Source: the group's revised English (human), picked by the team.\nLiteral: R-roger...",
    "edited": true
   },
   "MsgLabels_station_03_msg_001": {

@@ -35,7 +35,7 @@ STUDIO = Path(__file__).resolve().parents[1]
 # where the Japanese and En+Ko ROMs are looked for; '1. Original ROM' may sit one or two levels up
 ROM_FOLDERS = [STUDIO.parent, STUDIO.parent/'1. Original ROM', STUDIO.parent.parent/'1. Original ROM']
 ROM_DIR = STUDIO/'rom'
-# Kiley's "5. Group Localization Files" (the group's own English graphics) sits next to the Studio folder
+# The group's "5. Group Localization Files" (the group's own English graphics) sits next to the Studio folder
 # the group's own graphics and the En+Ko name screens, shipped with the Studio
 ASSETS = STUDIO/'assets'
 GROUP_FOLDERS = [STUDIO.parent, STUDIO.parent.parent, ASSETS]
@@ -43,7 +43,7 @@ WORKSPACE = STUDIO/'workspace'
 BUILDS = STUDIO/'builds'
 EXPORTS = STUDIO/'exports'
 PROJECT = WORKSPACE/'project.json'
-# Kiley's English, shipped with the Studio: a new workspace starts from it, and Import takes it too
+# The team's English, shipped with the Studio: a new workspace starts from it, and Import takes it too
 BUNDLED = STUDIO/'translation'/'project.json'
 SETUP_PNG = 'setup_bg.png'
 # the game font as a sheet to draw a new font on; sheets in workspace/fonts/ are the extra fonts
@@ -128,7 +128,7 @@ class Catalog:
     def __init__(self, rom_path):
         self.rom_path = Path(rom_path)
         self.rom = ndsrom.Rom(self.rom_path.read_bytes())
-        # The group's own graphics, when Kiley's group folder sits next to the Studio
+        # The group's own graphics, when the group folder sits next to the Studio
         found = groupart.find(GROUP_FOLDERS)
         self.group, self.group_problem = None, f'"{groupart.FOLDER_SUFFIX}" not found, so the group\'s graphics are not used'
         if found:

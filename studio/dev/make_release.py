@@ -61,7 +61,7 @@ Front Mission 2089: Border of Madness (Nintendo DS).
 4. "Build xdelta" writes the English patch and a patched ROM for testing into
    the "builds" folder.
 
-The full English translation comes with it, so the first build already makes
+The draft English translation comes with it, so the first build already makes
 the finished patch. Your own edits are saved in the "workspace" folder; keep it
 when you update to a newer version of the Studio.
 
@@ -138,7 +138,7 @@ def package(path, top, files, start, python=None):
 NOTES = '''# FM2089 Translation Studio {version}
 
 A translation editor and one-click English patch builder for *Front Mission 2089:
-Border of Madness* (Nintendo DS). It comes with the full English translation, the
+Border of Madness* (Nintendo DS). It comes with the draft English translation, the
 localization group's English graphics and the English name entry screens.
 
 ## Download
