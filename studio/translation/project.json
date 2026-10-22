@@ -37047,14 +37047,14 @@
   "MsgLabels_parts_help_arm_msg_043": {
    "en": "Tiran«g:24»Arm: Arm/Short\nDEF 50 HP 108 ACC 90 WT 60",
    "done": true,
-   "note": "Source: Claude's machine translation (MTL).",
-   "mtl": true
+   "note": "Source: Claude's machine translation (MTL). Since edited by a person.",
+   "edited": true
   },
   "MsgLabels_parts_help_arm_msg_044": {
    "en": "Tiran«g:24»Arm: Arm/Short\nDEF 50 HP 108 ACC 90 WT 60",
    "done": true,
-   "note": "Source: Claude's machine translation (MTL).",
-   "mtl": true
+   "note": "Source: Claude's machine translation (MTL). Since edited by a person.",
+   "edited": true
   },
   "MsgLabels_parts_help_arm_msg_045": {
    "en": "Stork«g:24»Arm: Arm/Melee\nDEF 30  HP 42  ACC 72  WT 30",
@@ -39201,8 +39201,8 @@
   "MsgLabels_parts_help_body_msg_023": {
    "en": "Tiran«g:24»Body: Body\nDEF 50  HP 204  PWR 440  WT 80",
    "done": true,
-   "note": "Source: Claude's machine translation (MTL).",
-   "mtl": true
+   "note": "Source: Claude's machine translation (MTL). Since edited by a person.",
+   "edited": true
   },
   "MsgLabels_parts_help_body_msg_024": {
    "en": "Stork«g:24»Body: Body\nDEF 28  HP 72  PWR 220  WT 50",
@@ -39795,8 +39795,8 @@
   "MsgLabels_parts_help_body_msg_144": {
    "en": "Tiran«g:24»Body+1: Body\nDEF 55  HP 204  PWR 440  WT 80",
    "done": true,
-   "note": "Source: Claude's machine translation (MTL).",
-   "mtl": true
+   "note": "Source: Claude's machine translation (MTL). Since edited by a person.",
+   "edited": true
   },
   "MsgLabels_parts_help_body_msg_145": {
    "en": "Stork«g:24»Body+1: Body\nDEF 33  HP 72  PWR 220  WT 50",
@@ -44031,8 +44031,8 @@
   "MsgLabels_parts_help_ig_msg_013": {
    "en": "Tiran Built-in MG: Short\nATK 4x25 ACC 99 RNG 1 AMMO ∞",
    "done": true,
-   "note": "Source: Claude's machine translation (MTL).",
-   "mtl": true
+   "note": "Source: Claude's machine translation (MTL). Since edited by a person.",
+   "edited": true
   },
   "MsgLabels_parts_help_ig_msg_014": {
    "en": "Type 65 Built-in Cannon: Short\nATK 3x20 ACC 74 RNG 1 AMMO ∞",
@@ -45281,8 +45281,8 @@
   "MsgLabels_parts_help_leg_msg_022": {
    "en": "Tiran«g:24»Legs: Legs\nDEF 50 HP 180 MOV 20 WT 90",
    "done": true,
-   "note": "Source: Claude's machine translation (MTL).",
-   "mtl": true
+   "note": "Source: Claude's machine translation (MTL). Since edited by a person.",
+   "edited": true
   },
   "MsgLabels_parts_help_leg_msg_023": {
    "en": "Stork«g:24»Legs: Legs\nDEF 32 HP 60 MOV 16 WT 32",
@@ -45623,8 +45623,8 @@
   "MsgLabels_parts_help_leg_msg_090": {
    "en": "Tiran Ⅱ«g:24»Legs: Legs\nDEF 58 HP 200 MOV 16 WT 90",
    "done": true,
-   "note": "Source: Claude's machine translation (MTL).",
-   "mtl": true
+   "note": "Source: Claude's machine translation (MTL). Since edited by a person.",
+   "edited": true
   },
   "MsgLabels_parts_help_leg_msg_091": {
    "en": "Zora-5A«g:24»Legs: Legs\nDEF 44 HP 60 MOV 16 WT 45",
@@ -45839,8 +45839,8 @@
   "MsgLabels_parts_help_leg_msg_148": {
    "en": "Tiran«g:24»Legs+1: Legs\nDEF 55 HP 180 MOV 20 WT 90",
    "done": true,
-   "note": "Source: Claude's machine translation (MTL).",
-   "mtl": true
+   "note": "Source: Claude's machine translation (MTL). Since edited by a person.",
+   "edited": true
   },
   "MsgLabels_parts_help_leg_msg_149": {
    "en": "Stork«g:24»Legs+1: Legs\nDEF 37 HP 60 MOV 16 WT 32",
@@ -46181,8 +46181,8 @@
   "MsgLabels_parts_help_leg_msg_216": {
    "en": "Tiran Ⅱ«g:24»Legs+1: Legs\nDEF 63 HP 200 MOV 16 WT 90",
    "done": true,
-   "note": "Source: Claude's machine translation (MTL).",
-   "mtl": true
+   "note": "Source: Claude's machine translation (MTL). Since edited by a person.",
+   "edited": true
   },
   "MsgLabels_parts_help_leg_msg_217": {
    "en": "Zora-5A«g:24»Legs+1: Legs\nDEF 49 HP 60 MOV 16 WT 45",
@@ -51577,14 +51577,14 @@
   "MsgLabels_parts_menu_arm_msg_043": {
    "en": "TIRAN",
    "done": true,
-   "note": "Source: Claude's machine translation (MTL).",
-   "mtl": true
+   "note": "Source: Claude's machine translation (MTL). Since edited by a person.",
+   "edited": true
   },
   "MsgLabels_parts_menu_arm_msg_044": {
    "en": "TIRAN",
    "done": true,
-   "note": "Source: Claude's machine translation (MTL).",
-   "mtl": true
+   "note": "Source: Claude's machine translation (MTL). Since edited by a person.",
+   "edited": true
   },
   "MsgLabels_parts_menu_arm_msg_059": {
    "en": "TYPE 103",
@@ -52837,8 +52837,8 @@
   "MsgLabels_parts_menu_body_msg_023": {
    "en": "TIRAN",
    "done": true,
-   "note": "Source: Claude's machine translation (MTL).",
-   "mtl": true
+   "note": "Source: Claude's machine translation (MTL). Since edited by a person.",
+   "edited": true
   },
   "MsgLabels_parts_menu_body_msg_031": {
    "en": "TYPE 103",
@@ -53045,8 +53045,8 @@
   "MsgLabels_parts_menu_body_msg_144": {
    "en": "TIRAN+1",
    "done": true,
-   "note": "Source: Claude's machine translation (MTL).",
-   "mtl": true
+   "note": "Source: Claude's machine translation (MTL). Since edited by a person.",
+   "edited": true
   },
   "MsgLabels_parts_menu_body_msg_145": {
    "en": "STORK+1",
@@ -54881,8 +54881,8 @@
   "MsgLabels_parts_menu_ig_msg_014": {
    "en": "TIRAN MG",
    "done": true,
-   "note": "Source: Claude's machine translation (MTL).",
-   "mtl": true
+   "note": "Source: Claude's machine translation (MTL). Since edited by a person.",
+   "edited": true
   },
   "MsgLabels_parts_menu_ig_msg_024": {
    "en": "KING MG",
@@ -55512,8 +55512,8 @@
   "MsgLabels_parts_menu_leg_msg_022": {
    "en": "TIRAN",
    "done": true,
-   "note": "Source: Claude's machine translation (MTL).",
-   "mtl": true
+   "note": "Source: Claude's machine translation (MTL). Since edited by a person.",
+   "edited": true
   },
   "MsgLabels_parts_menu_leg_msg_030": {
    "en": "TYPE 103",
@@ -55743,8 +55743,8 @@
   "MsgLabels_parts_menu_leg_msg_148": {
    "en": "TIRAN+1",
    "done": true,
-   "note": "Source: Claude's machine translation (MTL).",
-   "mtl": true
+   "note": "Source: Claude's machine translation (MTL). Since edited by a person.",
+   "edited": true
   },
   "MsgLabels_parts_menu_leg_msg_149": {
    "en": "STORK+1",
@@ -57244,5 +57244,6 @@
    "note": "Source: Claude's machine translation (MTL).",
    "mtl": true
   }
- }
+ },
+ "settings": {}
 }
