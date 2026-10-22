@@ -52,6 +52,16 @@ Only the Japanese ROM is needed from you; it is never stored here.
 * Control codes from the Japanese show as tags such as `«E801:00»` (the main
   character's name) or `«E8F6»` (red text). Click a tag to insert it. Hover a tag
   to see what it does. `«g:1A3»` is a glyph with no known character.
+* **The player's name**: type `«E801:00»` where the name goes, for example
+  `Nice to meet ya, «E801:00».` The game puts in whatever name the player chose
+  (Storm by default). Always use the code, never type "Storm", or players who pick
+  another name will see the wrong one. When the Japanese has the name, the
+  `«E801:00»` button under **Insert code** puts it in for you; in any other line,
+  type it with the « » marks (copy them from another line if your keyboard has
+  none). The preview shows the name as a blue box about the width of a 5-letter
+  name, but the width check counts it as zero, so keep lines with the name a
+  little short of the blue line. Lines the hero speaks get the name label
+  automatically, so don't add it to the text.
 * The preview draws the text with the game's own font. The blue line marks the
   widest Japanese line in that file and the red line the 256 px screen edge.
   Lines past the screen edge are errors; lines past the blue line are warnings.
