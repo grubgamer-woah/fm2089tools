@@ -102,7 +102,13 @@
   "耐衝撃属性": "Anti-Impact",
   "耐貫通属性": "Anti-Piercing"
  },
- "faces": {},
+ "faces": {
+  "アルケミスト": "Vface2",
+  "きさくなピーター": "Npcface4",
+  "太り気味のマット": "Npcface9",
+  "陰気なガブリエル": "Npcface3",
+  "グリフォン": "Vface1"
+ },
  "images": {
   "mtittle_bg_01": "../translation/images/mtittle_bg_01.png",
   "mtittle_bg_02": "../translation/images/mtittle_bg_02.png",
@@ -37026,13 +37032,13 @@
    "mtl": true
   },
   "MsgLabels_parts_help_arm_msg_043": {
-   "en": "Tyrant«g:24»Arm: Arm/Short\nDEF 50 HP 108 ACC 90 WT 60",
+   "en": "Tiran«g:24»Arm: Arm/Short\nDEF 50 HP 108 ACC 90 WT 60",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).",
    "mtl": true
   },
   "MsgLabels_parts_help_arm_msg_044": {
-   "en": "Tyrant«g:24»Arm: Arm/Short\nDEF 50 HP 108 ACC 90 WT 60",
+   "en": "Tiran«g:24»Arm: Arm/Short\nDEF 50 HP 108 ACC 90 WT 60",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).",
    "mtl": true
@@ -39180,7 +39186,7 @@
    "mtl": true
   },
   "MsgLabels_parts_help_body_msg_023": {
-   "en": "Tyrant«g:24»Body: Body\nDEF 50  HP 204  PWR 440  WT 80",
+   "en": "Tiran«g:24»Body: Body\nDEF 50  HP 204  PWR 440  WT 80",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).",
    "mtl": true
@@ -39774,7 +39780,7 @@
    "mtl": true
   },
   "MsgLabels_parts_help_body_msg_144": {
-   "en": "Tyrant«g:24»Body+1: Body\nDEF 55  HP 204  PWR 440  WT 80",
+   "en": "Tiran«g:24»Body+1: Body\nDEF 55  HP 204  PWR 440  WT 80",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).",
    "mtl": true
@@ -44010,7 +44016,7 @@
    "mtl": true
   },
   "MsgLabels_parts_help_ig_msg_013": {
-   "en": "Tyrant Built-in MG: Short\nATK 4x25 ACC 99 RNG 1 AMMO ∞",
+   "en": "Tiran Built-in MG: Short\nATK 4x25 ACC 99 RNG 1 AMMO ∞",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).",
    "mtl": true
@@ -45260,7 +45266,7 @@
    "mtl": true
   },
   "MsgLabels_parts_help_leg_msg_022": {
-   "en": "Tyrant«g:24»Legs: Legs\nDEF 50 HP 180 MOV 20 WT 90",
+   "en": "Tiran«g:24»Legs: Legs\nDEF 50 HP 180 MOV 20 WT 90",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).",
    "mtl": true
@@ -45602,7 +45608,7 @@
    "mtl": true
   },
   "MsgLabels_parts_help_leg_msg_090": {
-   "en": "Tyrant Ⅱ«g:24»Legs: Legs\nDEF 58 HP 200 MOV 16 WT 90",
+   "en": "Tiran Ⅱ«g:24»Legs: Legs\nDEF 58 HP 200 MOV 16 WT 90",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).",
    "mtl": true
@@ -45818,7 +45824,7 @@
    "mtl": true
   },
   "MsgLabels_parts_help_leg_msg_148": {
-   "en": "Tyrant«g:24»Legs+1: Legs\nDEF 55 HP 180 MOV 20 WT 90",
+   "en": "Tiran«g:24»Legs+1: Legs\nDEF 55 HP 180 MOV 20 WT 90",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).",
    "mtl": true
@@ -46160,7 +46166,7 @@
    "mtl": true
   },
   "MsgLabels_parts_help_leg_msg_216": {
-   "en": "Tyrant Ⅱ«g:24»Legs+1: Legs\nDEF 63 HP 200 MOV 16 WT 90",
+   "en": "Tiran Ⅱ«g:24»Legs+1: Legs\nDEF 63 HP 200 MOV 16 WT 90",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).",
    "mtl": true
@@ -51556,13 +51562,13 @@
    "mtl": true
   },
   "MsgLabels_parts_menu_arm_msg_043": {
-   "en": "TYRANT",
+   "en": "TIRAN",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).",
    "mtl": true
   },
   "MsgLabels_parts_menu_arm_msg_044": {
-   "en": "TYRANT",
+   "en": "TIRAN",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).",
    "mtl": true
@@ -52816,7 +52822,7 @@
    "note": "Source: the group sheet's English, kept as the group wrote it (human)."
   },
   "MsgLabels_parts_menu_body_msg_023": {
-   "en": "TYRANT",
+   "en": "TIRAN",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).",
    "mtl": true
@@ -53024,7 +53030,7 @@
    "note": "Source: the group sheet's English, kept as the group wrote it (human)."
   },
   "MsgLabels_parts_menu_body_msg_144": {
-   "en": "TYRANT+1",
+   "en": "TIRAN+1",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).",
    "mtl": true
@@ -54860,7 +54866,7 @@
    "mtl": true
   },
   "MsgLabels_parts_menu_ig_msg_014": {
-   "en": "TYRANT MG",
+   "en": "TIRAN MG",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).",
    "mtl": true
@@ -55491,7 +55497,7 @@
    "note": "Source: the group sheet's English, kept as the group wrote it (human)."
   },
   "MsgLabels_parts_menu_leg_msg_022": {
-   "en": "TYRANT",
+   "en": "TIRAN",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).",
    "mtl": true
@@ -55722,7 +55728,7 @@
    "note": "Source: the group sheet's English, kept as the group wrote it (human)."
   },
   "MsgLabels_parts_menu_leg_msg_148": {
-   "en": "TYRANT+1",
+   "en": "TIRAN+1",
    "done": true,
    "note": "Source: Claude's machine translation (MTL).",
    "mtl": true
