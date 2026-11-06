@@ -58,7 +58,6 @@ actions.insertAdjacentHTML('beforeend', `<button id="review" title="Accept, chan
   <button id="recent" title="The latest changes anyone made">Recent changes</button>
   <button id="team" title="Who can see and edit the script" hidden>Team</button>
   <button id="upload" title="Upload the Online pack the desktop Studio saves" hidden>Upload pack</button>
-  <button id="username" title="Change the name everyone sees for you">Username</button>
   <button id="signout" title="Sign out">Sign out</button>`);
 document.body.insertAdjacentHTML('beforeend', '<input id="pack-file" type="file" accept=".json,application/json" hidden>');
 
@@ -116,14 +115,14 @@ async function signedIn(user) {
   $('#review').hidden = !O.canReview;
   if (!uname(O.email)) { pickUsername(user); return; }
   O.name = uname(O.email);
-  $('#base').textContent = `Signed in as ${O.name}`;
+  $('#base').innerHTML = `Signed in as ${meLink()}`;
   listen();
 }
 
 // Team members who have no username yet (everyone added before usernames, or added straight from the Team list) pick one first
 function pickUsername(user) {
   showGate(`<h2>Pick a username</h2><p>The team sees this name next to your changes, suggestions and claims, instead of your Google name.
-    You can change it later with the <b>Username</b> button.</p>
+    You can change it later by clicking your name at the top of the page.</p>
     <form id="name-form" class="request-form"><label>Username<input id="name-new" maxlength="24" required></label>
     <p><button class="primary">Save</button> <button type="button" id="out">Sign out</button></p></form>`);
   $('#out').onclick = () => fb.signOut(auth);
@@ -147,15 +146,18 @@ async function saveUsername(value) {
   return true;
 }
 
-$('#username').onclick = async () => {
+// your own name (top of the page, and in the online list) is a link that changes your username
+const meLink = () => `<a href="#" class="me-name" title="Click to change your username">${esc(O.name)}</a>`;
+document.addEventListener('click', ev => { if (ev.target.closest('.me-name')) { ev.preventDefault(); renameMe(); } });
+async function renameMe() {
   if (!O.access || !O.name) return;
   const v = prompt('Your username (what the team sees next to your work):', O.name);
   if (v === null || cleanName(v) === O.name) return;
   if (await saveUsername(v)) {
-    if (O.showBase) O.showBase(); else $('#base').textContent = `Signed in as ${O.name}`;
+    if (O.showBase) O.showBase(); else $('#base').innerHTML = `Signed in as ${meLink()}`;
     heartbeat(); renderPresence();
   }
-};
+}
 
 // ---------- asking to join: accessRequests/{uid}, answered by an admin from their inbox ----------
 
@@ -383,7 +385,7 @@ function wrapStudio() {
   };
   claimsTab();
   // the Studio writes "ROM: …" there once its page has loaded; say who is signed in instead
-  const base = () => { $('#base').textContent = `Signed in as ${O.name} · script uploaded ${O.meta.made}${O.meta.uploaded ? ' by ' + nm(O.meta.uploaded) : ''}`; };
+  const base = () => { $('#base').innerHTML = `Signed in as ${meLink()} · script uploaded ${esc(O.meta.made)}${O.meta.uploaded ? ' by ' + esc(nm(O.meta.uploaded)) : ''}`; };
   const wait = setInterval(() => { if (S.entries.length) { clearInterval(wait); base(); numberLines(); listenClaims(); } }, 200);
   base();
   O.showBase = base;
@@ -1454,7 +1456,7 @@ const fresh = p => p.t?.toMillis ? Date.now() - p.t.toMillis() < 180000 : true;
 function colorOf(email) { let h = 0; for (const c of email || '') h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h} 70% 62%)`; }
 function renderPresence() {
   const people = Object.values(O.presence).filter(fresh);
-  $('#online').innerHTML = people.map(p => `<span class="who" title="${O.isAdmin ? esc(p.e) : esc(nm(p))}${p.id ? ' · on ' + esc(p.id) : ''}"><i style="background:${colorOf(p.e)}"></i>${esc(nm(p))}</span>`).join('');
+  $('#online').innerHTML = people.map(p => `<span class="who${p.e === O.email ? ' me-name' : ''}" title="${p.e === O.email ? 'You: click to change your username' : O.isAdmin ? esc(p.e) : esc(nm(p))}${p.id ? ' · on ' + esc(p.id) : ''}"><i style="background:${colorOf(p.e)}"></i>${esc(nm(p))}</span>`).join('');
 }
 setInterval(renderPresence, 60000);
 

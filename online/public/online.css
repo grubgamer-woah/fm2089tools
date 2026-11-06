@@ -36,3 +36,7 @@ img.face { width: 48px; height: 48px; image-rendering: pixelated; }
 .request-form { display: grid; gap: .6rem; max-width: 520px; }
 .request-form label { display: flex; flex-direction: column; gap: .2rem; }
 .request-form textarea, .request-form select { font: inherit; }
+
+/* your own name: click to change your username */
+.me-name { cursor: pointer; }
+a.me-name { color: inherit; text-decoration: underline dotted; }
