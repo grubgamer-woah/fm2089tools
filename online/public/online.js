@@ -306,6 +306,7 @@ function onlineEditorInfo() {
     ${others.length ? ` · <b>Also on this line now: ${others.map(esc).join(', ')}</b>` : ''}
     ${en !== seed ? ` · <a href="#" id="show-seed">Last upload from the Studio</a>` : ''} · <a href="#" id="line-history">History</a></div>
     ${lineSuggestions(id)}${claimInfo(id)}</div>`);
+  lockEditor(id);
   for (const b of document.querySelectorAll('[data-withdraw]')) b.onclick = () => withdraw(b.dataset.withdraw);
   $('#review-line')?.addEventListener('click', () => renderReview(id));
   $('#show-seed')?.addEventListener('click', ev => { ev.preventDefault(); showJob(`<h3>${esc(id)}: last upload from the Studio</h3><div class="merge-text">${esc(seed || '(no English)')}</div>`); });
@@ -512,6 +513,8 @@ async function saveEntry(data) {
   let res = {errors: [], warnings: [], widths: []};
   if (data.en) { res = check(id, data.en, speakerMap()); delete res.tokens; }
   if (res.errors.length && !data.force) return {ok: false, ...res};
+  const lock = lockedBy(id);
+  if (lock) return {ok: false, errors: [`${lock.n} claimed this line until ${until(lock)}; only they and admins can change it`], warnings: [], widths: []};
   const e = O.byId[id].e;
   const hidden = !('hidden' in data) ? undefined : !!data.hidden === !!e.unused ? '' : data.hidden;
   const after = projectSet(viewOf(id), {en: data.en, note: data.note, done: data.done, mtl: data.mtl, edited: data.edited, hidden});
@@ -1076,6 +1079,8 @@ async function decide(sid, x, i, accept) {
   }
   const modified = !same(final, x.change), who = `${x.n} (accepted by ${O.name})`;
   if (x.kind === 'entry') {
+    const c = O.byId[x.id] && S.byId[x.id] ? claimOf(S.byId[x.id]) : null;
+    if (c && c.uid !== x.uid && !O.isAdmin) throw new Error(`${c.n} claimed ${x.id}; only they and admins can change it, so only an admin can accept this.`);
     if (final.en) {
       const errors = check(x.id, final.en, speakerMap()).errors;
       if (errors.length && !confirm(`${x.id} has problems:\n${errors.join('\n')}\n\nAccept it anyway?`)) throw new Error('Not accepted.');
@@ -1141,6 +1146,22 @@ function claimOf(e) {
   return Object.values(O.claims).find(c => c.group === e.group && live(c) && n >= c.from && n <= c.to) || null;
 }
 
+// Someone else's claim locks a line: only they and admins change it (the claim, or null when you may)
+function lockedBy(id) {
+  const c = O.lineNo && S.byId[id] ? claimOf(S.byId[id]) : null;
+  return c && c.uid !== O.user.uid && !O.isAdmin ? c : null;
+}
+const LOCKED_FIELDS = ['#en', '#note', '#save', '#clear', '#copy-jp', '#done', '#mtl', '#edited', '#hidden'];
+function lockEditor(id) {
+  const c = lockedBy(id);
+  for (const sel of LOCKED_FIELDS) {
+    const el = $(sel);
+    if (!el) continue;
+    if (c) { if (!el.disabled) { el.disabled = true; el.dataset.claimLocked = '1'; } }
+    else if (el.dataset.claimLocked) { el.disabled = false; delete el.dataset.claimLocked; }
+  }
+}
+
 function listenClaims() {
   fb.onSnapshot(fb.collection(db, 'claims'), snap => {
     O.claims = Object.fromEntries(snap.docs.map(d => [d.id, d.data()]));
@@ -1165,7 +1186,8 @@ function claimInfo(id) {
   const c = claimOf(S.byId[id]);
   if (!c) return '';
   const what = `${c.group === 'story' ? 'missions' : 'lines'} ${rangeText(c)}`;
-  return `<div class="sub claim-sub">${c.uid === O.user.uid ? 'You claimed' : `<b>${esc(c.n)} claimed</b>`} ${what} until ${until(c)}.</div>`;
+  const lock = c.uid === O.user.uid ? '' : O.isAdmin ? ' As an admin you can still change it.' : ` Only ${esc(c.n)} and admins can change it.`;
+  return `<div class="sub claim-sub${lock && !O.isAdmin ? ' locked' : ''}">${c.uid === O.user.uid ? 'You claimed' : `<b>${esc(c.n)} claimed</b>`} ${what} until ${until(c)}.${lock}</div>`;
 }
 
 // "1-10, 14" -> [[1, 10], [14, 14]]

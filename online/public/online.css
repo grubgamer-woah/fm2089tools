@@ -32,3 +32,4 @@ img.face { width: 48px; height: 48px; image-rendering: pixelated; }
 .claim-list li { display: flex; gap: .6rem; align-items: center; padding: .25rem 0; }
 .claim-table { border-collapse: collapse; width: 100%; margin-top: .5rem; }
 .claim-table th, .claim-table td { text-align: left; padding: .25rem .5rem; border-bottom: 1px solid rgba(127,127,127,.25); }
+.claim-sub.locked { color: #ffb84d; }
