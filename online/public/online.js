@@ -15,6 +15,12 @@ const fmt = n => Number(n).toLocaleString('en-US');
 const when = t => { const d = t?.toDate ? t.toDate() : null; return d ? d.toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'}) : 'just now'; };
 const FIELDS = ['en', 'note', 'done', 'mtl', 'edited', 'hidden'];
 const O = {files: {}, byId: {}, speakers: {}, project: {}, presence: {}, claims: {}, started: false};
+// Everyone shows up under the username they picked (meta/access usernames), never their Google name
+const uname = email => (O.access?.usernames || {})[email] || '';
+const nm = r => (r && (uname(r.e) || r.n)) || 'Someone';
+const cleanName = v => String(v || '').replace(/\s+/g, ' ').trim();
+const nameProblem = v => !v ? 'Pick a username.' : v.length > 24 ? 'Keep the username to 24 characters or fewer.'
+  : /[@<>]/.test(v) ? 'A username can\'t contain @, < or >.' : '';
 
 const params = new URLSearchParams(location.search);
 const app = fb.initializeApp(firebaseConfig);
@@ -52,6 +58,7 @@ actions.insertAdjacentHTML('beforeend', `<button id="review" title="Accept, chan
   <button id="recent" title="The latest changes anyone made">Recent changes</button>
   <button id="team" title="Who can see and edit the script" hidden>Team</button>
   <button id="upload" title="Upload the Online pack the desktop Studio saves" hidden>Upload pack</button>
+  <button id="username" title="Change the name everyone sees for you">Username</button>
   <button id="signout" title="Sign out">Sign out</button>`);
 document.body.insertAdjacentHTML('beforeend', '<input id="pack-file" type="file" accept=".json,application/json" hidden>');
 
@@ -77,8 +84,8 @@ function emulatorSignIn(email) {
 $('#signout').onclick = async () => { await leave(); await fb.signOut(auth); location.reload(); };
 
 async function signedIn(user) {
-  O.user = user; O.email = (user.email || '').toLowerCase(); O.name = user.displayName || O.email.split('@')[0];
-  $('#base').textContent = `Signed in as ${O.name}`;
+  O.user = user; O.email = (user.email || '').toLowerCase(); O.name = '';
+  $('#base').textContent = `Signed in as ${O.email}`;
   let access;
   try {
     access = await fb.getDoc(ref('meta', 'access'));
@@ -89,9 +96,16 @@ async function signedIn(user) {
   if (!access.exists()) {
     showGate(`<h2>New editor</h2><p>Nobody runs this editor yet. As the first person here you can become its admin: you pick who else
       can see and edit the script, and you upload the script from the desktop Studio.</p>
-      <p><button id="claim" class="primary">Make me the admin (${esc(O.email)})</button> <button id="out">Sign out</button></p>`);
+      <form id="claim-form" class="request-form"><label>Your username (what the team sees instead of your Google name)<input id="claim-name" maxlength="24" required></label>
+      <p><button class="primary">Make me the admin (${esc(O.email)})</button> <button type="button" id="out">Sign out</button></p></form>`);
     $('#out').onclick = () => fb.signOut(auth);
-    $('#claim').onclick = async () => { await fb.setDoc(ref('meta', 'access'), {admins: [O.email], editors: [], names: {[O.email]: O.name}}); signedIn(user); };
+    $('#claim-form').onsubmit = async ev => {
+      ev.preventDefault();
+      const name = cleanName($('#claim-name').value), bad = nameProblem(name);
+      if (bad) return alert(bad);
+      await fb.setDoc(ref('meta', 'access'), {admins: [O.email], editors: [], names: {[O.email]: name}, usernames: {[O.email]: name}});
+      signedIn(user);
+    };
     return;
   }
   O.access = access.data();
@@ -100,9 +114,48 @@ async function signedIn(user) {
   O.canReview = O.isAdmin || (O.access.reviewers || []).includes(O.email);
   $('#team').hidden = $('#upload').hidden = !O.isAdmin;
   $('#review').hidden = !O.canReview;
-  if (!(O.access.names || {})[O.email] && O.isAdmin) fb.updateDoc(ref('meta', 'access'), new fb.FieldPath('names', O.email), O.name).catch(() => {});
+  if (!uname(O.email)) { pickUsername(user); return; }
+  O.name = uname(O.email);
+  $('#base').textContent = `Signed in as ${O.name}`;
   listen();
 }
+
+// Team members who have no username yet (everyone added before usernames, or added straight from the Team list) pick one first
+function pickUsername(user) {
+  showGate(`<h2>Pick a username</h2><p>The team sees this name next to your changes, suggestions and claims, instead of your Google name.
+    You can change it later with the <b>Username</b> button.</p>
+    <form id="name-form" class="request-form"><label>Username<input id="name-new" maxlength="24" required></label>
+    <p><button class="primary">Save</button> <button type="button" id="out">Sign out</button></p></form>`);
+  $('#out').onclick = () => fb.signOut(auth);
+  $('#name-form').onsubmit = async ev => {
+    ev.preventDefault();
+    if (await saveUsername($('#name-new').value)) signedIn(user);
+  };
+}
+
+// one call writes both maps: usernames (shown) and names (the Team list), so the Google name stored there before is replaced
+async function saveUsername(value) {
+  const name = cleanName(value), bad = nameProblem(name);
+  if (bad) { alert(bad); return false; }
+  const taken = Object.entries(O.access?.usernames || {}).find(([e, n]) => e !== O.email && n.toLowerCase() === name.toLowerCase());
+  if (taken) { alert('Someone on the team already uses that username.'); return false; }
+  try {
+    await fb.updateDoc(ref('meta', 'access'), new fb.FieldPath('usernames', O.email), name, new fb.FieldPath('names', O.email), name);
+  } catch (err) { alert('Could not save the username: ' + err.message); return false; }
+  O.access = {...O.access, usernames: {...(O.access.usernames || {}), [O.email]: name}};
+  O.name = name;
+  return true;
+}
+
+$('#username').onclick = async () => {
+  if (!O.access || !O.name) return;
+  const v = prompt('Your username (what the team sees next to your work):', O.name);
+  if (v === null || cleanName(v) === O.name) return;
+  if (await saveUsername(v)) {
+    if (O.showBase) O.showBase(); else $('#base').textContent = `Signed in as ${O.name}`;
+    heartbeat(); renderPresence();
+  }
+};
 
 // ---------- asking to join: accessRequests/{uid}, answered by an admin from their inbox ----------
 
@@ -114,20 +167,23 @@ function askForAccess() {
     const out = '<button id="out">Use another account</button>';
     if (r?.status === 'pending') {
       showGate(`<h2>Request sent</h2><p>You asked to join as <b>${r.role === 'reviewers' ? 'a reviewer' : 'an editor'}</b>
-        (signed in as <b>${esc(O.email)}</b>). The team admin sees it in their inbox. This page opens the script by itself once they approve it.</p>
+        with the username <b>${esc(r.n)}</b> (signed in as <b>${esc(O.email)}</b>). The team admin sees it in their inbox. This page opens the script by itself once they approve it.</p>
         <p><button id="cancel-request">Cancel the request</button> ${out}</p>`);
       $('#cancel-request').onclick = () => fb.deleteDoc(mine);
     } else {
       showGate(`<h2>No access yet</h2><p>You are signed in as <b>${esc(O.email)}</b>, which is not on the team list.
         ${r?.status === 'declined' ? `<br><b>The admin declined your last request${r.answer ? `: "${esc(r.answer)}"` : ''}.</b> You can ask again.` : ''}</p>
         <form id="request-form" class="request-form">
+          <label>Username (what the team sees instead of your Google name)<input id="request-name" maxlength="24" required value="${esc(r?.n || '')}"></label>
           <label>Role you would like<select id="request-role"><option value="editors">Editor: suggest changes for review</option>
             <option value="reviewers">Reviewer: review suggestions and edit directly</option></select></label>
-          <label>Message to the admin (optional)<textarea id="request-msg" rows="3" placeholder="Who you are, what you would like to work on"></textarea></label>
+          <label>Note to the admin (optional)<textarea id="request-msg" rows="3" placeholder="Who you are, what you would like to work on"></textarea></label>
           <p><button class="primary">Request access</button> ${out}</p></form>`);
       $('#request-form').onsubmit = async ev => {
         ev.preventDefault();
-        await fb.setDoc(mine, {uid: O.user.uid, e: O.email, n: O.name, role: $('#request-role').value, msg: $('#request-msg').value.trim(),
+        const name = cleanName($('#request-name').value), bad = nameProblem(name);
+        if (bad) return alert(bad);
+        await fb.setDoc(mine, {uid: O.user.uid, e: O.email, n: name, role: $('#request-role').value, msg: $('#request-msg').value.trim(),
           status: 'pending', t: now()}).catch(err => alert(err.message));
       };
     }
@@ -163,7 +219,7 @@ function wireRequests() {
       next[role].push(r.e);
       try {
         await fb.updateDoc(ref('meta', 'access'), 'admins', next.admins, 'reviewers', next.reviewers, 'editors', next.editors,
-                           new fb.FieldPath('names', r.e), r.n);
+                           new fb.FieldPath('names', r.e), r.n, new fb.FieldPath('usernames', r.e), r.n);
         await fb.updateDoc(r.ref, {status: 'approved', role, answeredBy: O.name, answeredAt: now()});
       } catch (err) { alert(err.message); }
       $('#inbox').click();
@@ -185,6 +241,7 @@ function listen() {
     const was = O.canReview;
     O.isAdmin = O.access.admins.includes(O.email);
     O.canReview = O.isAdmin || (O.access.reviewers || []).includes(O.email);
+    if (uname(O.email)) O.name = uname(O.email);
     $('#team').hidden = $('#upload').hidden = !O.isAdmin;
     $('#review').hidden = !O.canReview;
     if (was !== undefined && was !== O.canReview) alert('Your role on the team changed. The page will reload.') || location.reload();
@@ -326,9 +383,10 @@ function wrapStudio() {
   };
   claimsTab();
   // the Studio writes "ROM: …" there once its page has loaded; say who is signed in instead
-  const base = () => { $('#base').textContent = `Signed in as ${O.name} · script uploaded ${O.meta.made}${O.meta.uploaded ? ' by ' + O.meta.uploaded.n : ''}`; };
+  const base = () => { $('#base').textContent = `Signed in as ${O.name} · script uploaded ${O.meta.made}${O.meta.uploaded ? ' by ' + nm(O.meta.uploaded) : ''}`; };
   const wait = setInterval(() => { if (S.entries.length) { clearInterval(wait); base(); numberLines(); listenClaims(); } }, 200);
   base();
+  O.showBase = base;
   renderPresence();
 }
 
@@ -360,7 +418,7 @@ function offerTheirs(id) {
   const by = (O.files[O.byId[id].file].by || {})[id], p = S.project[id] || {};
   let box = $('#live-note');
   if (!box) { $('#editor h2').insertAdjacentHTML('afterend', '<div id="live-note" class="live"></div>'); box = $('#live-note'); }
-  box.innerHTML = `${esc(by ? by.n : 'Someone')} saved this line while you were typing:<pre>${esc(p.en || '(no English)')}</pre>
+  box.innerHTML = `${esc(nm(by))} saved this line while you were typing:<pre>${esc(p.en || '(no English)')}</pre>
     <button id="take-theirs">Use their text</button> or press <b>Save entry</b> to keep yours.`;
   $('#take-theirs').onclick = () => { S.dirty = false; renderEditor(); scheduleCheck(0); };
 }
@@ -371,9 +429,9 @@ function onlineEditorInfo() {
   if (!id || !O.byId[id] || !$('#editor .sub')) return;
   document.querySelectorAll('#editor .online-info').forEach(el => el.remove());
   const by = (O.files[O.byId[id].file].by || {})[id];
-  const others = Object.entries(O.presence).filter(([uid, p]) => uid !== O.user.uid && p.id === id && fresh(p)).map(([, p]) => p.n);
+  const others = Object.entries(O.presence).filter(([uid, p]) => uid !== O.user.uid && p.id === id && fresh(p)).map(([, p]) => nm(p));
   const seed = seedOf(id), en = (S.project[id] || {}).en || '';
-  $('#editor .sub').insertAdjacentHTML('afterend', `<div class="online-info"><div class="sub online-sub">${by ? `Last changed online by ${esc(by.n)}, ${esc(when(by.t))}` : 'Not changed online yet'}
+  $('#editor .sub').insertAdjacentHTML('afterend', `<div class="online-info"><div class="sub online-sub">${by ? `Last changed online by ${esc(nm(by))}, ${esc(when(by.t))}` : 'Not changed online yet'}
     ${others.length ? ` · <b>Also on this line now: ${others.map(esc).join(', ')}</b>` : ''}
     ${en !== seed ? ` · <a href="#" id="show-seed">Last upload from the Studio</a>` : ''} · <a href="#" id="line-history">History</a></div>
     ${lineSuggestions(id)}${claimInfo(id)}</div>`);
@@ -585,7 +643,7 @@ async function saveEntry(data) {
   if (data.en) { res = check(id, data.en, speakerMap()); delete res.tokens; }
   if (res.errors.length && !data.force) return {ok: false, ...res};
   const lock = lockedBy(id);
-  if (lock) return {ok: false, errors: [`${lock.n} claimed this line until ${until(lock)}; only they and admins can change it`], warnings: [], widths: []};
+  if (lock) return {ok: false, errors: [`${nm(lock)} claimed this line until ${until(lock)}; only they and admins can change it`], warnings: [], widths: []};
   const e = O.byId[id].e;
   const hidden = !('hidden' in data) ? undefined : !!data.hidden === !!e.unused ? '' : data.hidden;
   const after = projectSet(viewOf(id), {en: data.en, note: data.note, done: data.done, mtl: data.mtl, edited: data.edited, hidden});
@@ -1032,7 +1090,7 @@ function lineSuggestions(id) {
     return x.uid === O.user.uid
       ? `<div class="suggestion mine"><b>Your suggestion is waiting for review.</b> You see it here; the rest of the team sees the shared text until an admin accepts it.
          <button data-withdraw="${esc(sid)}">Withdraw</button></div>`
-      : `<div class="suggestion"><b>${esc(x.n)} suggested</b> <span class="muted">${esc(when(x.t))}</span>${what}</div>`;
+      : `<div class="suggestion"><b>${esc(nm(x))} suggested</b> <span class="muted">${esc(when(x.t))}</span>${what}</div>`;
   }).join('')}${O.canReview && list.some(([, x]) => x.uid !== O.user.uid) ? '<button id="review-line" class="primary">Review this line</button>' : ''}</div>`;
 }
 
@@ -1127,10 +1185,10 @@ function reviewItem(sid, x, i) {
     body = `<div class="merge-pair">${textBox(creditsSummary(cur.value))}${textBox(creditsSummary(x.change.value), 'new')}</div>
       <p class="muted">Team section of the closing credits: now, and as suggested.</p>`;
   }
-  return `<div class="merge-item review-item"><div class="merge-head"><b>${suggestionTitle(x)}</b><span>${esc(x.n)}, ${esc(when(x.t))}</span></div>
+  return `<div class="merge-item review-item"><div class="merge-head"><b>${suggestionTitle(x)}</b><span>${esc(nm(x))}, ${esc(when(x.t))}</span></div>
     ${stale ? '<p class="warn-text">The shared script changed after this was suggested; the left side is what it has now.</p>' : ''}
     ${body}
-    <label class="review-note">Note to ${esc(x.n)} (optional)<input id="r${i}-note" placeholder="Why you accepted, changed or rejected it"></label>
+    <label class="review-note">Note to ${esc(nm(x))} (optional)<input id="r${i}-note" placeholder="Why you accepted, changed or rejected it"></label>
     <div class="buttons"><button id="r${i}-accept" class="primary">Accept</button><button id="r${i}-reject">Reject</button></div></div>`;
 }
 
@@ -1149,25 +1207,25 @@ async function decide(sid, x, i, accept) {
     const box = $(`#r${i}-${f}`);
     if (box && typeof final[f] === 'string') final[f] = f === 'value' ? box.value.trim() : box.value;
   }
-  const modified = !same(final, x.change), who = `${x.n} (accepted by ${O.name})`;
+  const modified = !same(final, x.change), who = `${nm(x)} (accepted by ${O.name})`;
   if (x.kind === 'entry') {
     const c = O.byId[x.id] && S.byId[x.id] ? claimOf(S.byId[x.id]) : null;
-    if (c && c.uid !== x.uid && !O.isAdmin) throw new Error(`${c.n} claimed ${x.id}; only they and admins can change it, so only an admin can accept this.`);
+    if (c && c.uid !== x.uid && !O.isAdmin) throw new Error(`${nm(c)} claimed ${x.id}; only they and admins can change it, so only an admin can accept this.`);
     if (final.en) {
       const errors = check(x.id, final.en, speakerMap()).errors;
       if (errors.length && !confirm(`${x.id} has problems:\n${errors.join('\n')}\n\nAccept it anyway?`)) throw new Error('Not accepted.');
     }
     const before = entryOf(x.id), after = projectSet(before, final), args = [];
-    if (entryUpdates(x.id, after, args, {n: x.n, e: x.e, ok: O.name})) batch.update(ref('files', O.byId[x.id].file), ...args);
+    if (entryUpdates(x.id, after, args, {n: nm(x), e: x.e, ok: O.name})) batch.update(ref('files', O.byId[x.id].file), ...args);
     for (const f of ['en', 'note']) if (f in final) history(x.id, f, before[f] || '', after[f] || '', who);
   } else if (x.kind === 'speaker' || x.kind === 'face') {
     if (x.kind === 'speaker' && final.value) { const [, problems] = tokens(final.value); if (problems.length) throw new Error(problems.join('\n')); }
     const field = x.kind === 'speaker' ? 'en' : 'faces';
     batch.update(ref('meta', 'speakers'), new fb.FieldPath(field, x.id), final.value || fb.deleteField(),
-                 ...(x.kind === 'speaker' ? [new fb.FieldPath('by', x.id), {n: x.n, e: x.e, ok: O.name, t: now()}] : []));
+                 ...(x.kind === 'speaker' ? [new fb.FieldPath('by', x.id), {n: nm(x), e: x.e, ok: O.name, t: now()}] : []));
     history(x.id, x.kind, (O.speakers[field] || {})[x.id] || '', final.value, who);
   } else {
-    batch.set(ref('meta', 'project'), {credits: final.value, creditsBy: {n: x.n, e: x.e, ok: O.name, t: now()}}, {merge: true});
+    batch.set(ref('meta', 'project'), {credits: final.value, creditsBy: {n: nm(x), e: x.e, ok: O.name, t: now()}}, {merge: true});
     history('Credits', 'credits', '', 'changed', who);
   }
   batch.update(ref('suggestions', sid), {...reviewed, status: modified ? 'modified' : 'accepted', final});
@@ -1186,7 +1244,7 @@ $('#inbox').onclick = () => {
     ${O.isAdmin && O.requests?.length ? '<h4>Your suggestions</h4>' : ''}
     ${done.length ? `<div class="merge-list">${done.map(x => `<div class="merge-item${x.seen ? '' : ' unseen'}">
       <div class="merge-head"><b>${suggestionTitle(x)}</b><span><span class="badge status-${x.status}">${STATUS_WORDS[x.status] || esc(x.status)}</span>
-        ${esc(x.reviewer?.n || '')}, ${esc(when(x.reviewedAt))}</span></div>
+        ${esc(x.reviewer ? nm(x.reviewer) : '')}, ${esc(when(x.reviewedAt))}</span></div>
       ${x.reviewNote ? `<p class="review-said"><b>Note:</b> ${esc(x.reviewNote)}</p>` : ''}
       ${x.status === 'modified' ? `<div class="merge-pair"><div><small>You suggested</small>${values(x, x.change)}</div><div><small>Went in as</small>${values(x, x.final)}</div></div>`
         : `<div><small>You suggested</small>${values(x, x.change)}</div>`}</div>`).join('')}</div>` : '<p>Nothing has been reviewed yet.</p>'}
@@ -1263,7 +1321,7 @@ function claimBadge(e) {
   const no = e.group === 'story' ? '' : `<span class="badge" title="This line's number for claims">line ${fmt(O.lineNo[e.id])}</span> `;
   if (!c) return no;
   const mine = c.uid === O.user.uid;
-  return `${no}<span class="badge claim${mine ? ' mine' : ''}" title="Claimed by ${esc(c.n)} until ${until(c)}">${mine ? 'claimed by you' : 'claimed: ' + esc(c.n)}</span>`;
+  return `${no}<span class="badge claim${mine ? ' mine' : ''}" title="Claimed by ${esc(nm(c))} until ${until(c)}">${mine ? 'claimed by you' : 'claimed: ' + esc(nm(c))}</span>`;
 }
 
 function claimInfo(id) {
@@ -1271,8 +1329,8 @@ function claimInfo(id) {
   const c = claimOf(S.byId[id]);
   if (!c) return '';
   const what = `${c.group === 'story' ? 'missions' : 'lines'} ${rangeText(c)}`;
-  const lock = c.uid === O.user.uid ? '' : O.isAdmin ? ' As an admin you can still change it.' : ` Only ${esc(c.n)} and admins can change it.`;
-  return `<div class="sub claim-sub${lock && !O.isAdmin ? ' locked' : ''}">${c.uid === O.user.uid ? 'You claimed' : `<b>${esc(c.n)} claimed</b>`} ${what} until ${until(c)}.${lock}</div>`;
+  const lock = c.uid === O.user.uid ? '' : O.isAdmin ? ' As an admin you can still change it.' : ` Only ${esc(nm(c))} and admins can change it.`;
+  return `<div class="sub claim-sub${lock && !O.isAdmin ? ' locked' : ''}">${c.uid === O.user.uid ? 'You claimed' : `<b>${esc(nm(c))} claimed</b>`} ${what} until ${until(c)}.${lock}</div>`;
 }
 
 // "1-10, 14" -> [[1, 10], [14, 14]]
@@ -1295,7 +1353,7 @@ async function claimRanges(group, text) {
   const ranges = parseRanges(text, max);
   const taken = [];
   for (const [a, b] of ranges) for (const c of Object.values(O.claims)) {
-    if (c.group === group && live(c) && c.uid !== O.user.uid && a <= c.to && b >= c.from) taken.push(`${rangeText({from: Math.max(a, c.from), to: Math.min(b, c.to)})} (${c.n})`);
+    if (c.group === group && live(c) && c.uid !== O.user.uid && a <= c.to && b >= c.from) taken.push(`${rangeText({from: Math.max(a, c.from), to: Math.min(b, c.to)})} (${nm(c)})`);
   }
   if (taken.length) throw new Error(`Already claimed by someone else: ${unit(group).toLowerCase()}s ${taken.join(', ')}. Claim around them.`);
   // ranges you already hold need no new claim (Renew extends those)
@@ -1342,7 +1400,7 @@ function claimRows(list) {
     const all = []; for (let m = c.from; m <= c.to; m++) all.push(missionName(m)[1]);
     return ` <span class="muted">(${esc(all.slice(0, 4).join(', '))}${all.length > 4 ? `, … ${esc(all[all.length - 1])}` : ''})</span>`;
   };
-  return list.length ? `<ul class="claim-list">${list.map(([cid, c]) => `<li><b>${esc(rangeText(c))}</b>${names(c)} · ${esc(c.n)}, until ${until(c)}
+  return list.length ? `<ul class="claim-list">${list.map(([cid, c]) => `<li><b>${esc(rangeText(c))}</b>${names(c)} · ${esc(nm(c))}, until ${until(c)}
     ${c.uid === O.user.uid ? `<button data-renew="${cid}" title="Keep it for another week from today">Renew</button>` : ''}
     ${c.uid === O.user.uid || O.canReview ? `<button data-release="${cid}">Release</button>` : ''}</li>`).join('')}</ul>` : '<p class="muted">Nothing claimed.</p>';
 }
@@ -1358,7 +1416,7 @@ function renderClaims() {
     const lines = story.filter(e => +e.mission === m), c = claimOf({group: 'story', mission: m});
     const [label, title] = missionName(m);
     return `<tr><td>${m}</td><td>${esc(title)}${label ? ` <span class="muted">${esc(label)} in game</span>` : ''}</td><td>${fmt(lines.length)}</td><td>${fmt(lines.filter(e => (S.project[e.id] || {}).mtl).length)}</td>
-      <td>${c ? `<span class="badge claim${c.uid === O.user.uid ? ' mine' : ''}">${c.uid === O.user.uid ? 'you' : esc(c.n)}</span> until ${until(c)}` : ''}</td></tr>`;
+      <td>${c ? `<span class="badge claim${c.uid === O.user.uid ? ' mine' : ''}">${c.uid === O.user.uid ? 'you' : esc(nm(c))}</span> until ${until(c)}` : ''}</td></tr>`;
   }).join('');
   const others = S.config.groups.filter(([k]) => k !== 'story');
   page.innerHTML = `<h2>Claims</h2>
@@ -1396,12 +1454,13 @@ const fresh = p => p.t?.toMillis ? Date.now() - p.t.toMillis() < 180000 : true;
 function colorOf(email) { let h = 0; for (const c of email || '') h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h} 70% 62%)`; }
 function renderPresence() {
   const people = Object.values(O.presence).filter(fresh);
-  $('#online').innerHTML = people.map(p => `<span class="who" title="${esc(p.e)}${p.id ? ' · on ' + esc(p.id) : ''}"><i style="background:${colorOf(p.e)}"></i>${esc(p.n)}</span>`).join('');
+  $('#online').innerHTML = people.map(p => `<span class="who" title="${O.isAdmin ? esc(p.e) : esc(nm(p))}${p.id ? ' · on ' + esc(p.id) : ''}"><i style="background:${colorOf(p.e)}"></i>${esc(nm(p))}</span>`).join('');
 }
 setInterval(renderPresence, 60000);
 
 // ---------- recent changes, line history and the team list ----------
 
+const histName = h => / \(accepted by /.test(h.n || '') ? h.n : nm(h);
 const fieldName = f => ({en: 'English', note: 'note', speaker: 'speaker name', face: 'portrait', credits: 'credits', import: 'import'}[f] || f);
 
 $('#recent').onclick = async () => {
@@ -1409,7 +1468,7 @@ $('#recent').onclick = async () => {
   const snap = await fb.getDocs(fb.query(fb.collection(db, 'history'), fb.orderBy('t', 'desc'), fb.limit(150)));
   const items = snap.docs.map(d => d.data());
   showJob(`<h3>Recent changes</h3>${items.length ? `<div class="merge-list">${items.map(h => `<div class="merge-item"><div class="merge-head">
-    <b>${O.byId[h.id] ? `<a href="#" data-goto="${esc(h.id)}">${esc(h.id)}</a>` : esc(h.id)}</b><span>${esc(h.n)}, ${esc(when(h.t))} · ${esc(fieldName(h.field))}</span></div>
+    <b>${O.byId[h.id] ? `<a href="#" data-goto="${esc(h.id)}">${esc(h.id)}</a>` : esc(h.id)}</b><span>${esc(histName(h))}, ${esc(when(h.t))} · ${esc(fieldName(h.field))}</span></div>
     ${h.field === 'credits' || h.field === 'import' ? `<div class="muted">${esc(h.new)}</div>` : textBox(h.new, 'new')}</div>`).join('')}</div>` : '<p>Nobody has changed anything online yet.</p>'}`);
   wireGoto();
 };
@@ -1419,14 +1478,14 @@ async function lineHistory(id) {
   const snap = await fb.getDocs(fb.query(fb.collection(db, 'history'), fb.where('id', '==', id), fb.limit(100)));
   const items = snap.docs.map(d => d.data()).sort((a, b) => (b.t?.toMillis?.() || 0) - (a.t?.toMillis?.() || 0));
   showJob(`<h3>History of ${esc(id)}</h3>${items.length ? `<div class="merge-list">${items.map(h => `<div class="merge-item"><div class="merge-head">
-    <b>${esc(fieldName(h.field))}</b><span>${esc(h.n)}, ${esc(when(h.t))}</span></div><div class="merge-pair">${textBox(h.old)}${textBox(h.new, 'new')}</div></div>`).join('')}</div>`
+    <b>${esc(fieldName(h.field))}</b><span>${esc(histName(h))}, ${esc(when(h.t))}</span></div><div class="merge-pair">${textBox(h.old)}${textBox(h.new, 'new')}</div></div>`).join('')}</div>`
     : '<p>No changes online yet.</p>'}<p class="muted">Last upload from the Studio:</p>${textBox(seedOf(id))}`);
 }
 
 $('#team').onclick = () => renderTeam();
 const ROLES = [['admins', 'Admin'], ['reviewers', 'Reviewer'], ['editors', 'Editor']];
 function renderTeam() {
-  const a = O.access, names = a.names || {};
+  const a = O.access, names = {...(a.names || {}), ...(a.usernames || {})};
   const row = (email, role) => `<div><span>${esc(names[email] || '')} <code>${esc(email)}</code> · ${role}</span>
     ${email === O.email ? '<span class="muted">you</span>' : `<button data-rm="${esc(email)}">Remove</button>`}</div>`;
   showJob(`<h3>Team</h3><p>Only these Google accounts can open the script.</p>

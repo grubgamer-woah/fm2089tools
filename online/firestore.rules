@@ -20,12 +20,22 @@ service cloud.firestore {
                                          || me() in get(accessPath()).data.get('reviewers', []));
     }
 
+    // anyone on the team may set their own username (shown instead of their Google name), and nothing else
+    function okName(v) { return v is string && v.size() >= 1 && v.size() <= 24; }
+    function setsOwnUsername() {
+      return isEditor()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usernames', 'names'])
+        && request.resource.data.get('usernames', {}).diff(resource.data.get('usernames', {})).affectedKeys().hasOnly([me()])
+        && request.resource.data.get('names', {}).diff(resource.data.get('names', {})).affectedKeys().hasOnly([me()])
+        && okName(request.resource.data.usernames[me()]);
+    }
+
     match /meta/access {
       allow get: if isEditor() || (signedIn() && !hasTeam());
       allow create: if signedIn() && !hasTeam() && request.resource.data.admins == [me()]
                     && request.resource.data.editors == [];
       // an admin can't remove the last admin or themselves
-      allow update: if isAdmin() && me() in request.resource.data.admins;
+      allow update: if (isAdmin() && me() in request.resource.data.admins) || setsOwnUsername();
     }
     // the script itself: everyone on the team reads it, admins and reviewers change it (editors'
     // changes go in as suggestions they review); only admins upload packs (script, font, portraits)
@@ -69,11 +79,11 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow create: if signedIn() && uid == request.auth.uid && request.resource.data.uid == uid
                     && request.resource.data.e == me() && request.resource.data.status == 'pending'
-                    && request.resource.data.role in ['editors', 'reviewers'];
+                    && request.resource.data.role in ['editors', 'reviewers'] && okName(request.resource.data.n);
       allow update: if isAdmin()
                     || (signedIn() && uid == request.auth.uid && resource.data.status != 'pending'
                         && request.resource.data.status == 'pending' && request.resource.data.e == me()
-                        && request.resource.data.role in ['editors', 'reviewers']);
+                        && request.resource.data.role in ['editors', 'reviewers'] && okName(request.resource.data.n));
       allow delete: if isAdmin() || (signedIn() && uid == request.auth.uid && resource.data.status == 'pending');
     }
     match /history/{item} {

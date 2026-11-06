@@ -40,9 +40,14 @@ page reads about 160 documents, and each saved edit is one or two writes.
 ## Who can get in
 
 Only Google accounts on the team list. The first person to sign in on a new database is offered the
-admin role. Anyone else who signs in gets a "Request access" form (editor or reviewer, with a message);
+admin role. Anyone else who signs in gets a "Request access" form (username, editor or reviewer, and an optional note);
 the request shows in the admins' **Inbox**, where they approve it (picking the role) or decline it with a
-note. Admins can also add or remove people under **Team**. The rules in `firestore.rules` enforce this, so
+note. Admins can also add or remove people under **Team**.
+
+Nobody's Google name is shown on the site. Everyone picks a username (on the request form, when claiming
+the admin role, or on first sign-in for people added under **Team**) and the site shows that next to their
+changes, suggestions, claims and in the online list. The **Username** button changes it. Emails are only
+shown to admins (Team list, access requests). The rules in `firestore.rules` enforce this, so
 the page holds nothing secret and the settings in `firebase-config.js` are safe to share.
 
 ## Setting it up (once)
