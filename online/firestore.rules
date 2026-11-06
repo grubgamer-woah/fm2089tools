@@ -11,8 +11,13 @@ service cloud.firestore {
     function accessPath() { return /databases/$(db)/documents/meta/access; }
     function hasTeam() { return exists(accessPath()); }
     function isAdmin() { return signedIn() && hasTeam() && me() in get(accessPath()).data.admins; }
+    // reviewers accept or reject suggestions and change the script directly, but don't run the team or upload packs
+    function isReviewer() {
+      return signedIn() && hasTeam() && (me() in get(accessPath()).data.admins || me() in get(accessPath()).data.get('reviewers', []));
+    }
     function isEditor() {
-      return signedIn() && hasTeam() && (me() in get(accessPath()).data.editors || me() in get(accessPath()).data.admins);
+      return signedIn() && hasTeam() && (me() in get(accessPath()).data.editors || me() in get(accessPath()).data.admins
+                                         || me() in get(accessPath()).data.get('reviewers', []));
     }
 
     match /meta/access {
@@ -22,19 +27,35 @@ service cloud.firestore {
       // an admin can't remove the last admin or themselves
       allow update: if isAdmin() && me() in request.resource.data.admins;
     }
-    match /meta/script {
-      allow read: if isEditor();
-      allow write: if isAdmin();
-    }
-    match /meta/speakers {
-      allow read: if isEditor();
-      allow create, delete: if isAdmin();
-      allow update: if isEditor();
+    // the script itself: everyone on the team reads it, admins and reviewers change it (editors'
+    // changes go in as suggestions they review); only admins upload packs (script, font, portraits)
+    match /meta/{doc} {
+      allow read: if isEditor() && doc != 'access';
+      allow write: if isAdmin() && doc != 'access';
+      allow update: if isReviewer() && doc in ['speakers', 'project'];
+      allow create: if isReviewer() && doc == 'project';
     }
     match /files/{file} {
       allow read: if isEditor();
-      allow create, delete: if isAdmin();
-      allow update: if isEditor();
+      allow write: if isAdmin();
+      allow update: if isReviewer();
+    }
+    // A suggestion: made by its author while waiting for review (they may change or withdraw it then);
+    // an admin accepts, modifies or rejects it. Afterwards its author may only mark the answer as read.
+    match /suggestions/{item} {
+      allow read: if isEditor();
+      allow create: if isEditor() && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.e == me() && request.resource.data.status == 'pending';
+      allow update: if isReviewer()
+                    || (isEditor() && resource.data.uid == request.auth.uid && resource.data.status == 'pending'
+                        && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'pending')
+                    || (isEditor() && resource.data.uid == request.auth.uid && resource.data.status != 'pending'
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seen']));
+      allow delete: if isReviewer() || (isEditor() && resource.data.uid == request.auth.uid && resource.data.status == 'pending');
+    }
+    // claims/{file}: who is translating which lines (each claim lasts a week; the page ignores older ones)
+    match /claims/{file} {
+      allow read, write: if isEditor();
     }
     match /history/{item} {
       allow read: if isEditor();

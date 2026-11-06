@@ -14,7 +14,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '
 const fmt = n => Number(n).toLocaleString('en-US');
 const when = t => { const d = t?.toDate ? t.toDate() : null; return d ? d.toLocaleString([], {dateStyle: 'medium', timeStyle: 'short'}) : 'just now'; };
 const FIELDS = ['en', 'note', 'done', 'mtl', 'edited', 'hidden'];
-const O = {files: {}, byId: {}, speakers: {}, project: {}, presence: {}, started: false};
+const O = {files: {}, byId: {}, speakers: {}, project: {}, presence: {}, claims: {}, started: false};
 
 const params = new URLSearchParams(location.search);
 const app = fb.initializeApp(firebaseConfig);
@@ -38,16 +38,19 @@ function showGate(html) { document.body.classList.add('gated'); gate.hidden = fa
 function hideGate() { document.body.classList.remove('gated'); gate.hidden = true; }
 
 // building needs the ROM, and mission titles, TSV and fonts are not wanted online
-for (const id of ['#build', '#restart', '#fonts', '#export-web', '#export', '#titles']) $(id)?.remove();
-$('#stat-icons')?.closest('label')?.remove();
+// (hidden rather than removed: the Studio's code still looks them up)
+for (const id of ['#build', '#restart', '#fonts', '#export-web', '#export', '#titles']) $(id).style.display = 'none';
+$('#stat-icons').closest('label').style.display = 'none';
 $('#export-script').title = 'Download every line changed online since the last upload as a script .md; load it in the desktop Studio with Import script';
 $('#import').title = 'Import a script (.md, .tsv, .txt or project.json) into the shared online script';
 $('#import-multi').title = 'Import several scripts into the shared online script at once: changes only one of them makes go in, and you pick where they disagree';
 $('footer').innerHTML = 'Edits save to the team\'s shared online script, and everyone signed in sees them. Build the patch in the desktop Studio: '
-  + '<b>Export script</b> here, then <b>Import script</b> there.';
+  + '<b>Export script</b> here, then <b>Import script</b> there.<span id="project-path" hidden></span>';
 const actions = $('header .actions');
 actions.insertAdjacentHTML('afterbegin', '<span id="online" class="online" aria-label="Who is online"></span>');
-actions.insertAdjacentHTML('beforeend', `<button id="recent" title="The latest changes anyone made">Recent changes</button>
+actions.insertAdjacentHTML('beforeend', `<button id="review" title="Accept, change or reject the team's suggested changes" hidden>Review</button>
+  <button id="inbox" title="What happened to the changes you suggested">Inbox</button>
+  <button id="recent" title="The latest changes anyone made">Recent changes</button>
   <button id="team" title="Who can see and edit the script" hidden>Team</button>
   <button id="upload" title="Upload the Online pack the desktop Studio saves" hidden>Upload pack</button>
   <button id="signout" title="Sign out">Sign out</button>`);
@@ -96,7 +99,10 @@ async function signedIn(user) {
   }
   O.access = access.data();
   O.isAdmin = O.access.admins.includes(O.email);
+  // reviewers (and admins) change the script directly and review everyone else's suggestions
+  O.canReview = O.isAdmin || (O.access.reviewers || []).includes(O.email);
   $('#team').hidden = $('#upload').hidden = !O.isAdmin;
+  $('#review').hidden = !O.canReview;
   if (!(O.access.names || {})[O.email] && O.isAdmin) fb.updateDoc(ref('meta', 'access'), new fb.FieldPath('names', O.email), O.name).catch(() => {});
   listen();
 }
@@ -104,7 +110,16 @@ async function signedIn(user) {
 // ---------- live data from the database ----------
 
 function listen() {
-  fb.onSnapshot(ref('meta', 'access'), snap => { if (snap.exists()) O.access = snap.data(); });
+  fb.onSnapshot(ref('meta', 'access'), snap => {
+    if (!snap.exists()) return;
+    O.access = snap.data();
+    const was = O.canReview;
+    O.isAdmin = O.access.admins.includes(O.email);
+    O.canReview = O.isAdmin || (O.access.reviewers || []).includes(O.email);
+    $('#team').hidden = $('#upload').hidden = !O.isAdmin;
+    $('#review').hidden = !O.canReview;
+    if (was !== undefined && was !== O.canReview) alert('Your role on the team changed. The page will reload.') || location.reload();
+  });
   fb.onSnapshot(ref('meta', 'script'), async snap => {
     if (!snap.exists()) {
       showGate(O.isAdmin
@@ -147,6 +162,18 @@ function listenScript() {
     if (O.started) liveSpeakers();
   });
   fb.onSnapshot(ref('meta', 'project'), snap => { O.project = snap.exists() ? snap.data() : {}; });
+  // suggestions waiting for review (everyone's), and your own after review (for the inbox)
+  fb.onSnapshot(fb.query(fb.collection(db, 'suggestions'), fb.where('status', '==', 'pending')), snap => {
+    const touched = new Set(Object.values(O.pending || {}).map(x => x.kind + '\t' + x.id));
+    O.pending = Object.fromEntries(snap.docs.map(d => [d.id, d.data()]));
+    for (const x of Object.values(O.pending)) touched.add(x.kind + '\t' + x.id);
+    renderCounts();
+    if (O.started && O.wrapped) livePending(touched);
+  });
+  fb.onSnapshot(fb.query(fb.collection(db, 'suggestions'), fb.where('uid', '==', O.user.uid)), snap => {
+    O.mine = snap.docs.map(d => ({ref: d.ref, ...d.data()})).filter(x => x.status !== 'pending');
+    renderCounts();
+  });
   fb.onSnapshot(fb.collection(db, 'files'), snap => {
     const changed = new Set();
     snap.docChanges().forEach(ch => {
@@ -177,10 +204,22 @@ function seedFlagsOf(id) {
 }
 const seedOf = (id, field = 'en') => (O.files[O.byId[id].file][field === 'en' ? 'seed' : 'seedNote'] || {})[id] || '';
 const allEntries = () => Object.values(O.files).flatMap(d => d.entries).sort((a, b) => a.pos - b.pos);
-const projectMap = () => Object.fromEntries(Object.keys(O.byId).map(id => [id, entryOf(id)]).filter(([, p]) => Object.keys(p).length));
-const speakerMap = () => ({...(O.speakers.en || {})});
-const faceMap = () => ({...(O.speakers.faces || {})});
-const credits = () => ({...O.layout.credits.default, ...(O.project.credits || {})});
+// What you see: the shared script with your own suggestions still waiting for review laid over it
+// (an admin's changes go straight into the script, so an admin sees just the script)
+const mySuggestion = (kind, id) => (O.pending || {})[suggestionId(kind, id)];
+function viewOf(id) {
+  const s = mySuggestion('entry', id);
+  return s ? projectSet(entryOf(id), s.change) : entryOf(id);
+}
+const projectMap = () => Object.fromEntries(Object.keys(O.byId).map(id => [id, viewOf(id)]).filter(([, p]) => Object.keys(p).length));
+function overlay(kind, field) {
+  const out = {...(O.speakers[field] || {})};
+  for (const x of Object.values(O.pending || {})) if (x.uid === O.user.uid && x.kind === kind) { if (x.change.value) out[x.id] = x.change.value; else delete out[x.id]; }
+  return out;
+}
+const speakerMap = () => overlay('speaker', 'en');
+const faceMap = () => overlay('face', 'faces');
+const credits = () => ({...O.layout.credits.default, ...(mySuggestion('credits', '')?.change.value || O.project.credits || {})});
 
 // ---------- the Studio's page ----------
 
@@ -199,16 +238,37 @@ function wrapStudio() {
   const studioRenderEditor = window.renderEditor;
   window.renderEditor = function () { studioRenderEditor(); onlineEditorInfo(); };
   window.exportScript = exportScript;
+  O.wrapped = true;
   const studioSave = window.save;
   // after a save, one history item for what changed
   window.save = async function (explicit, clearing) {
     const id = S.current, before = {...(S.project[id] || {})};
     const ok = await studioSave(explicit, clearing);
-    if (ok) for (const f of ['en', 'note']) if ((before[f] || '') !== ((S.project[id] || {})[f] || '')) history(id, f, before[f] || '', (S.project[id] || {})[f] || '');
+    if (ok && S.current === id) onlineEditorInfo();
+    if (ok && O.canReview) for (const f of ['en', 'note']) if ((before[f] || '') !== ((S.project[id] || {})[f] || '')) history(id, f, before[f] || '', (S.project[id] || {})[f] || '');
     return ok;
   };
+  // claims: a mark on each claimed row, and the "Claimed by…" choices under Show
+  // portraits as data URLs straight away (an /api/ address would first be fetched from the web host and fail)
+  const studioFaceImg = window.faceImg;
+  window.faceImg = (jp, cls) => studioFaceImg(jp, cls).replace(/src="(\/api\/[^"]+)"/, (m, u) => `src="${imageUrl(new URL(u.replace(/&amp;/g, '&'), location.href))}"`);
+  const studioRowEl = window.rowEl;
+  window.rowEl = function (e) {
+    const b = studioRowEl(e), badge = claimBadge(e);
+    if (badge) b.querySelector('.meta span:last-child').insertAdjacentHTML('afterbegin', badge + ' ');
+    return b;
+  };
   const studioApplyFilter = window.applyFilter;
-  window.applyFilter = function () { studioApplyFilter(); };
+  window.applyFilter = function () {
+    const status = $('#status').value, keep = claimFilter(status);
+    if (!keep) return studioApplyFilter();
+    // the Studio's filter, with "Everything" in place of the claim choice, then only the claimed (or free) lines
+    $('#status').value = ''; studioApplyFilter(); $('#status').value = status;
+    S.filtered = S.filtered.filter(keep); S.page = 0;
+    renderRows();
+  };
+  claimBar();
+  listenClaims();
   $('#base').textContent = `Signed in as ${O.name} · script uploaded ${O.meta.made}${O.meta.uploaded ? ' by ' + O.meta.uploaded.n : ''}`;
   renderPresence();
 }
@@ -217,7 +277,7 @@ function wrapStudio() {
 function liveEntries(changed) {
   if (!changed.size) return;
   for (const id of changed) {
-    const p = entryOf(id), mine = S.project[id] || {};
+    const p = viewOf(id), mine = S.project[id] || {};
     if (JSON.stringify(p) === JSON.stringify(mine)) continue;
     if (Object.keys(p).length) S.project[id] = p; else delete S.project[id];
     if (id === S.current) {
@@ -246,15 +306,21 @@ function offerTheirs(id) {
   $('#take-theirs').onclick = () => { S.dirty = false; renderEditor(); scheduleCheck(0); };
 }
 
+// the online lines under the editor's heading (redrawn on their own when suggestions or claims change)
 function onlineEditorInfo() {
   const id = S.current;
-  if (!id || !O.byId[id]) return;
+  if (!id || !O.byId[id] || !$('#editor .sub')) return;
+  document.querySelectorAll('#editor .online-info').forEach(el => el.remove());
   const by = (O.files[O.byId[id].file].by || {})[id];
   const others = Object.entries(O.presence).filter(([uid, p]) => uid !== O.user.uid && p.id === id && fresh(p)).map(([, p]) => p.n);
   const seed = seedOf(id), en = (S.project[id] || {}).en || '';
-  $('#editor .sub').insertAdjacentHTML('afterend', `<div class="sub online-sub">${by ? `Last changed online by ${esc(by.n)}, ${esc(when(by.t))}` : 'Not changed online yet'}
+  $('#editor .sub').insertAdjacentHTML('afterend', `<div class="online-info"><div class="sub online-sub">${by ? `Last changed online by ${esc(by.n)}, ${esc(when(by.t))}` : 'Not changed online yet'}
     ${others.length ? ` · <b>Also on this line now: ${others.map(esc).join(', ')}</b>` : ''}
-    ${en !== seed ? ` · <a href="#" id="show-seed">Last upload from the Studio</a>` : ''} · <a href="#" id="line-history">History</a></div>`);
+    ${en !== seed ? ` · <a href="#" id="show-seed">Last upload from the Studio</a>` : ''} · <a href="#" id="line-history">History</a></div>
+    ${lineSuggestions(id)}${claimInfo(id)}</div>`);
+  $('#claim-line')?.addEventListener('click', ev => (ev.target.hasAttribute('data-release') ? release([id]) : claim([id])).catch(err => alert(err.message)));
+  for (const b of document.querySelectorAll('[data-withdraw]')) b.onclick = () => withdraw(b.dataset.withdraw);
+  $('#review-line')?.addEventListener('click', () => renderReview(id));
   $('#show-seed')?.addEventListener('click', ev => { ev.preventDefault(); showJob(`<h3>${esc(id)}: last upload from the Studio</h3><div class="merge-text">${esc(seed || '(no English)')}</div>`); });
   $('#line-history').onclick = ev => { ev.preventDefault(); lineHistory(id); };
   heartbeat();
@@ -441,7 +507,7 @@ function projectSet(cur, {en, note, done, mtl, edited, hidden}) {
 }
 
 // the changes to write for lines whose new entry is `after`
-function entryUpdates(id, after, args) {
+function entryUpdates(id, after, args, who = {n: O.name, e: O.email}) {
   const before = entryOf(id);
   let changed = false;
   for (const f of FIELDS) {
@@ -449,7 +515,7 @@ function entryUpdates(id, after, args) {
     args.push(new fb.FieldPath(f, id), after[f] === undefined ? fb.deleteField() : after[f]);
     changed = true;
   }
-  if (changed) args.push(new fb.FieldPath('by', id), {n: O.name, e: O.email, t: now()});
+  if (changed) args.push(new fb.FieldPath('by', id), {...who, t: now()});
   return changed;
 }
 
@@ -461,7 +527,8 @@ async function saveEntry(data) {
   if (res.errors.length && !data.force) return {ok: false, ...res};
   const e = O.byId[id].e;
   const hidden = !('hidden' in data) ? undefined : !!data.hidden === !!e.unused ? '' : data.hidden;
-  const after = projectSet(entryOf(id), {en: data.en, note: data.note, done: data.done, mtl: data.mtl, edited: data.edited, hidden});
+  const after = projectSet(viewOf(id), {en: data.en, note: data.note, done: data.done, mtl: data.mtl, edited: data.edited, hidden});
+  if (!O.canReview) { await suggestEntry(id, after); return {ok: true, entry: after, ...res}; }
   const args = [];
   if (entryUpdates(id, after, args)) await fb.updateDoc(ref('files', O.byId[id].file), ...args);
   return {ok: true, entry: after, ...res};
@@ -472,6 +539,7 @@ async function saveSpeaker(data) {
   if ('face' in data) {
     const face = data.face || '';
     if (face && face !== '-' && !O.portraits[face]) return {ok: false, errors: [`unknown portrait ${face}`]};
+    if (!O.canReview) { await suggest('face', jp, face, (O.speakers.faces || {})[jp] || ''); return {ok: true, faces: faceMap()}; }
     const old = (O.speakers.faces || {})[jp] || '';
     await fb.updateDoc(ref('meta', 'speakers'), new fb.FieldPath('faces', jp), face || fb.deleteField());
     history(jp, 'face', old, face);
@@ -480,6 +548,7 @@ async function saveSpeaker(data) {
   }
   const en = (data.en || '').trim();
   if (en) { const [, problems] = tokens(en); if (problems.length) return {ok: false, errors: problems}; }
+  if (!O.canReview) { await suggest('speaker', jp, en, (O.speakers.en || {})[jp] || ''); return {ok: true, speakers: speakerMap()}; }
   const old = (O.speakers.en || {})[jp] || '';
   await fb.updateDoc(ref('meta', 'speakers'), new fb.FieldPath('en', jp), en || fb.deleteField(),
                      new fb.FieldPath('by', jp), {n: O.name, e: O.email, t: now()});
@@ -488,9 +557,9 @@ async function saveSpeaker(data) {
   return {ok: true, speakers};
 }
 
-function history(id, field, old, value) {
+function history(id, field, old, value, who = O.name) {
   if (old === value) return;
-  fb.addDoc(fb.collection(db, 'history'), {id, field, old, new: value, n: O.name, e: O.email, t: now()}).catch(() => {});
+  fb.addDoc(fb.collection(db, 'history'), {id, field, old, new: value, n: who, e: O.email, t: now()}).catch(() => {});
 }
 
 // ---------- credits (credits.py in JavaScript) ----------
@@ -565,10 +634,14 @@ function creditsState(cfg) {
     problems: problems.map(([level, message]) => ({level, message}))};
 }
 async function saveCredits(data) {
-  const cfg = creditsSettings(O.project.credits || {});
+  const cfg = creditsSettings(credits());
   for (const k of ['position', 'title', 'group', 'capitals', 'roles', 'script']) if (k in data) cfg[k] = data[k];
   if (!(cfg.position in O.layout.credits.positions)) cfg.position = O.layout.credits.default.position;
   if (cfg.script === O.layout.credits.base) cfg.script = null;
+  if (!O.canReview) {
+    await suggest('credits', '', cfg, O.project.credits || {});
+    return {ok: true, ...creditsState(cfg)};
+  }
   await fb.setDoc(ref('meta', 'project'), {credits: cfg, creditsBy: {n: O.name, e: O.email, t: now()}}, {merge: true});
   O.project = {...O.project, credits: cfg};
   history('Credits', 'credits', '', 'changed');
@@ -623,7 +696,7 @@ const keyOf = k => k.join('\t');
 function current([kind, name]) {
   if (kind === 'en' || kind === 'note') return (S.project[name] || {})[kind] || '';
   if (kind === 'done' || kind === 'hidden') return flagText(kind, S.project[name] || {});
-  if (kind === 'credits') return creditsText(O.project.credits);
+  if (kind === 'credits') return creditsText(mySuggestion('credits', '')?.change.value || O.project.credits);
   return ((kind === 'speaker' ? S.speakers : S.faces) || {})[name] || '';
 }
 
@@ -766,7 +839,7 @@ async function importApply(plan, choices) {
   let creditsPick;
   for (const [[kind, name], value] of picks) {
     if (ENTRY_KINDS.includes(kind)) {
-      const before = pending[name] || entryOf(name);
+      const before = pending[name] || viewOf(name);
       const change = kind === 'done' ? {done: value === 'Done'} : kind === 'hidden' ? {hidden: {Hidden: true, Shown: false}[value] ?? ''} : {[kind]: value};
       pending[name] = projectSet(before, change);
     } else if (kind === 'credits') {
@@ -774,6 +847,15 @@ async function importApply(plan, choices) {
     } else {
       speakerArgs.push(new fb.FieldPath(kind === 'speaker' ? 'en' : 'faces', name), value || fb.deleteField());
     }
+  }
+  if (!O.canReview) {
+    for (const [id, after] of Object.entries(pending)) await suggestEntry(id, after);
+    for (const [[kind, name], value] of picks) {
+      if (kind === 'speaker') await suggest('speaker', name, value, (O.speakers.en || {})[name] || '');
+      if (kind === 'face') await suggest('face', name, value, (O.speakers.faces || {})[name] || '');
+    }
+    if (creditsPick) await suggest('credits', '', creditsPick, O.project.credits || {});
+    return picks.length;
   }
   for (const [id, after] of Object.entries(pending)) entryUpdates(id, after, perFile[O.byId[id].file] ||= []);
   const writes = Object.entries(perFile).filter(([, args]) => args.length);
@@ -841,11 +923,315 @@ async function exportScript() {
     upload are shown so you can pick which text to keep. Then build the patch as usual.</p>`);
 }
 
+// ---------- suggestions: team members' changes wait for an admin's review ----------
+// suggestions/{uid~kind~id}: one per person and line (or speaker, portrait, the credits); change = what they want,
+// base = what the script had when they asked. An admin accepts it (maybe after editing it) or rejects it, with a note
+// the author reads in their inbox.
+
+const suggestionId = (kind, id, uid = O.user.uid) => `${uid}~${kind}~${encodeURIComponent(id)}`;
+const ENTRY_FIELDS = ['en', 'note', 'done', 'hidden'];
+const fieldValue = (f, p) => f === 'done' ? !!p.done : f === 'hidden' ? (p.hidden === undefined ? '' : p.hidden) : p[f] || '';
+const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+
+async function suggestEntry(id, after) {
+  const now_ = entryOf(id), change = {}, base = {};
+  for (const f of ENTRY_FIELDS) if (!same(fieldValue(f, after), fieldValue(f, now_))) { change[f] = fieldValue(f, after); base[f] = fieldValue(f, now_); }
+  const sid = suggestionId('entry', id);
+  if (!Object.keys(change).length) { if (O.pending[sid]) await fb.deleteDoc(ref('suggestions', sid)); return; }
+  await fb.setDoc(ref('suggestions', sid), {uid: O.user.uid, e: O.email, n: O.name, kind: 'entry', id, file: O.byId[id].file, change, base, status: 'pending', t: now()});
+}
+
+async function suggest(kind, id, value, base) {
+  const sid = suggestionId(kind, id);
+  if (same(value || '', base || '') || (kind === 'credits' && creditsText(value) === creditsText(base))) {
+    if (O.pending[sid]) await fb.deleteDoc(ref('suggestions', sid));
+    return;
+  }
+  await fb.setDoc(ref('suggestions', sid), {uid: O.user.uid, e: O.email, n: O.name, kind, id, change: {value}, base: {value: base}, status: 'pending', t: now()});
+}
+
+async function withdraw(sid) {
+  if (!confirm('Withdraw this suggestion? The line goes back to the shared script\'s text.')) return;
+  await fb.deleteDoc(ref('suggestions', sid));
+}
+
+// a suggested value as words
+function shown(f, v) {
+  if (f === 'done') return v ? 'Marked done' : 'Not marked done';
+  if (f === 'hidden') return v === true ? 'Not in game (hidden)' : v === false ? 'In game' : 'Studio decides';
+  return v;
+}
+const FIELD_WORDS = {en: 'English', note: 'Note', done: 'Done', hidden: 'In game', value: ''};
+
+function lineSuggestions(id) {
+  const list = Object.entries(O.pending || {}).filter(([, x]) => x.kind === 'entry' && x.id === id);
+  if (!list.length) return '';
+  return `<div class="suggestions">${list.map(([sid, x]) => {
+    const what = Object.entries(x.change).map(([f, v]) => `<div><small>${FIELD_WORDS[f]}</small>${textBox(String(shown(f, v)), 'new')}</div>`).join('');
+    return x.uid === O.user.uid
+      ? `<div class="suggestion mine"><b>Your suggestion is waiting for review.</b> You see it here; the rest of the team sees the shared text until an admin accepts it.
+         <button data-withdraw="${esc(sid)}">Withdraw</button></div>`
+      : `<div class="suggestion"><b>${esc(x.n)} suggested</b> <span class="muted">${esc(when(x.t))}</span>${what}</div>`;
+  }).join('')}${O.canReview && list.some(([, x]) => x.uid !== O.user.uid) ? '<button id="review-line" class="primary">Review this line</button>' : ''}</div>`;
+}
+
+function livePending(touched) {
+  let speakers = false;
+  for (const key of touched) {
+    const [kind, id] = key.split('\t');
+    if (kind === 'speaker' || kind === 'face') { speakers = true; continue; }
+    if (kind !== 'entry' || !O.byId[id]) continue;
+    const p = viewOf(id);
+    if (!same(p, S.project[id] || {})) { if (Object.keys(p).length) S.project[id] = p; else delete S.project[id]; refreshRow(id); }
+    if (id === S.current) { if (S.dirty) onlineEditorInfo(); else { renderEditor(); scheduleCheck(0); } }
+  }
+  if (speakers) liveSpeakers();
+  renderTabsCounts();
+}
+
+function renderCounts() {
+  const waiting = Object.values(O.pending || {}), mineWaiting = waiting.filter(x => x.uid === O.user?.uid).length;
+  const unseen = (O.mine || []).filter(x => !x.seen).length;
+  const review = waiting.filter(x => x.uid !== O.user?.uid).length;
+  $('#review').textContent = review ? `Review (${fmt(review)})` : 'Review';
+  $('#review').classList.toggle('primary', !!review);
+  $('#inbox').textContent = unseen ? `Inbox (${fmt(unseen)} new)` : mineWaiting ? `Inbox (${fmt(mineWaiting)} waiting)` : 'Inbox';
+  $('#inbox').classList.toggle('primary', !!unseen);
+}
+
+function suggestionTitle(x) {
+  if (x.kind === 'entry') return O.byId[x.id] ? `<a href="#" data-goto="${esc(x.id)}">${esc(x.id)}</a>` : esc(x.id);
+  if (x.kind === 'credits') return 'Closing credits';
+  return `${x.kind === 'speaker' ? 'Speaker name' : 'Portrait'}: ${esc(x.id)}`;
+}
+const faceImg = f => f && f !== '-' && O.portraits[f] ? `<img class="face" alt="${esc(f)}" src="data:image/png;base64,${O.portraits[f]}">` : `<span class="muted">${f === '-' ? 'No portrait' : 'Default portrait'}</span>`;
+function creditsSummary(cfg) {
+  if (!cfg || !Object.keys(cfg).length) return "The game's own credits";
+  cfg = creditsSettings(cfg);
+  return teamLines(cfg).map(([t]) => t).join('\n') || '(no team section)';
+}
+function currentOf(x) {
+  if (x.kind === 'entry') { const p = entryOf(x.id); return Object.fromEntries(Object.keys(x.change).map(f => [f, fieldValue(f, p)])); }
+  if (x.kind === 'speaker') return {value: (O.speakers.en || {})[x.id] || ''};
+  if (x.kind === 'face') return {value: (O.speakers.faces || {})[x.id] || ''};
+  return {value: O.project.credits || {}};
+}
+
+// ---------- the admin's review ----------
+
+$('#review').onclick = () => renderReview();
+function renderReview(onlyId) {
+  const order = new Map(allEntries().map((e, i) => [e.id, i]));
+  const rank = x => x.kind === 'entry' ? order.get(x.id) ?? 1e9 : x.kind === 'credits' ? 2e9 : -1;
+  const items = Object.entries(O.pending || {}).filter(([, x]) => x.uid !== O.user.uid && (!onlyId || x.id === onlyId))
+    .sort(([, a], [, b]) => rank(a) - rank(b) || (a.t?.toMillis?.() || 0) - (b.t?.toMillis?.() || 0));
+  if (!items.length) { showJob('<h3>Review</h3><p>No suggestions are waiting for review.</p>'); return; }
+  const shownItems = items.slice(0, 60);
+  showJob(`<h3>Review: ${fmt(items.length)} suggestion${items.length === 1 ? '' : 's'}</h3>
+    <p>Accept puts the suggestion into the shared script (edit the text first to change it). Reject leaves the script as it is.
+    Either way the author sees your answer and note in their inbox.</p>
+    ${onlyId ? '' : `<div class="buttons"><button id="accept-all">Accept all ${fmt(items.length)} as suggested</button></div>`}
+    <div class="merge-list">${shownItems.map(([sid, x], i) => reviewItem(sid, x, i)).join('')}</div>
+    ${items.length > shownItems.length ? `<p class="muted">…and ${fmt(items.length - shownItems.length)} more after you review these.</p>` : ''}`);
+  wireGoto();
+  shownItems.forEach(([sid, x], i) => {
+    $(`#r${i}-accept`).onclick = () => decide(sid, x, i, true).then(() => renderReview(onlyId)).catch(err => alert(err.message));
+    $(`#r${i}-reject`).onclick = () => decide(sid, x, i, false).then(() => renderReview(onlyId)).catch(err => alert(err.message));
+  });
+  $('#accept-all')?.addEventListener('click', async () => {
+    if (!confirm(`Accept all ${items.length} suggestions exactly as suggested?`)) return;
+    $('#accept-all').disabled = true;
+    for (const [sid, x] of items) await decide(sid, x, null, true);
+    renderReview();
+  });
+}
+
+function reviewItem(sid, x, i) {
+  const cur = currentOf(x), stale = !same(cur, x.base) && !(x.kind === 'credits' && creditsText(cur.value) === creditsText(x.base.value));
+  let body = '';
+  if (x.kind === 'entry') {
+    const e = O.byId[x.id]?.e;
+    if (e) body += `<div class="merge-jp">${e.speaker ? `<span class="speaker">${esc(e.speaker)}</span> ` : ''}${esc(e.body)}</div>`;
+    for (const [f, v] of Object.entries(x.change)) {
+      body += `<div class="review-field"><small>${FIELD_WORDS[f]}</small><div class="merge-pair">${textBox(String(shown(f, cur[f])))}`;
+      body += f === 'en' || f === 'note' ? `<textarea id="r${i}-${f}" rows="${Math.max(2, String(v).split('\n').length + 1)}">${esc(v)}</textarea>` : textBox(String(shown(f, v)), 'new');
+      body += '</div></div>';
+    }
+  } else if (x.kind === 'speaker') {
+    body = `<div class="merge-pair">${textBox(cur.value)}<input id="r${i}-value" value="${esc(x.change.value)}"></div>`;
+  } else if (x.kind === 'face') {
+    body = `<div class="merge-pair"><div>${faceImg(cur.value)}</div><div>${faceImg(x.change.value)}</div></div>`;
+  } else {
+    body = `<div class="merge-pair">${textBox(creditsSummary(cur.value))}${textBox(creditsSummary(x.change.value), 'new')}</div>
+      <p class="muted">Team section of the closing credits: now, and as suggested.</p>`;
+  }
+  return `<div class="merge-item review-item"><div class="merge-head"><b>${suggestionTitle(x)}</b><span>${esc(x.n)}, ${esc(when(x.t))}</span></div>
+    ${stale ? '<p class="warn-text">The shared script changed after this was suggested; the left side is what it has now.</p>' : ''}
+    ${body}
+    <label class="review-note">Note to ${esc(x.n)} (optional)<input id="r${i}-note" placeholder="Why you accepted, changed or rejected it"></label>
+    <div class="buttons"><button id="r${i}-accept" class="primary">Accept</button><button id="r${i}-reject">Reject</button></div></div>`;
+}
+
+// i = the item's place in the review window (null: accept as suggested, with no note)
+async function decide(sid, x, i, accept) {
+  const note = i === null ? '' : $(`#r${i}-note`).value.trim();
+  const reviewed = {reviewNote: note, reviewer: {n: O.name, e: O.email}, reviewedAt: now(), seen: false};
+  const batch = fb.writeBatch(db);
+  if (!accept) {
+    batch.update(ref('suggestions', sid), {...reviewed, status: 'rejected'});
+    await batch.commit();
+    return;
+  }
+  const final = {...x.change};
+  if (i !== null) for (const f of ['en', 'note', 'value']) {
+    const box = $(`#r${i}-${f}`);
+    if (box && typeof final[f] === 'string') final[f] = f === 'value' ? box.value.trim() : box.value;
+  }
+  const modified = !same(final, x.change), who = `${x.n} (accepted by ${O.name})`;
+  if (x.kind === 'entry') {
+    if (final.en) {
+      const errors = check(x.id, final.en, speakerMap()).errors;
+      if (errors.length && !confirm(`${x.id} has problems:\n${errors.join('\n')}\n\nAccept it anyway?`)) throw new Error('Not accepted.');
+    }
+    const before = entryOf(x.id), after = projectSet(before, final), args = [];
+    if (entryUpdates(x.id, after, args, {n: x.n, e: x.e, ok: O.name})) batch.update(ref('files', O.byId[x.id].file), ...args);
+    for (const f of ['en', 'note']) if (f in final) history(x.id, f, before[f] || '', after[f] || '', who);
+  } else if (x.kind === 'speaker' || x.kind === 'face') {
+    if (x.kind === 'speaker' && final.value) { const [, problems] = tokens(final.value); if (problems.length) throw new Error(problems.join('\n')); }
+    const field = x.kind === 'speaker' ? 'en' : 'faces';
+    batch.update(ref('meta', 'speakers'), new fb.FieldPath(field, x.id), final.value || fb.deleteField(),
+                 ...(x.kind === 'speaker' ? [new fb.FieldPath('by', x.id), {n: x.n, e: x.e, ok: O.name, t: now()}] : []));
+    history(x.id, x.kind, (O.speakers[field] || {})[x.id] || '', final.value, who);
+  } else {
+    batch.set(ref('meta', 'project'), {credits: final.value, creditsBy: {n: x.n, e: x.e, ok: O.name, t: now()}}, {merge: true});
+    history('Credits', 'credits', '', 'changed', who);
+  }
+  batch.update(ref('suggestions', sid), {...reviewed, status: modified ? 'modified' : 'accepted', final});
+  await batch.commit();
+}
+
+// ---------- your inbox: what happened to your suggestions ----------
+
+const STATUS_WORDS = {accepted: 'Accepted', modified: 'Accepted with changes', rejected: 'Rejected'};
+$('#inbox').onclick = () => {
+  const waiting = Object.entries(O.pending || {}).filter(([, x]) => x.uid === O.user.uid);
+  const done = [...(O.mine || [])].sort((a, b) => (b.reviewedAt?.toMillis?.() || 0) - (a.reviewedAt?.toMillis?.() || 0)).slice(0, 150);
+  const values = (x, change) => x.kind === 'face' ? faceImg(change.value) : x.kind === 'credits' ? textBox(creditsSummary(change.value))
+    : Object.entries(change).map(([f, v]) => `${FIELD_WORDS[f] ? `<small>${FIELD_WORDS[f]}</small>` : ''}${textBox(String(shown(f, v)))}`).join('');
+  showJob(`<h3>Inbox</h3>
+    ${done.length ? `<div class="merge-list">${done.map(x => `<div class="merge-item${x.seen ? '' : ' unseen'}">
+      <div class="merge-head"><b>${suggestionTitle(x)}</b><span><span class="badge status-${x.status}">${STATUS_WORDS[x.status] || esc(x.status)}</span>
+        ${esc(x.reviewer?.n || '')}, ${esc(when(x.reviewedAt))}</span></div>
+      ${x.reviewNote ? `<p class="review-said"><b>Note:</b> ${esc(x.reviewNote)}</p>` : ''}
+      ${x.status === 'modified' ? `<div class="merge-pair"><div><small>You suggested</small>${values(x, x.change)}</div><div><small>Went in as</small>${values(x, x.final)}</div></div>`
+        : `<div><small>You suggested</small>${values(x, x.change)}</div>`}</div>`).join('')}</div>` : '<p>Nothing has been reviewed yet.</p>'}
+    ${waiting.length ? `<p class="muted">${fmt(waiting.length)} of your suggestion${waiting.length === 1 ? ' is' : 's are'} waiting for review:
+      ${waiting.slice(0, 40).map(([, x]) => suggestionTitle(x)).join(', ')}${waiting.length > 40 ? '…' : ''}</p>` : ''}`);
+  wireGoto();
+  for (const x of done) if (!x.seen) fb.updateDoc(x.ref, {seen: true}).catch(() => {});
+};
+
+// ---------- claims: "I'm translating these" marks on untranslated or MTL lines, for a week ----------
+// claims/{file}: {line id: {uid, n, e, t}}. A claim older than a week counts as gone, and anyone can take the line then.
+
+const WEEK = 7 * 24 * 3600 * 1000;
+const claimTime = c => c?.t?.toMillis ? c.t.toMillis() : Date.now();
+const claimOf = id => { const c = O.claims[id]; return c && claimTime(c) + WEEK > Date.now() ? c : null; };
+const claimable = e => { const p = S.project[e.id] || {}; return !isHidden(e) && (!translated(e) || p.mtl); };
+const until = c => new Date(claimTime(c) + WEEK).toLocaleDateString([], {month: 'short', day: 'numeric'});
+
+function listenClaims() {
+  fb.onSnapshot(fb.collection(db, 'claims'), snap => {
+    const changed = new Set();
+    snap.docChanges().forEach(ch => {
+      const data = ch.type === 'removed' ? {} : ch.doc.data();
+      for (const [id, c] of Object.entries(O.claims)) if (c.file === ch.doc.id && !data[id]) { delete O.claims[id]; changed.add(id); }
+      for (const [id, c] of Object.entries(data)) { if (!same(O.claims[id], {...c, file: ch.doc.id})) changed.add(id); O.claims[id] = {...c, file: ch.doc.id}; }
+    });
+    if (!O.wrapped) return;
+    for (const id of changed) if (S.byId[id]) refreshRow(id);
+    if (changed.has(S.current)) onlineEditorInfo();
+    renderClaimCount();
+  });
+}
+
+async function claim(ids) {
+  const perFile = {};
+  for (const id of ids) (perFile[O.byId[id].file] ||= {})[id] = {uid: O.user.uid, n: O.name, e: O.email, t: now()};
+  const files = Object.entries(perFile);
+  for (let i = 0; i < files.length; i += 20) {
+    const batch = fb.writeBatch(db);
+    for (const [file, map] of files.slice(i, i + 20)) batch.set(ref('claims', file), map, {merge: true});
+    await batch.commit();
+  }
+}
+
+async function release(ids) {
+  const perFile = {};
+  for (const id of ids) (perFile[O.byId[id].file] ||= []).push(new fb.FieldPath(id), fb.deleteField());
+  const files = Object.entries(perFile);
+  for (let i = 0; i < files.length; i += 20) {
+    const batch = fb.writeBatch(db);
+    for (const [file, args] of files.slice(i, i + 20)) batch.update(ref('claims', file), ...args);
+    await batch.commit();
+  }
+}
+
+function claimBadge(e) {
+  const c = claimOf(e.id);
+  if (!c) return '';
+  const mine = c.uid === O.user.uid;
+  return `<span class="badge claim${mine ? ' mine' : ''}" title="Claimed by ${esc(c.n)} until ${until(c)}">${mine ? 'claimed by you' : 'claimed: ' + esc(c.n)}</span>`;
+}
+
+function claimInfo(id) {
+  const e = S.byId[id], c = claimOf(id);
+  if (c) return c.uid === O.user.uid
+    ? `<div class="sub claim-sub">You claimed this line until ${until(c)}. <button id="claim-line" data-release>Release it</button></div>`
+    : `<div class="sub claim-sub"><b>${esc(c.n)} claimed this line</b> until ${until(c)}.${O.canReview ? ' <button id="claim-line" data-release>Release their claim</button>' : ''}</div>`;
+  return claimable(e) ? '<div class="sub claim-sub"><button id="claim-line">Claim this line</button> so the team knows you are translating it (for a week).</div>' : '';
+}
+
+// the toolbar: claim or release what the list shows
+function claimBar() {
+  $('.toolbar').insertAdjacentHTML('beforeend', `<div class="claim-bar">
+    <button id="claim-shown" title="Claim every untranslated or MTL line the list shows (with the filters above) that nobody else has claimed, for a week">Claim shown lines</button>
+    <button id="release-shown" title="Release your claims on the lines the list shows">Release my shown claims</button>
+    <span id="claim-count" class="muted"></span></div>`);
+  $('#status').insertAdjacentHTML('beforeend', `<option value="claim-mine">Claimed by me</option><option value="claim-others">Claimed by others</option>
+    <option value="claim-free">Untranslated or MTL, not claimed</option>`);
+  $('#claim-shown').onclick = async () => {
+    const ids = S.filtered.filter(e => claimable(e) && !claimOf(e.id)).map(e => e.id);
+    if (!ids.length) return showJob('<h3>Nothing to claim</h3><p>The list shows no untranslated or MTL lines that nobody has claimed.</p>');
+    if (!confirm(`Claim ${ids.length} untranslated or MTL line${ids.length === 1 ? '' : 's'} for a week?`)) return;
+    await claim(ids); flash(`Claimed ${fmt(ids.length)} lines`);
+  };
+  $('#release-shown').onclick = async () => {
+    const ids = S.filtered.filter(e => claimOf(e.id)?.uid === O.user.uid).map(e => e.id);
+    if (!ids.length) return showJob('<h3>Nothing to release</h3><p>You have no claims on the lines the list shows.</p>');
+    if (!confirm(`Release your claim on ${ids.length} line${ids.length === 1 ? '' : 's'}?`)) return;
+    await release(ids); flash(`Released ${fmt(ids.length)} lines`);
+  };
+}
+
+function renderClaimCount() {
+  const all = Object.keys(O.claims).filter(claimOf), mine = all.filter(id => O.claims[id].uid === O.user.uid).length;
+  $('#claim-count').textContent = all.length ? `${fmt(all.length)} lines claimed${mine ? `, ${fmt(mine)} by you` : ''}` : '';
+}
+
+function claimFilter(status) {
+  if (!status.startsWith('claim-')) return null;
+  return e => {
+    const c = claimOf(e.id);
+    return status === 'claim-mine' ? c?.uid === O.user.uid : status === 'claim-others' ? c && c.uid !== O.user.uid : !c && claimable(e);
+  };
+}
+
 // ---------- who is online ----------
 
 function heartbeat() {
   if (!O.user || !O.access) return;
-  fb.setDoc(ref('presence', O.user.uid), {n: O.name, e: O.email, id: window.S?.current || '', t: now()}).catch(() => {});
+  fb.setDoc(ref('presence', O.user.uid), {n: O.name, e: O.email, id: studioOn() ? S.current || '' : '', t: now()}).catch(() => {});
 }
 function leave() { return O.user ? fb.deleteDoc(ref('presence', O.user.uid)).catch(() => {}) : Promise.resolve(); }
 const fresh = p => p.t?.toMillis ? Date.now() - p.t.toMillis() < 180000 : true;
@@ -880,32 +1266,41 @@ async function lineHistory(id) {
 }
 
 $('#team').onclick = () => renderTeam();
+const ROLES = [['admins', 'Admin'], ['reviewers', 'Reviewer'], ['editors', 'Editor']];
 function renderTeam() {
   const a = O.access, names = a.names || {};
   const row = (email, role) => `<div><span>${esc(names[email] || '')} <code>${esc(email)}</code> · ${role}</span>
     ${email === O.email ? '<span class="muted">you</span>' : `<button data-rm="${esc(email)}">Remove</button>`}</div>`;
-  showJob(`<h3>Team</h3><p>Only these Google accounts can open the script. Admins can also change this list and upload packs.</p>
-    <div class="team-list">${a.admins.map(e => row(e, 'admin')).join('')}${a.editors.map(e => row(e, 'editor')).join('')}</div>
+  showJob(`<h3>Team</h3><p>Only these Google accounts can open the script.</p>
+    <ul><li><b>Editors</b> suggest changes; they go into the shared script once a reviewer or admin accepts them.</li>
+      <li><b>Reviewers</b> accept, change or reject suggestions, and their own edits go straight in.</li>
+      <li><b>Admins</b> do the same, and also change this list and upload packs.</li></ul>
+    <div class="team-list">${ROLES.map(([k, word]) => (a[k] || []).map(e => row(e, word.toLowerCase())).join('')).join('')}</div>
     <div class="team-add"><label>Google account email<input id="add-email" type="email" placeholder="name@gmail.com"></label>
-      <label>Role<select id="add-role"><option value="editors">Editor</option><option value="admins">Admin</option></select></label>
-      <button id="add" class="primary">Add</button></div>`);
+      <label>Role<select id="add-role">${ROLES.slice().reverse().map(([k, word]) => `<option value="${k}">${word}</option>`).join('')}</select></label>
+      <button id="add" class="primary">Add or change role</button></div>`);
+  const without = email => Object.fromEntries(ROLES.map(([k]) => [k, (a[k] || []).filter(x => x !== email)]));
   $('#add').onclick = async () => {
     const email = $('#add-email').value.trim().toLowerCase(), role = $('#add-role').value;
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return alert('That does not look like an email address.');
-    const next = {admins: a.admins.filter(x => x !== email), editors: a.editors.filter(x => x !== email)};
+    if (email === O.email && role !== 'admins') return alert('You can\'t take away your own admin role.');
+    const next = without(email);
     next[role].push(email);
     await fb.updateDoc(ref('meta', 'access'), next); O.access = {...a, ...next}; renderTeam();
   };
   for (const b of document.querySelectorAll('[data-rm]')) b.onclick = async () => {
-    const next = {admins: a.admins.filter(x => x !== b.dataset.rm), editors: a.editors.filter(x => x !== b.dataset.rm)};
+    if (!confirm(`Remove ${b.dataset.rm} from the team?`)) return;
+    const next = without(b.dataset.rm);
     await fb.updateDoc(ref('meta', 'access'), next); O.access = {...a, ...next}; renderTeam();
   };
 }
 
 // before the Studio's page is loaded, its helpers are not there yet
 const textBox = (t, cls = '') => t ? `<div class="merge-text ${cls}">${esc(t)}</div>` : '<div class="merge-text none">(empty)</div>';
-function showJob(html) { if (window.S) window.showJob(html); else showGate(html); }
-function wireGoto() { if (window.S) window.wireGoto(); }
+// app.js's S is a global const, so it is not window.S
+const studioOn = () => typeof S !== 'undefined' && O.wrapped;
+function showJob(html) { if (studioOn()) window.showJob(html); else showGate(html); }
+function wireGoto() { if (studioOn()) window.wireGoto(); }
 
 // ---------- uploading a pack from the desktop Studio ----------
 

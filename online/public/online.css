@@ -7,3 +7,19 @@ body.gated #app, body.gated nav, body.gated .mtlbar { display: none; }
 .live { border: 1px solid #c90; padding: .5rem; margin: .5rem 0; border-radius: 4px; }
 .live pre { white-space: pre-wrap; margin: .4rem 0; }
 .team-list > div, .team-add { display: flex; gap: .75rem; align-items: center; margin: .4rem 0; }
+.suggestions { margin: .5rem 0; display: grid; gap: .4rem; }
+.suggestion { border-left: 3px solid #6aa8ff; padding: .3rem .6rem; }
+.suggestion.mine { border-color: #ffb84d; }
+.review-field { margin: .4rem 0; }
+.review-item textarea, .review-item input { width: 100%; box-sizing: border-box; font: inherit; }
+.review-note { display: block; margin: .5rem 0; }
+.review-said { margin: .3rem 0; }
+.merge-item.unseen { outline: 2px solid #6aa8ff; }
+.badge.status-accepted { background: #2e7d32; color: #fff; }
+.badge.status-modified { background: #8a6d00; color: #fff; }
+.badge.status-rejected { background: #b3261e; color: #fff; }
+.badge.claim { background: #4a3a7a; color: #fff; }
+.badge.claim.mine { background: #6a4fc0; }
+.claim-bar { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+img.face { width: 48px; height: 48px; image-rendering: pixelated; }
+[hidden] { display: none !important; }
