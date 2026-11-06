@@ -1,20 +1,36 @@
-# FM2089 Online Script
+# FM2089 Online Studio
 
-A web page where the translation team edits the script together. Everyone signed in sees each other's
-changes within a second or two, sees who is on which line, and can look up who changed what. There is no
-ROM and no patch building here: the desktop Translation Studio still builds the patch.
+The desktop Translation Studio's own page, running on the web so the translation team edits one shared
+script: the same list, editor, game-font preview, flags, Speakers, Credits, Validate, Import script and
+Import multiple. Everyone signed in sees changes within a second or two. There is no ROM and no patch
+building here (Build, Restart, Fonts, Mission titles, Export TSV and Online pack are hidden); the desktop
+Studio still builds the patch.
+
+`public/index.html` and `public/studio/` are copies of `studio/web` made by `node dev/sync-studio.mjs`;
+run it again after changing the Studio's page. `public/online.js` answers the Studio's `/api/...`
+requests from the database (JavaScript versions of the Studio's checks, saving, credits and import).
 
 How the script travels:
 
 1. **Studio to web.** In the desktop Studio, click **Online pack**. It saves `FM2089 online script.json`
-   (the Japanese and English text, notes, speaker names and font widths; no ROM data beyond the text) in
-   its `exports` folder. An admin uploads that file with **Upload pack**. Lines nobody changed online take
-   the pack's English; lines someone changed online keep their online text.
-2. **Web to Studio.** **Download changes** saves every line changed online since the last upload as a
-   script `.md`, the same kind the Studio's Export script makes. In the Studio, **Import script** (or
-   **Import multiple**) loads it, and asks you to pick where you also changed a line in the Studio since
-   that upload. **Download full script** saves the whole script as a project.json instead; Import script
-   takes every line from it without asking. Then build the xdelta in the Studio as usual.
+   (the text, notes, flags, speaker names and portraits, the game font and the credits) in its `exports`
+   folder. An admin uploads it with **Upload pack**. Lines nobody changed online take the pack's version;
+   lines changed online keep theirs.
+2. **Web to Studio.** **Export script** downloads every change made online since the last upload as a
+   script `.md` (English, notes, Done and Hidden flags, speaker names, portraits and the credits). In the
+   Studio, **Import script** loads it and asks you to pick wherever you also changed something since that
+   upload. Then build the xdelta as usual.
+
+## Roles, review and claims
+
+- **Editors** suggest changes. A suggestion shows as "waiting for review" on its line; the shared script
+  changes only when a reviewer or admin accepts it.
+- **Reviewers** use **Review** to accept a suggestion, edit it and accept it, or reject it, with a note.
+  Their own edits go straight in.
+- **Admins** do the same, and also manage **Team** and upload packs.
+- **Inbox** shows each person what happened to their suggestions and the reviewer's note.
+- **Claims** mark untranslated or MTL lines as someone's for a week ("Claim this line" in the editor, or
+  "Claim shown lines" for everything the list's filters show). Show > Claimed by me / by others lists them.
 
 It runs on Firebase's free plan (Spark): Google sign-in, the Firestore database and Hosting. A team of a
 few people uses a small part of the free daily limits (50,000 reads and 20,000 writes): opening the
@@ -50,8 +66,9 @@ Run `deploy.cmd` again after the page or `firestore.rules` change.
 
 ## Files
 
-- `public/` is the page: `index.html`, `app.js`, `style.css`, `firebase-config.js` and `firebase.js`
-  (the Firebase web SDK, bundled so the page loads nothing from other sites).
+- `public/` is the page: `index.html` and `studio/` (copied from the Studio), `online.js` and
+  `online.css`, `firebase-config.js` and `firebase.js` (the Firebase web SDK, bundled so the page loads
+  nothing from other sites).
 - `firestore.rules` holds the database rules. `firebase.json` is the Hosting and emulator setup.
 - `dev/` rebuilds `firebase.js` (`npm install`, then `node build-sdk.mjs`).
 
@@ -59,6 +76,7 @@ Testing without a real project: run `npx firebase-tools emulators:start --projec
 `firebase-config.js` whose projectId is `demo-fm2089`, then open
 `http://localhost:5000/?emulator&as=someone@example.com` to sign in as a made-up account.
 
-Database layout: `meta/access` (team list), `meta/script` (pack date, font widths, portraits),
-`meta/speakers`, `files/{file}` (one per game text file: its lines, English, notes, the last uploaded
-English, and who changed each line), `history` (one item per finished edit) and `presence` (who is online).
+Database layout: `meta/access` (admins, reviewers, editors), `meta/script` (pack date and layout),
+`meta/font`, `meta/portraits`, `meta/speakers`, `meta/project` (settings and credits), `files/{file}` (one
+per game text file: its lines, their English, notes and flags, the last upload's version, and who changed
+each line), `suggestions` (waiting and reviewed), `claims/{file}`, `history` and `presence`.
