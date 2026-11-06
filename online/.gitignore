@@ -4,3 +4,4 @@ dev/package-lock.json
 *-debug.log
 project-id.txt
 deploy-log.txt
+firebase.deploy.json

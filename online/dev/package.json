@@ -6,6 +6,6 @@
   "devDependencies": {
     "esbuild": "0.25.12",
     "firebase": "11.10.0",
-    "firebase-tools": "14.27.0"
+    "firebase-tools": "15.35.0"
   }
 }

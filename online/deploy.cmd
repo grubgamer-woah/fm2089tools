@@ -11,8 +11,9 @@ set PROJECT=
 if exist project-id.txt set /p PROJECT=<project-id.txt
 if "%PROJECT%"=="" set /p PROJECT=Firebase project id (Project settings, "Project ID"): 
 echo %PROJECT%>project-id.txt
-call npx -y firebase-tools@14 login
+call npx -y firebase-tools@15 login
+call node dev\deploy-config.mjs || (pause & exit /b 1)
 echo Deploying... (everything it prints also goes to deploy-log.txt)
-call npx -y firebase-tools@14 deploy --only hosting,firestore:rules --project %PROJECT% > deploy-log.txt 2>&1
+call npx -y firebase-tools@15 deploy --only hosting,firestore:rules,auth --config firebase.deploy.json --project %PROJECT% > deploy-log.txt 2>&1
 type deploy-log.txt
 pause
