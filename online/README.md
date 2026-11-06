@@ -1,9 +1,9 @@
 # FM2089 Online Studio
 
 The desktop Translation Studio's own page, running on the web so the translation team edits one shared
-script: the same list, editor, game-font preview, flags, Speakers, Credits, Validate, Import script and
-Import multiple. Everyone signed in sees changes within a second or two. There is no ROM and no patch
-building here (Build, Restart, Fonts, Mission titles, Export TSV and Online pack are hidden); the desktop
+script: the same list, editor, game-font preview, flags, Speakers, Credits and Validate. Everyone signed in sees changes within a second or two. There is no ROM and no patch
+building here (Build, Restart, Fonts, Mission titles, Export TSV, Online pack, Import script and Import
+multiple are hidden); the desktop
 Studio still builds the patch.
 
 `public/index.html` and `public/studio/` are copies of `studio/web` made by `node dev/sync-studio.mjs`;

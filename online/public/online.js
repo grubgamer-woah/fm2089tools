@@ -37,13 +37,11 @@ $('main').prepend(gate);
 function showGate(html) { document.body.classList.add('gated'); gate.hidden = false; gate.innerHTML = html; }
 function hideGate() { document.body.classList.remove('gated'); gate.hidden = true; }
 
-// building needs the ROM, and mission titles, TSV and fonts are not wanted online
+// building needs the ROM; mission titles, TSV, fonts and importing scripts are not wanted online (Upload pack brings the Studio's script)
 // (hidden rather than removed: the Studio's code still looks them up)
-for (const id of ['#build', '#restart', '#fonts', '#export-web', '#export', '#titles']) $(id).style.display = 'none';
+for (const id of ['#build', '#restart', '#fonts', '#export-web', '#export', '#titles', '#import', '#import-multi']) $(id).style.display = 'none';
 $('#stat-icons').closest('label').style.display = 'none';
 $('#export-script').title = 'Download every line changed online since the last upload as a script .md; load it in the desktop Studio with Import script';
-$('#import').title = 'Import a script (.md, .tsv, .txt or project.json) into the shared online script';
-$('#import-multi').title = 'Import several scripts into the shared online script at once: changes only one of them makes go in, and you pick where they disagree';
 $('footer').innerHTML = 'Edits save to the team\'s shared online script, and everyone signed in sees them. Build the patch in the desktop Studio: '
   + '<b>Export script</b> here, then <b>Import script</b> there.<span id="project-path" hidden></span>';
 const actions = $('header .actions');
