@@ -1215,11 +1215,14 @@ function numberLines() {
 }
 // A story mission's English name: the game's mission name list (MsgLabels_mission_name line N is mission N,
 // "M-41«g:24»Mopping Up") as the script has it now; [in-game label, name]
+// The English mission titles as the team's title pictures show them (workspace/images/mtittle_bg_NN.png, NN = the
+// mission number here; there is no picture 48). These win over the text list below, which has older wording.
+const TITLE_PICTURES = {1: "Combat Exercise I", 2: "Combat Exercise II", 3: "Combat Exercise III", 4: "Assault Scouts", 5: "Vehicle Pursuit", 6: "Sniper operation", 7: "Disruption of Supply Lines", 8: "Arms Factory Defense", 9: "The Hunt", 10: "Suspicion", 11: "Urban assault operation", 12: "Mail river bridge skirmish", 13: "Fierce battle in the valley", 14: "Tank hunting", 15: "Supplies destruction", 16: "New model", 17: "Spy's arrest", 18: "Crash site investigation", 19: "Trespassing", 20: "Desert ambush operation", 21: "Mercenary base defense", 22: "Repair operation", 23: "New weapon Test 1", 24: "New weapon Test 2", 25: "Through the dust", 26: "Arena guards", 27: "Arena bomb threat", 28: "Champ", 29: "Swarm of Mobile Weapons", 30: "Journalists", 31: "Media relations", 32: "Escorts", 33: "Resumption", 34: "Codename", 35: "Oddeye", 36: "Wipeout operation", 37: "Comrades", 38: "Anti-vampire unit", 39: "Anti-V experimental weapons test", 40: "Airforce Base Assault", 41: "Fortress", 42: "Hell's bridge", 43: "Vampire", 44: "Mage Corps", 45: "Rescue", 46: "Complications", 47: "Memories", 49: "Remnants elimination", 50: "Aisha", 51: "Midnight rescue operation", 52: "Investigation", 53: "Gathering information", 54: "B-Organization Assault", 55: "Devil's seed", 56: "Retreating forces", 57: "The tragedy of Larcus Incident", 58: "Experimental unit", 59: "The Second Huffman War begins", 60: "And then... This..."};
 function missionName(m) {
   const id = `MsgLabels_mission_name_msg_${String(m).padStart(3, '0')}`;
   const text = (S.project[id] || {}).en || S.byId[id]?.jp || '';
   const [label, name] = text.includes('»') ? [text.split('«')[0], text.split('»').slice(1).join('»')] : ['', text];
-  return [label, name.replace(/«[^»]*»/g, '').trim()];
+  return [label, TITLE_PICTURES[m] || name.replace(/«[^»]*»/g, '').trim()];
 }
 const numberOf = e => e.group === 'story' ? +e.mission : O.lineNo[e.id];
 function claimOf(e) {
@@ -1294,8 +1297,12 @@ async function claimRanges(group, text) {
     if (c.group === group && live(c) && c.uid !== O.user.uid && a <= c.to && b >= c.from) taken.push(`${rangeText({from: Math.max(a, c.from), to: Math.min(b, c.to)})} (${c.n})`);
   }
   if (taken.length) throw new Error(`Already claimed by someone else: ${unit(group).toLowerCase()}s ${taken.join(', ')}. Claim around them.`);
+  // ranges you already hold need no new claim (Renew extends those)
+  const mine = Object.values(O.claims).filter(c => c.group === group && live(c) && c.uid === O.user.uid);
+  const fresh = ranges.filter(([a, b]) => !mine.some(c => a >= c.from && b <= c.to));
+  if (!fresh.length) throw new Error('You already hold that claim; use Renew to keep it longer.');
   const batch = fb.writeBatch(db);
-  for (const [from, to] of ranges) batch.set(fb.doc(fb.collection(db, 'claims')), {uid: O.user.uid, n: O.name, e: O.email, t: now(), group, from, to});
+  for (const [from, to] of fresh) batch.set(fb.doc(fb.collection(db, 'claims')), {uid: O.user.uid, n: O.name, e: O.email, t: now(), group, from, to});
   await batch.commit();
 }
 
