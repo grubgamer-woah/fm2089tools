@@ -647,7 +647,12 @@ async function showFonts() {
 }
 
 const textBox = (t, cls = '') => t ? `<div class="merge-text ${cls}">${esc(t)}</div>` : '<div class="merge-text none">(empty)</div>';
-const what = item => item.kind === 'English' || item.kind === 'note' ? `${esc(item.name)}${item.kind === 'note' ? ' <span class="badge">note</span>' : ''}` : `${item.kind === 'name' ? 'Speaker name' : 'Portrait'}: ${esc(item.name)}`;
+const what = item => item.kind === 'credits' ? 'Closing credits'
+  : item.kind === 'name' || item.kind === 'portrait' ? `${item.kind === 'name' ? 'Speaker name' : 'Portrait'}: ${esc(item.name)}`
+  : `${esc(item.name)}${item.kind === 'English' ? '' : ` <span class="badge">${item.kind === 'hidden' ? 'in game' : item.kind}</span>`}`;
+// an import value as text: empty flags and credits get words instead of "(empty)"
+const valueBox = (item, v, cls = '') => v || !({done: 1, hidden: 1, credits: 1})[item.kind] ? textBox(v, cls)
+  : `<div class="merge-text none">${{done: 'Not marked done', hidden: 'Studio decides', credits: "The game's own credits"}[item.kind]}</div>`;
 
 // Import one or several scripts: preview what changes, pick where they disagree, then apply
 async function importFiles(fileList) {
@@ -670,12 +675,12 @@ async function importFiles(fileList) {
     <div class="merge-list">${c.map((item, i) => `<div class="merge-item">
       <div class="merge-head"><b>${what(item)}</b><span>${esc(item.why)}</span></div>
       ${item.jp ? `<div class="merge-jp">${item.speaker ? `<span class="speaker">${esc(item.speaker)}</span> ` : ''}${esc(item.jp)}</div>` : ''}
-      <label class="pick"><input type="radio" name="c${i}" value="-1" checked><span><small>Keep mine</small>${textBox(item.current)}</span></label>
-      ${item.options.map((o, j) => `<label class="pick"><input type="radio" name="c${i}" value="${j}" data-files="${esc(JSON.stringify(o.files))}"><span><small>${o.files.map(esc).join(', ')}</small>${textBox(o.value, 'new')}</span></label>`).join('')}
+      <label class="pick"><input type="radio" name="c${i}" value="-1" checked><span><small>Keep mine</small>${valueBox(item, item.current)}</span></label>
+      ${item.options.map((o, j) => `<label class="pick"><input type="radio" name="c${i}" value="${j}" data-files="${esc(JSON.stringify(o.files))}"><span><small>${o.files.map(esc).join(', ')}</small>${valueBox(item, o.value, 'new')}</span></label>`).join('')}
     </div>`).join('')}</div>` : ''}
     ${a.length ? `<details class="merge-auto"><summary>Show the ${fmt(a.length)} automatic change${a.length === 1 ? '' : 's'}</summary>
       ${a.slice(0, 500).map(item => `<div class="merge-item small"><div class="merge-head"><b>${what(item)}</b><span>${item.files.map(esc).join(', ')}</span></div>
-      <div class="merge-pair">${textBox(item.current)}${textBox(item.new, 'new')}</div></div>`).join('')}
+      <div class="merge-pair">${valueBox(item, item.current)}${valueBox(item, item.new, 'new')}</div></div>`).join('')}
       ${a.length > 500 ? `<p class="muted">…and ${fmt(a.length - 500)} more.</p>` : ''}</details>` : ''}
     <div class="buttons"><button id="import-apply" class="primary">Apply</button><button id="import-cancel">Cancel</button>
     <span class="muted">Your script is backed up first.</span></div>`);

@@ -168,6 +168,13 @@ function entryOf(id) {
   for (const f of FIELDS) { const v = (d[f] || {})[id]; if (v !== undefined && v !== '') out[f] = v; }
   return out;
 }
+// the done / mtl / edited / hidden flags the line had in the last upload (stored as their JSON, joined by commas)
+function seedFlagsOf(id) {
+  const s = (O.files[O.byId[id].file].seedFlags || {})[id];
+  if (!s) return {};
+  const [done, mtl, edited, hidden] = JSON.parse(`[${s}]`);
+  return {done, mtl, edited, hidden};
+}
 const seedOf = (id, field = 'en') => (O.files[O.byId[id].file][field === 'en' ? 'seed' : 'seedNote'] || {})[id] || '';
 const allEntries = () => Object.values(O.files).flatMap(d => d.entries).sort((a, b) => a.pos - b.pos);
 const projectMap = () => Object.fromEntries(Object.keys(O.byId).map(id => [id, entryOf(id)]).filter(([, p]) => Object.keys(p).length));
@@ -594,14 +601,29 @@ function creditsPng(roll, first, count) {
 
 // ---------- importing scripts into the shared script (scriptio.py in JavaScript) ----------
 
-const KINDS = {en: 'English', note: 'note', speaker: 'name', face: 'portrait'};
-const HEAD_SPEAKER = 'Speaker name: ', HEAD_FACE = 'Portrait: ';
-const BLOCK_RX = /^(Japanese|Old English|New English|Old note|New note|Old name|New name|Old portrait|New portrait):\s*$/;
+const KINDS = {en: 'English', note: 'note', done: 'done', hidden: 'hidden', speaker: 'name', face: 'portrait', credits: 'credits'};
+const ENTRY_KINDS = ['en', 'note', 'done', 'hidden'];
+const HEAD_SPEAKER = 'Speaker name: ', HEAD_FACE = 'Portrait: ', HEAD_CREDITS = 'Closing credits';
+const BLOCK_RX = /^(Japanese|(?:Old|New) (?:English|note|done|hidden|name|portrait|credits)):\s*$/;
+
+// flags and credits as text, the same way scriptio.py writes them: done is 'Done' or '', hidden 'Hidden', 'Shown'
+// or '' (the Studio decides), credits the Credits settings as JSON with sorted keys ('' = the game's own)
+const flagText = (kind, p) => kind === 'done' ? (p.done ? 'Done' : '') : p.hidden === true ? 'Hidden' : p.hidden === false ? 'Shown' : '';
+const sortKeys = v => Array.isArray(v) ? v.map(sortKeys) : v && typeof v === 'object'
+  ? Object.fromEntries(Object.keys(v).sort().map(k => [k, sortKeys(v[k])])) : v;
+function creditsText(cfg) {
+  if (!cfg || !Object.keys(cfg).length) return '';
+  cfg = {...O.layout.credits.default, ...cfg};
+  cfg.roles = (cfg.roles || []).map(r => ({role: String(r.role ?? ''), names: String(r.names ?? '')}));
+  return JSON.stringify(sortKeys(cfg), null, 1);
+}
 const FENCE_RX = /^(~{3,}|`{3,})\s*\w*\s*$/;
 const keyOf = k => k.join('\t');
 
 function current([kind, name]) {
   if (kind === 'en' || kind === 'note') return (S.project[name] || {})[kind] || '';
+  if (kind === 'done' || kind === 'hidden') return flagText(kind, S.project[name] || {});
+  if (kind === 'credits') return creditsText(O.project.credits);
   return ((kind === 'speaker' ? S.speakers : S.faces) || {})[name] || '';
 }
 
@@ -610,7 +632,8 @@ function parseMd(text) {
   let head = null, found = {};
   const flush = () => {
     if (!head) return;
-    const kinds = {entry: [['English', 'en'], ['note', 'note']], speaker: [['name', 'speaker']], face: [['portrait', 'face']]}[head[0]];
+    const kinds = {entry: [['English', 'en'], ['note', 'note'], ['done', 'done'], ['hidden', 'hidden']], speaker: [['name', 'speaker']],
+      face: [['portrait', 'face']], credits: [['credits', 'credits']]}[head[0]];
     for (const [word, kind] of kinds) if ('New ' + word in found) changes.push([[kind, head[1]], found['Old ' + word] ?? null, found['New ' + word]]);
   };
   for (let i = 0; i < lines.length; i++) {
@@ -619,7 +642,7 @@ function parseMd(text) {
       flush();
       const title = line.slice(3).trim(); found = {};
       head = title.startsWith(HEAD_SPEAKER) ? ['speaker', title.slice(HEAD_SPEAKER.length)]
-        : title.startsWith(HEAD_FACE) ? ['face', title.slice(HEAD_FACE.length)] : ['entry', title];
+        : title.startsWith(HEAD_FACE) ? ['face', title.slice(HEAD_FACE.length)] : title === HEAD_CREDITS ? ['credits', ''] : ['entry', title];
       continue;
     }
     const m = BLOCK_RX.exec(line);
@@ -637,7 +660,11 @@ function parseMd(text) {
 
 function valuesOf(data) {
   const out = [];
-  for (const [sid, p] of Object.entries(data.entries || {})) for (const f of ['en', 'note']) if (p[f]) out.push([[f, sid], null, p[f]]);
+  for (const [sid, p] of Object.entries(data.entries || {})) {
+    for (const f of ['en', 'note']) if (p[f]) out.push([[f, sid], null, p[f]]);
+    for (const f of ['done', 'hidden']) if (flagText(f, p)) out.push([[f, sid], null, flagText(f, p)]);
+  }
+  if (creditsText(data.credits)) out.push([['credits', ''], null, creditsText(data.credits)]);
   for (const [kind, field] of [['speaker', 'speakers'], ['face', 'faces']]) for (const [jp, v] of Object.entries(data[field] || {})) if (v) out.push([[kind, jp], null, v]);
   return out;
 }
@@ -693,15 +720,15 @@ function parseScript(text) {
 }
 
 function importPlan(files) {
-  const order = new Map(allEntries().map((e, i) => [e.id, i])), rank = {speaker: 0, face: 1, en: 2, note: 2};
-  const sortKey = k => [rank[k[0]], k[0] === 'en' || k[0] === 'note' ? (order.get(k[1]) ?? order.size) : 0, k[1], k[0] === 'note' ? 1 : 0];
+  const order = new Map(allEntries().map((e, i) => [e.id, i])), rank = {speaker: 0, face: 1, en: 2, note: 2, done: 2, hidden: 2, credits: 3};
+  const sortKey = k => [rank[k[0]], ENTRY_KINDS.includes(k[0]) ? (order.get(k[1]) ?? order.size) : 0, k[1], Math.max(0, ENTRY_KINDS.indexOf(k[0]))];
   const cmp = (a, b) => { const x = sortKey(a), y = sortKey(b); for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] < y[i] ? -1 : 1; return 0; };
   const offers = new Map(), unknown = new Set();
   for (const {name, text} of files) {
     let changes;
     try { changes = parseScript(text); } catch (err) { throw new Error(`${name}: ${err.message}`); }
     for (const [key, old, value] of changes) {
-      if ((key[0] === 'en' || key[0] === 'note') && !O.byId[key[1]]) { unknown.add(key[1]); continue; }
+      if (ENTRY_KINDS.includes(key[0]) && !O.byId[key[1]]) { unknown.add(key[1]); continue; }
       if (value !== current(key)) {
         const k = keyOf(key);
         if (!offers.has(k)) offers.set(k, {key, list: []});
@@ -715,7 +742,7 @@ function importPlan(files) {
     for (const [name, , value] of list) { if (!options.has(value)) options.set(value, []); options.get(value).push(name); }
     const stale = list.filter(([, old]) => old !== null && old !== cur).map(([name]) => name);
     const item = {key, kind: KINDS[key[0]], name: key[1], current: cur};
-    if ((key[0] === 'en' || key[0] === 'note') && O.byId[key[1]]) { const e = O.byId[key[1]].e; item.jp = e.body; item.speaker = e.speaker || ''; }
+    if (ENTRY_KINDS.includes(key[0]) && O.byId[key[1]]) { const e = O.byId[key[1]].e; item.jp = e.body; item.speaker = e.speaker || ''; }
     if (options.size === 1 && !stale.length) {
       const [[value, names]] = options;
       auto.push({...item, new: value, files: names});
@@ -736,10 +763,14 @@ async function importApply(plan, choices) {
   }
   const perFile = {}, speakerArgs = [];
   const pending = {};
+  let creditsPick;
   for (const [[kind, name], value] of picks) {
-    if (kind === 'en' || kind === 'note') {
+    if (ENTRY_KINDS.includes(kind)) {
       const before = pending[name] || entryOf(name);
-      pending[name] = projectSet(before, {[kind]: value});
+      const change = kind === 'done' ? {done: value === 'Done'} : kind === 'hidden' ? {hidden: {Hidden: true, Shown: false}[value] ?? ''} : {[kind]: value};
+      pending[name] = projectSet(before, change);
+    } else if (kind === 'credits') {
+      creditsPick = value ? JSON.parse(value) : {};
     } else {
       speakerArgs.push(new fb.FieldPath(kind === 'speaker' ? 'en' : 'faces', name), value || fb.deleteField());
     }
@@ -752,6 +783,7 @@ async function importApply(plan, choices) {
     await batch.commit();
   }
   if (speakerArgs.length) await fb.updateDoc(ref('meta', 'speakers'), ...speakerArgs);
+  if (creditsPick) await fb.setDoc(ref('meta', 'project'), {credits: creditsPick, creditsBy: {n: O.name, e: O.email, t: now()}}, {merge: true});
   history('Import', 'import', '', `${picks.length} changes imported`);
   return picks.length;
 }
@@ -771,9 +803,10 @@ function changesMd() {
     count++;
   }
   for (const e of allEntries()) {
-    const parts = [], p = entryOf(e.id);
-    for (const [field, word] of [['en', 'English'], ['note', 'note']]) {
-      const old = seedOf(e.id, field), cur = p[field] || '';
+    const parts = [], p = entryOf(e.id), seedFlags = seedFlagsOf(e.id);
+    for (const [field, word] of [['en', 'English'], ['note', 'note'], ['done', 'done'], ['hidden', 'hidden']]) {
+      const old = field === 'en' || field === 'note' ? seedOf(e.id, field) : flagText(field, seedFlags);
+      const cur = field === 'en' || field === 'note' ? p[field] || '' : flagText(field, p);
       if (old !== cur) { parts.push(...block(`Old ${word}`, old), ...block(`New ${word}`, cur)); count++; }
     }
     if (!parts.length) continue;
@@ -781,11 +814,17 @@ function changesMd() {
     if (e.speaker) out.push(`Speaker: ${e.speaker} (${(O.speakers.en || {})[e.speaker] || O.layout.default_speakers[e.speaker] || 'no English name'})`, '');
     out.push(...block('Japanese', e.body || ''), ...parts);
   }
+  const oldCredits = creditsText(O.project.creditsSeed), newCredits = creditsText(O.project.credits);
+  if (oldCredits !== newCredits) {
+    out.push('---', '', `## ${HEAD_CREDITS}`, '', ...block('Old credits', oldCredits), ...block('New credits', newCredits));
+    count++;
+  }
   const [day, , clock] = stamp();
   const head = ['# FM2089 script changes', '', '- From: the online script', `- Exported: ${day} ${clock}`,
     `- Changes since: the online script's last upload (${O.meta.made})`, `- Changes: ${count}`, '',
     'Load this file with **Import script** (or several at once with **Import multiple**) in the FM2089 Translation Studio.',
-    'Only the "New" blocks are read in; "Old" is what the sender started from, so the Studio can tell when both of you changed a line.', ''];
+    'Only the "New" blocks are read in; "Old" is what the sender started from, so the Studio can tell when both of you changed a line.',
+    'An empty done block means not marked done; an empty hidden block means the Studio decides whether the line is in the game.', ''];
   return [[...head, ...out].join('\n').trimEnd() + '\n', count];
 }
 
