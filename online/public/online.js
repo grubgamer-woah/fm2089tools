@@ -269,7 +269,10 @@ function wrapStudio() {
   };
   claimBar();
   listenClaims();
-  $('#base').textContent = `Signed in as ${O.name} · script uploaded ${O.meta.made}${O.meta.uploaded ? ' by ' + O.meta.uploaded.n : ''}`;
+  // the Studio writes "ROM: …" there once its page has loaded; say who is signed in instead
+  const base = () => { $('#base').textContent = `Signed in as ${O.name} · script uploaded ${O.meta.made}${O.meta.uploaded ? ' by ' + O.meta.uploaded.n : ''}`; };
+  const wait = setInterval(() => { if (S.entries.length) { clearInterval(wait); base(); } }, 200);
+  base();
   renderPresence();
 }
 
