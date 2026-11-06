@@ -1,0 +1,9 @@
+/* Online-only parts of the page; the rest is the Studio's own studio/style.css */
+body.gated #app, body.gated nav, body.gated .mtlbar { display: none; }
+.gate { max-width: 640px; margin: 2rem auto; }
+.online { display: inline-flex; gap: .5rem; align-items: center; font-size: .85em; }
+.online .who i { display: inline-block; width: .6em; height: .6em; border-radius: 50%; margin-right: .3em; }
+.online-sub { margin-top: .25rem; }
+.live { border: 1px solid #c90; padding: .5rem; margin: .5rem 0; border-radius: 4px; }
+.live pre { white-space: pre-wrap; margin: .4rem 0; }
+.team-list > div, .team-add { display: flex; gap: .75rem; align-items: center; margin: .4rem 0; }

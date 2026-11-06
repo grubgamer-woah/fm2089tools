@@ -545,38 +545,40 @@ def export_script(catalog, project, author='', folder=EXPORTS):
 
 
 WEB_PACK = 'FM2089 online script.json'
-WEB_FIELDS = ('id', 'file', 'index', 'group', 'speaker', 'speaker_own_line', 'body', 'lines', 'mission', 'mission_title',
-              'scene', 'unused', 'english', 'codes', 'art')
 
 
 def web_pack(catalog, project):
-    """The script for the online editor (online/ in the repo): every entry's Japanese and English, the speaker
-    names, and the font widths its length check needs. No ROM data beyond the text goes in."""
-    entries = []
-    for e in catalog.entries:
-        row = {k: e[k] for k in WEB_FIELDS if e.get(k) not in (None, False, '')}
-        row['limit'] = catalog.limit(e)
-        entries.append(row)
-    font = catalog.font
+    """Everything the online editor (online/ in the repo) shows next to the script: the catalog's entries, the
+    game font for the preview, the portraits, the credits script and its font, and the project as it is.
+    It holds no ROM files, only what the Studio's own pages show."""
+    # graphic = drawn into a picture or the Config menu rather than a .msg file (Validate lists only its errors)
+    entries = [{**e, 'limit': catalog.limit(e), **({'graphic': True} if catalog.by_id[e['id']][0] is None else {})}
+               for e in catalog.entries]
+    staff = credits.Font(catalog.rom)
     return {
-        'format': 'fm2089-online-script', 'version': 1, 'made': dt.datetime.now().strftime('%Y-%m-%d %H:%M'),
+        'format': 'fm2089-online-script', 'version': 2, 'made': dt.datetime.now().strftime('%Y-%m-%d %H:%M'),
         'groups': [[k, label] for k, label, _ in GROUPS], 'dialogue_groups': list(DIALOGUE_GROUPS),
-        'screen_width': SCREEN_WIDTH, 'hero': [HERO_NAME, HERO_DEFAULT], 'default_speakers': DEFAULT_SPEAKERS,
-        'chars': {ch: font.advance(g) for ch, g in font.lookup.items()},
-        'glyphs': [font.advance(g) for g in range(font.count)],
-        'entries': entries,
-        'text': {k: {f: v[f] for f in ('en', 'note', 'mtl', 'edited', 'done') if v.get(f)} for k, v in project.entries.items()},
-        'speakers': dict(project.speakers), 'faces': dict(project.faces), 'default_faces': portraits.SPEAKER_FACES,
+        'screen_width': SCREEN_WIDTH, 'text_box_width': TEXT_BOX_WIDTH, 'hero': [HERO_NAME, HERO_DEFAULT],
+        'controls': {f'{k:04X}': v for k, v in msgcodec.CONTROL_NAMES.items()},
+        'control_range': [msgcodec.CONTROL_FIRST, msgcodec.CONTROL_LAST, msgcodec.CONTROL_WITH_ARG_LAST],
+        'default_speakers': DEFAULT_SPEAKERS, 'default_faces': portraits.SPEAKER_FACES,
+        'font': catalog.font.to_json(),
         'portraits': web_portraits(catalog, project),
+        'credits': {'base': credits.original(catalog.rom), 'width': credits.WIDTH, 'positions': credits.POSITIONS,
+                    'default': credits.DEFAULT, 'tiles': base64.b64encode(staff.tiles).decode('ascii'), 'palettes': staff.palettes},
+        'entries': entries,
+        'text': project.entries, 'speakers': dict(project.speakers), 'faces': dict(project.faces),
+        # the exporter's name (settings "author") stays on this computer
+        'settings': {k: v for k, v in project.settings.items() if k != 'author'},
+        'project_credits': dict(project.credits or {}), 'images': dict(project.images),
     }
 
 
 def web_portraits(catalog, project):
-    """The small face pictures of the portraits speakers use (base64 PNGs), for the online editor's speaker faces."""
-    used = {f for f in {**portraits.SPEAKER_FACES, **project.faces}.values() if f and f != '-'}
+    """Every small face picture (base64 PNGs, in the Studio's picker order), for the online editor's speaker faces."""
     out = {}
-    for face in sorted(used):
-        data = catalog.portraits.image(face) if face in catalog.portraits.paths else None
+    for face in catalog.portraits.faces:
+        data = catalog.portraits.image(face)
         if data:
             out[face] = base64.b64encode(data).decode('ascii')
     return out
