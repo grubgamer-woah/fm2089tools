@@ -1,0 +1,48 @@
+rules_version = '2';
+// Only people on the team list (meta/access) can read or change the script.
+// The first person to sign in on a new database can make themselves its admin;
+// after that only admins change the team list or upload a new pack.
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email != null && request.auth.token.email_verified == true;
+    }
+    function me() { return request.auth.token.email.lower(); }
+    function accessPath() { return /databases/$(db)/documents/meta/access; }
+    function hasTeam() { return exists(accessPath()); }
+    function isAdmin() { return signedIn() && hasTeam() && me() in get(accessPath()).data.admins; }
+    function isEditor() {
+      return signedIn() && hasTeam() && (me() in get(accessPath()).data.editors || me() in get(accessPath()).data.admins);
+    }
+
+    match /meta/access {
+      allow get: if isEditor() || (signedIn() && !hasTeam());
+      allow create: if signedIn() && !hasTeam() && request.resource.data.admins == [me()]
+                    && request.resource.data.editors == [];
+      // an admin can't remove the last admin or themselves
+      allow update: if isAdmin() && me() in request.resource.data.admins;
+    }
+    match /meta/script {
+      allow read: if isEditor();
+      allow write: if isAdmin();
+    }
+    match /meta/speakers {
+      allow read: if isEditor();
+      allow create, delete: if isAdmin();
+      allow update: if isEditor();
+    }
+    match /files/{file} {
+      allow read: if isEditor();
+      allow create, delete: if isAdmin();
+      allow update: if isEditor();
+    }
+    match /history/{item} {
+      allow read: if isEditor();
+      allow create: if isEditor() && request.resource.data.e == me();
+    }
+    match /presence/{uid} {
+      allow read: if isEditor();
+      allow write: if isEditor() && uid == request.auth.uid;
+    }
+  }
+}

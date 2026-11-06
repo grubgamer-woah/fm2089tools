@@ -1,0 +1,11 @@
+{
+  "name": "fm2089-online-editor-dev",
+  "private": true,
+  "type": "module",
+  "description": "Builds public/firebase.js and runs the editor against the Firebase emulators for testing",
+  "devDependencies": {
+    "esbuild": "0.25.12",
+    "firebase": "11.10.0",
+    "firebase-tools": "14.27.0"
+  }
+}

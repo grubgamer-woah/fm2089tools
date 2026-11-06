@@ -543,6 +543,39 @@ def export_script(catalog, project, author='', folder=EXPORTS):
     return path, len(changes), since
 
 
+WEB_PACK = 'FM2089 online script.json'
+WEB_FIELDS = ('id', 'file', 'index', 'group', 'speaker', 'speaker_own_line', 'body', 'lines', 'mission', 'mission_title',
+              'scene', 'unused', 'english', 'codes', 'art')
+
+
+def web_pack(catalog, project):
+    """The script for the online editor (online/ in the repo): every entry's Japanese and English, the speaker
+    names, and the font widths its length check needs. No ROM data beyond the text goes in."""
+    entries = []
+    for e in catalog.entries:
+        row = {k: e[k] for k in WEB_FIELDS if e.get(k) not in (None, False, '')}
+        row['limit'] = catalog.limit(e)
+        entries.append(row)
+    font = catalog.font
+    return {
+        'format': 'fm2089-online-script', 'version': 1, 'made': dt.datetime.now().strftime('%Y-%m-%d %H:%M'),
+        'groups': [[k, label] for k, label, _ in GROUPS], 'dialogue_groups': list(DIALOGUE_GROUPS),
+        'screen_width': SCREEN_WIDTH, 'hero': [HERO_NAME, HERO_DEFAULT], 'default_speakers': DEFAULT_SPEAKERS,
+        'chars': {ch: font.advance(g) for ch, g in font.lookup.items()},
+        'glyphs': [font.advance(g) for g in range(font.count)],
+        'entries': entries,
+        'text': {k: {f: v[f] for f in ('en', 'note', 'mtl', 'edited', 'done') if v.get(f)} for k, v in project.entries.items()},
+        'speakers': dict(project.speakers), 'faces': dict(project.faces),
+    }
+
+
+def export_web_pack(catalog, project, folder=EXPORTS):
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder/WEB_PACK
+    path.write_text(json.dumps(web_pack(catalog, project), ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
+    return path
+
+
 def import_plan(catalog, project, files):
     """files = [(name, text)]: what importing them together would change, and where they conflict."""
     sources = []

@@ -1,0 +1,5 @@
+dev/node_modules/
+dev/package-lock.json
+.firebase/
+*-debug.log
+project-id.txt

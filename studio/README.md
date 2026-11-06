@@ -102,6 +102,11 @@ several at once. Either way the Studio first shows what will change:
 Nothing changes until you press **Apply**, and your `project.json` is copied to
 `workspace/backups/` first.
 
+**Online pack** saves the whole script (Japanese, English, notes, speaker names)
+as `exports/FM2089 online script.json` for the team's shared online editor
+(`online/` in the repository). Changes made there come back as a script `.md`
+from its **Download changes** button, loaded with **Import script** as above.
+
 **Export TSV** writes every string (ID, English, Japanese, note) for a
 spreadsheet.
 

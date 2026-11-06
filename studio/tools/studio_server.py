@@ -349,6 +349,15 @@ class Handler(BaseHTTPRequestHandler):
                     except OSError:
                         pass  # the page still shows where the file is
                 return self.send(200, {'file': str(file) if file else None, 'count': count, 'since': since, 'folder': str(core.EXPORTS)})
+            if path == '/api/export-web':
+                with STATE.lock:
+                    file = core.export_web_pack(cat, STATE.project)
+                if json.loads(self.body() or b'{}').get('open', True):
+                    try:
+                        open_folder(str(core.EXPORTS), str(file))
+                    except OSError:
+                        pass
+                return self.send(200, {'file': str(file), 'folder': str(core.EXPORTS)})
             if path in ('/api/import/preview', '/api/import/apply'):
                 data = json.loads(self.body())
                 files = [(f['name'], f['text']) for f in data['files']]

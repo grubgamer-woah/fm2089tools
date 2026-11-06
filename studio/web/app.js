@@ -29,11 +29,11 @@ async function start() {
     $('#rom-missing').hidden = false; $('#app').hidden = true; $('#tabs').hidden = true;
     $('#rom-problem').textContent = S.config.rom_problem;
     $('#base').textContent = 'No ROM loaded';
-    for (const b of ['#build', '#validate', '#import', '#import-multi', '#export-script', '#titles', '#credits', '#fonts']) $(b).disabled = true;
+    for (const b of ['#build', '#validate', '#import', '#import-multi', '#export-script', '#export-web', '#titles', '#credits', '#fonts']) $(b).disabled = true;
     return;
   }
   $('#rom-missing').hidden = true; $('#app').hidden = false; $('#tabs').hidden = false;
-  for (const b of ['#build', '#validate', '#import', '#import-multi', '#export-script', '#titles', '#credits', '#fonts']) $(b).disabled = false;
+  for (const b of ['#build', '#validate', '#import', '#import-multi', '#export-script', '#export-web', '#titles', '#credits', '#fonts']) $(b).disabled = false;
   $('#base').textContent = 'ROM: ' + S.config.rom;
   const [cat, font] = await Promise.all([api('/api/catalog'), api('/api/font')]);
   S.entries = cat.entries; S.project = cat.project;
@@ -621,6 +621,15 @@ async function exportScript() {
   $('#open-exports').onclick = () => api('/api/open', {path: r.folder});
 }
 
+// The whole script as one file for the shared online editor (its admin uploads it there)
+async function exportWeb() {
+  const r = await api('/api/export-web', {});
+  showJob(`<h3 class="ok">Online pack saved</h3><p>Saved to <code>${esc(r.file)}</code>. In the online editor, an admin picks
+     <b>Upload pack</b> and chooses this file. Lines nobody changed online take the English in this file; lines someone
+     changed online keep their online text.</p><button id="open-exports">Open exports folder</button>`);
+  $('#open-exports').onclick = () => api('/api/open', {path: r.folder});
+}
+
 // Extra fonts for the game's Config menu: the game font as a sheet, and the sheets already in fonts/
 async function showFonts() {
   const r = await api('/api/fonts', {});
@@ -726,6 +735,7 @@ $('#stat-icons').onchange = async ev => {
 };
 $('#fonts').onclick = () => showFonts().catch(err => showJob(`<h3 class="bad">Fonts failed</h3><p>${esc(err.message)}</p>`));
 $('#export-script').onclick = () => exportScript().catch(err => showJob(`<h3 class="bad">Export failed</h3><p>${esc(err.message)}</p>`));
+$('#export-web').onclick = () => exportWeb().catch(err => showJob(`<h3 class="bad">Export failed</h3><p>${esc(err.message)}</p>`));
 $('#import').onclick = () => $('#import-file').click();
 $('#import-multi').onclick = () => $('#import-files').click();
 for (const id of ['#import-file', '#import-files']) {

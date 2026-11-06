@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FM2089 Online Script</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><span class="mark">2089</span><div><h1>Online Script</h1><p>Front Mission 2089: Border of Madness</p></div></div>
+  <div class="actions" id="actions" hidden>
+    <span id="online" class="online" aria-label="Who is online"></span>
+    <button id="recent" title="The latest changes anyone made">Recent changes</button>
+    <button id="speakers" title="Translate each speaker's name once">Speakers</button>
+    <button id="team" title="Who can see and edit the script" hidden>Team</button>
+    <button id="upload" title="Upload the Online pack the desktop Studio saves" hidden>Upload pack</button>
+    <button id="download-full" title="The whole script as a project.json. Import script in the desktop Studio takes every line from it.">Download full script</button>
+    <button id="download" class="primary" title="Every line changed online since the last pack upload, as a script .md for Import script / Import multiple in the desktop Studio">Download changes</button>
+    <button id="signout" title="Sign out">Sign out</button>
+  </div>
+</header>
+<div class="basebar"><span id="base">Loading…</span><span id="progress"></span><span id="saved" role="status"></span></div>
+<nav id="tabs" aria-label="Text groups" hidden></nav>
+<main>
+  <section id="gate" class="notice" hidden></section>
+  <div id="app" hidden>
+    <section class="toolbar">
+      <label class="search"><span>Search Japanese, English, note or ID</span><input id="search" type="search" placeholder="Search…"></label>
+      <label><span>File</span><select id="file"><option value="">All files</option></select></label>
+      <label>Show<select id="status">
+        <option value="">Everything</option>
+        <option value="todo">Untranslated</option>
+        <option value="translated">Translated</option>
+        <option value="changed">Changed online</option>
+        <option value="noted">Has a note</option>
+        <option value="mtl">MTL (machine translation)</option>
+        <option value="warn">Too long / problems</option>
+      </select></label>
+      <label class="check" title="Hide text the game never shows, such as test messages and graphics the group's pictures replace"><input id="hide-unused" type="checkbox" checked> Hide text not in game</label>
+    </section>
+    <div class="workspace">
+      <section class="catalog">
+        <div class="list-head"><span id="count"></span><span>Japanese / English</span></div>
+        <div id="rows" role="list" aria-label="Text entries"></div>
+        <div class="pagination"><button id="prev">Previous</button><span id="page"></span><button id="next">Next</button></div>
+      </section>
+      <section class="editor" id="editor"><p class="empty-editor">Pick a line on the left to edit it.</p></section>
+    </div>
+  </div>
+</main>
+<dialog id="dialog"><div id="dialog-body"></div><form method="dialog" class="dialog-close"><button>Close</button></form></dialog>
+<input id="pack-file" type="file" accept=".json,application/json" hidden>
+<script type="module" src="app.js"></script>
+</body>
+</html>
