@@ -58,7 +58,6 @@ actions.insertAdjacentHTML('beforeend', `<button id="review" title="Accept, chan
   <button id="recent" title="The latest changes anyone made">Recent changes</button>
   <button id="team" title="Who can see and edit the script" hidden>Team</button>
   <button id="upload" title="Upload the Online pack the desktop Studio saves" hidden>Upload pack</button>
-  <button id="username" title="Change the name everyone sees for you">Username</button>
   <button id="signout" title="Sign out">Sign out</button>`);
 document.body.insertAdjacentHTML('beforeend', '<input id="pack-file" type="file" accept=".json,application/json" hidden>');
 
@@ -96,7 +95,7 @@ async function signedIn(user) {
   if (!access.exists()) {
     showGate(`<h2>New editor</h2><p>Nobody runs this editor yet. As the first person here you can become its admin: you pick who else
       can see and edit the script, and you upload the script from the desktop Studio.</p>
-      <form id="claim-form" class="request-form"><label>Your username (what the team sees instead of your Google name)<input id="claim-name" maxlength="24" required></label>
+      <form id="claim-form" class="request-form"><label>Your username (what the team sees instead of your Google name; it can't be changed later)<input id="claim-name" maxlength="24" required></label>
       <p><button class="primary">Make me the admin (${esc(O.email)})</button> <button type="button" id="out">Sign out</button></p></form>`);
     $('#out').onclick = () => fb.signOut(auth);
     $('#claim-form').onsubmit = async ev => {
@@ -123,7 +122,7 @@ async function signedIn(user) {
 // Team members who have no username yet (everyone added before usernames, or added straight from the Team list) pick one first
 function pickUsername(user) {
   showGate(`<h2>Pick a username</h2><p>The team sees this name next to your changes, suggestions and claims, instead of your Google name.
-    You can change it later with the <b>Username</b> button.</p>
+    It can't be changed afterwards, so choose carefully.</p>
     <form id="name-form" class="request-form"><label>Username<input id="name-new" maxlength="24" required></label>
     <p><button class="primary">Save</button> <button type="button" id="out">Sign out</button></p></form>`);
   $('#out').onclick = () => fb.signOut(auth);
@@ -147,15 +146,6 @@ async function saveUsername(value) {
   return true;
 }
 
-$('#username').onclick = async () => {
-  if (!O.access || !O.name) return;
-  const v = prompt('Your username (what the team sees next to your work):', O.name);
-  if (v === null || cleanName(v) === O.name) return;
-  if (await saveUsername(v)) {
-    if (O.showBase) O.showBase(); else $('#base').textContent = `Signed in as ${O.name}`;
-    heartbeat(); renderPresence();
-  }
-};
 
 // ---------- asking to join: accessRequests/{uid}, answered by an admin from their inbox ----------
 
@@ -174,7 +164,7 @@ function askForAccess() {
       showGate(`<h2>No access yet</h2><p>You are signed in as <b>${esc(O.email)}</b>, which is not on the team list.
         ${r?.status === 'declined' ? `<br><b>The admin declined your last request${r.answer ? `: "${esc(r.answer)}"` : ''}.</b> You can ask again.` : ''}</p>
         <form id="request-form" class="request-form">
-          <label>Username (what the team sees instead of your Google name)<input id="request-name" maxlength="24" required value="${esc(r?.n || '')}"></label>
+          <label>Username (what the team sees instead of your Google name; it can't be changed later)<input id="request-name" maxlength="24" required value="${esc(r?.n || '')}"></label>
           <label>Role you would like<select id="request-role"><option value="editors">Editor: suggest changes for review</option>
             <option value="reviewers">Reviewer: review suggestions and edit directly</option></select></label>
           <label>Note to the admin (optional)<textarea id="request-msg" rows="3" placeholder="Who you are, what you would like to work on"></textarea></label>
