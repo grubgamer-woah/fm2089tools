@@ -29,8 +29,9 @@ How the script travels:
   Their own edits go straight in.
 - **Admins** do the same, and also manage **Team** and upload packs.
 - **Inbox** shows each person what happened to their suggestions and the reviewer's note.
-- **Claims** mark untranslated or MTL lines as someone's for a week ("Claim this line" in the editor, or
-  "Claim shown lines" for everything the list's filters show). Show > Claimed by me / by others lists them.
+- **Claims** (the Claims tab) mark work as someone's for a week: story by mission number ("1-10, 14"),
+  the other tabs by line number (each row shows its "line N"). Claimed rows get a purple tag; the owner can
+  renew or release a claim, and reviewers can release anyone's.
 
 It runs on Firebase's free plan (Spark): Google sign-in, the Firestore database and Hosting. A team of a
 few people uses a small part of the free daily limits (50,000 reads and 20,000 writes): opening the

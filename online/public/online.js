@@ -248,30 +248,17 @@ function wrapStudio() {
     if (ok && O.canReview) for (const f of ['en', 'note']) if ((before[f] || '') !== ((S.project[id] || {})[f] || '')) history(id, f, before[f] || '', (S.project[id] || {})[f] || '');
     return ok;
   };
-  // claims: a mark on each claimed row, and the "Claimed by…" choices under Show
-  // portraits as data URLs straight away (an /api/ address would first be fetched from the web host and fail)
-  const studioFaceImg = window.faceImg;
-  window.faceImg = (jp, cls) => studioFaceImg(jp, cls).replace(/src="(\/api\/[^"]+)"/, (m, u) => `src="${imageUrl(new URL(u.replace(/&amp;/g, '&'), location.href))}"`);
+  // claims: line numbers and a tag on each claimed row, and the Claims tab
   const studioRowEl = window.rowEl;
   window.rowEl = function (e) {
     const b = studioRowEl(e), badge = claimBadge(e);
     if (badge) b.querySelector('.meta span:last-child').insertAdjacentHTML('afterbegin', badge + ' ');
     return b;
   };
-  const studioApplyFilter = window.applyFilter;
-  window.applyFilter = function () {
-    const status = $('#status').value, keep = claimFilter(status);
-    if (!keep) return studioApplyFilter();
-    // the Studio's filter, with "Everything" in place of the claim choice, then only the claimed (or free) lines
-    $('#status').value = ''; studioApplyFilter(); $('#status').value = status;
-    S.filtered = S.filtered.filter(keep); S.page = 0;
-    renderRows();
-  };
-  claimBar();
-  listenClaims();
+  claimsTab();
   // the Studio writes "ROM: …" there once its page has loaded; say who is signed in instead
   const base = () => { $('#base').textContent = `Signed in as ${O.name} · script uploaded ${O.meta.made}${O.meta.uploaded ? ' by ' + O.meta.uploaded.n : ''}`; };
-  const wait = setInterval(() => { if (S.entries.length) { clearInterval(wait); base(); } }, 200);
+  const wait = setInterval(() => { if (S.entries.length) { clearInterval(wait); base(); numberLines(); listenClaims(); } }, 200);
   base();
   renderPresence();
 }
@@ -321,7 +308,6 @@ function onlineEditorInfo() {
     ${others.length ? ` · <b>Also on this line now: ${others.map(esc).join(', ')}</b>` : ''}
     ${en !== seed ? ` · <a href="#" id="show-seed">Last upload from the Studio</a>` : ''} · <a href="#" id="line-history">History</a></div>
     ${lineSuggestions(id)}${claimInfo(id)}</div>`);
-  $('#claim-line')?.addEventListener('click', ev => (ev.target.hasAttribute('data-release') ? release([id]) : claim([id])).catch(err => alert(err.message)));
   for (const b of document.querySelectorAll('[data-withdraw]')) b.onclick = () => withdraw(b.dataset.withdraw);
   $('#review-line')?.addEventListener('click', () => renderReview(id));
   $('#show-seed')?.addEventListener('click', ev => { ev.preventDefault(); showJob(`<h3>${esc(id)}: last upload from the Studio</h3><div class="merge-text">${esc(seed || '(no English)')}</div>`); });
@@ -1134,100 +1120,155 @@ $('#inbox').onclick = () => {
   for (const x of done) if (!x.seen) fb.updateDoc(x.ref, {seen: true}).catch(() => {});
 };
 
-// ---------- claims: "I'm translating these" marks on untranslated or MTL lines, for a week ----------
-// claims/{file}: {line id: {uid, n, e, t}}. A claim older than a week counts as gone, and anyone can take the line then.
+// ---------- claims: "I'm translating these" for a week, from the Claims tab ----------
+// claims/{auto}: {uid, n, e, t, group, from, to}. Story claims are mission numbers; every other tab's are its
+// line numbers (each line's place in that tab, shown as "line N" on its row). A claim older than a week is gone.
 
 const WEEK = 7 * 24 * 3600 * 1000;
 const claimTime = c => c?.t?.toMillis ? c.t.toMillis() : Date.now();
-const claimOf = id => { const c = O.claims[id]; return c && claimTime(c) + WEEK > Date.now() ? c : null; };
-const claimable = e => { const p = S.project[e.id] || {}; return !isHidden(e) && (!translated(e) || p.mtl); };
+const live = c => claimTime(c) + WEEK > Date.now();
 const until = c => new Date(claimTime(c) + WEEK).toLocaleDateString([], {month: 'short', day: 'numeric'});
+const unit = group => group === 'story' ? 'Mission' : 'Line';
+const rangeText = c => c.from === c.to ? `${c.from}` : `${c.from}-${c.to}`;
+
+// line numbers of the non-story tabs: each line's place among its tab's lines, in the Studio's order
+function numberLines() {
+  O.lineNo = {}; O.groupSize = {};
+  for (const e of S.entries) if (e.group !== 'story') O.lineNo[e.id] = O.groupSize[e.group] = (O.groupSize[e.group] || 0) + 1;
+  O.missions = [...new Set(S.entries.filter(e => e.group === 'story').map(e => +e.mission))].sort((a, b) => a - b);
+}
+const numberOf = e => e.group === 'story' ? +e.mission : O.lineNo[e.id];
+function claimOf(e) {
+  const n = numberOf(e);
+  return Object.values(O.claims).find(c => c.group === e.group && live(c) && n >= c.from && n <= c.to) || null;
+}
 
 function listenClaims() {
   fb.onSnapshot(fb.collection(db, 'claims'), snap => {
-    const changed = new Set();
-    snap.docChanges().forEach(ch => {
-      const data = ch.type === 'removed' ? {} : ch.doc.data();
-      for (const [id, c] of Object.entries(O.claims)) if (c.file === ch.doc.id && !data[id]) { delete O.claims[id]; changed.add(id); }
-      for (const [id, c] of Object.entries(data)) { if (!same(O.claims[id], {...c, file: ch.doc.id})) changed.add(id); O.claims[id] = {...c, file: ch.doc.id}; }
-    });
+    O.claims = Object.fromEntries(snap.docs.map(d => [d.id, d.data()]));
     if (!O.wrapped) return;
-    for (const id of changed) if (S.byId[id]) refreshRow(id);
-    if (changed.has(S.current)) onlineEditorInfo();
-    renderClaimCount();
+    renderRows();
+    onlineEditorInfo();
+    if (O.claimsOpen) renderClaims();
   });
 }
 
-async function claim(ids) {
-  const perFile = {};
-  for (const id of ids) (perFile[O.byId[id].file] ||= {})[id] = {uid: O.user.uid, n: O.name, e: O.email, t: now()};
-  const files = Object.entries(perFile);
-  for (let i = 0; i < files.length; i += 20) {
-    const batch = fb.writeBatch(db);
-    for (const [file, map] of files.slice(i, i + 20)) batch.set(ref('claims', file), map, {merge: true});
-    await batch.commit();
-  }
-}
-
-async function release(ids) {
-  const perFile = {};
-  for (const id of ids) (perFile[O.byId[id].file] ||= []).push(new fb.FieldPath(id), fb.deleteField());
-  const files = Object.entries(perFile);
-  for (let i = 0; i < files.length; i += 20) {
-    const batch = fb.writeBatch(db);
-    for (const [file, args] of files.slice(i, i + 20)) batch.update(ref('claims', file), ...args);
-    await batch.commit();
-  }
-}
-
 function claimBadge(e) {
-  const c = claimOf(e.id);
-  if (!c) return '';
+  if (!O.lineNo) return '';
+  const c = claimOf(e);
+  const no = e.group === 'story' ? '' : `<span class="badge" title="This line's number for claims">line ${fmt(O.lineNo[e.id])}</span> `;
+  if (!c) return no;
   const mine = c.uid === O.user.uid;
-  return `<span class="badge claim${mine ? ' mine' : ''}" title="Claimed by ${esc(c.n)} until ${until(c)}">${mine ? 'claimed by you' : 'claimed: ' + esc(c.n)}</span>`;
+  return `${no}<span class="badge claim${mine ? ' mine' : ''}" title="Claimed by ${esc(c.n)} until ${until(c)}">${mine ? 'claimed by you' : 'claimed: ' + esc(c.n)}</span>`;
 }
 
 function claimInfo(id) {
-  const e = S.byId[id], c = claimOf(id);
-  if (c) return c.uid === O.user.uid
-    ? `<div class="sub claim-sub">You claimed this line until ${until(c)}. <button id="claim-line" data-release>Release it</button></div>`
-    : `<div class="sub claim-sub"><b>${esc(c.n)} claimed this line</b> until ${until(c)}.${O.canReview ? ' <button id="claim-line" data-release>Release their claim</button>' : ''}</div>`;
-  return claimable(e) ? '<div class="sub claim-sub"><button id="claim-line">Claim this line</button> so the team knows you are translating it (for a week).</div>' : '';
+  if (!O.lineNo) return '';
+  const c = claimOf(S.byId[id]);
+  if (!c) return '';
+  const what = `${c.group === 'story' ? 'missions' : 'lines'} ${rangeText(c)}`;
+  return `<div class="sub claim-sub">${c.uid === O.user.uid ? 'You claimed' : `<b>${esc(c.n)} claimed</b>`} ${what} until ${until(c)}.</div>`;
 }
 
-// the toolbar: claim or release what the list shows
-function claimBar() {
-  $('.toolbar').insertAdjacentHTML('beforeend', `<div class="claim-bar">
-    <button id="claim-shown" title="Claim every untranslated or MTL line the list shows (with the filters above) that nobody else has claimed, for a week">Claim shown lines</button>
-    <button id="release-shown" title="Release your claims on the lines the list shows">Release my shown claims</button>
-    <span id="claim-count" class="muted"></span></div>`);
-  $('#status').insertAdjacentHTML('beforeend', `<option value="claim-mine">Claimed by me</option><option value="claim-others">Claimed by others</option>
-    <option value="claim-free">Untranslated or MTL, not claimed</option>`);
-  $('#claim-shown').onclick = async () => {
-    const ids = S.filtered.filter(e => claimable(e) && !claimOf(e.id)).map(e => e.id);
-    if (!ids.length) return showJob('<h3>Nothing to claim</h3><p>The list shows no untranslated or MTL lines that nobody has claimed.</p>');
-    if (!confirm(`Claim ${ids.length} untranslated or MTL line${ids.length === 1 ? '' : 's'} for a week?`)) return;
-    await claim(ids); flash(`Claimed ${fmt(ids.length)} lines`);
+// "1-10, 14" -> [[1, 10], [14, 14]]
+function parseRanges(text, max) {
+  const out = [];
+  for (const part of text.split(/[,\s]+/).filter(Boolean)) {
+    const m = /^(\d+)(?:-(\d+))?$/.exec(part);
+    if (!m) throw new Error(`"${part}" is not a number or a range like 1-10`);
+    let [a, b] = [+m[1], +(m[2] ?? m[1])];
+    if (a > b) [a, b] = [b, a];
+    if (a < 1 || b > max) throw new Error(`${part} is outside 1-${max}`);
+    out.push([a, b]);
+  }
+  if (!out.length) throw new Error('Type the numbers to claim, such as 1-10');
+  return out;
+}
+
+async function claimRanges(group, text) {
+  const max = group === 'story' ? Math.max(...O.missions) : O.groupSize[group];
+  const ranges = parseRanges(text, max);
+  const taken = [];
+  for (const [a, b] of ranges) for (const c of Object.values(O.claims)) {
+    if (c.group === group && live(c) && c.uid !== O.user.uid && a <= c.to && b >= c.from) taken.push(`${rangeText({from: Math.max(a, c.from), to: Math.min(b, c.to)})} (${c.n})`);
+  }
+  if (taken.length) throw new Error(`Already claimed by someone else: ${unit(group).toLowerCase()}s ${taken.join(', ')}. Claim around them.`);
+  const batch = fb.writeBatch(db);
+  for (const [from, to] of ranges) batch.set(fb.doc(fb.collection(db, 'claims')), {uid: O.user.uid, n: O.name, e: O.email, t: now(), group, from, to});
+  await batch.commit();
+}
+
+// ---------- the Claims tab ----------
+
+function claimsTab() {
+  const studioRenderTabs = window.renderTabs;
+  window.renderTabs = function () {
+    studioRenderTabs();
+    const b = document.createElement('button');
+    b.id = 'claims-tab'; b.className = O.claimsOpen ? 'active' : '';
+    if (O.claimsOpen) $('#tabs').querySelectorAll('button').forEach(x => x.classList.remove('active'));
+    b.innerHTML = 'Claims<small id="claims-tab-count"></small>';
+    b.onclick = () => { O.claimsOpen = true; renderTabs(); renderClaims(); };
+    $('#tabs').appendChild(b);
+    renderClaimCount();
   };
-  $('#release-shown').onclick = async () => {
-    const ids = S.filtered.filter(e => claimOf(e.id)?.uid === O.user.uid).map(e => e.id);
-    if (!ids.length) return showJob('<h3>Nothing to release</h3><p>You have no claims on the lines the list shows.</p>');
-    if (!confirm(`Release your claim on ${ids.length} line${ids.length === 1 ? '' : 's'}?`)) return;
-    await release(ids); flash(`Released ${fmt(ids.length)} lines`);
-  };
+  // any other tab closes the claims page
+  $('#tabs').addEventListener('click', ev => {
+    const b = ev.target.closest('button');
+    if (b && b.id !== 'claims-tab' && O.claimsOpen) { O.claimsOpen = false; $('#claims-page').hidden = true; $('#app').hidden = false; }
+  }, true);
+  $('main').insertAdjacentHTML('beforeend', '<section id="claims-page" class="claims-page" hidden></section>');
+  if (S.config) renderTabs();
 }
 
 function renderClaimCount() {
-  const all = Object.keys(O.claims).filter(claimOf), mine = all.filter(id => O.claims[id].uid === O.user.uid).length;
-  $('#claim-count').textContent = all.length ? `${fmt(all.length)} lines claimed${mine ? `, ${fmt(mine)} by you` : ''}` : '';
+  const n = Object.values(O.claims).filter(live).length;
+  const el = $('#claims-tab-count');
+  if (el) el.textContent = n ? `${fmt(n)} active` : 'none';
 }
 
-function claimFilter(status) {
-  if (!status.startsWith('claim-')) return null;
-  return e => {
-    const c = claimOf(e.id);
-    return status === 'claim-mine' ? c?.uid === O.user.uid : status === 'claim-others' ? c && c.uid !== O.user.uid : !c && claimable(e);
+function claimRows(list) {
+  return list.length ? `<ul class="claim-list">${list.map(([cid, c]) => `<li><b>${esc(rangeText(c))}</b> · ${esc(c.n)}, until ${until(c)}
+    ${c.uid === O.user.uid ? `<button data-renew="${cid}" title="Keep it for another week from today">Renew</button>` : ''}
+    ${c.uid === O.user.uid || O.canReview ? `<button data-release="${cid}">Release</button>` : ''}</li>`).join('')}</ul>` : '<p class="muted">Nothing claimed.</p>';
+}
+
+function renderClaims() {
+  $('#app').hidden = true;
+  const page = $('#claims-page'); page.hidden = false;
+  const active = Object.entries(O.claims).filter(([, c]) => live(c)).sort(([, a], [, b]) => a.from - b.from);
+  const of = g => active.filter(([, c]) => c.group === g);
+  const translatedIn = list => list.filter(e => translated(e) && !(S.project[e.id] || {}).mtl).length;
+  const story = S.entries.filter(e => e.group === 'story' && !isHidden(e));
+  const missionRows = O.missions.map(m => {
+    const lines = story.filter(e => +e.mission === m), c = claimOf({group: 'story', mission: m});
+    const title = lines.find(e => e.mission_title)?.mission_title || '';
+    return `<tr><td>${m}</td><td>${esc(title)}</td><td>${fmt(lines.length)}</td><td>${fmt(lines.filter(e => (S.project[e.id] || {}).mtl).length)}</td>
+      <td>${c ? `<span class="badge claim${c.uid === O.user.uid ? ' mine' : ''}">${c.uid === O.user.uid ? 'you' : esc(c.n)}</span> until ${until(c)}` : ''}</td></tr>`;
+  }).join('');
+  const others = S.config.groups.filter(([k]) => k !== 'story');
+  page.innerHTML = `<h2>Claims</h2>
+    <p>Claim what you are going to translate so nobody else starts on it. A claim lasts a week (Renew keeps it another week) and shows on
+      every claimed line as a purple tag. ${O.canReview ? 'As a reviewer you can release anyone\'s claim.' : ''}</p>
+    <div class="claim-box"><h3>Story: by mission</h3>
+      <form data-group="story" class="claim-form"><label>Missions to claim<input placeholder="for example 1-10, 14" autocomplete="off"></label>
+        <button class="primary">Claim</button><span class="claim-error bad"></span></form>
+      ${claimRows(of('story'))}
+      <details><summary>All ${O.missions.length} missions</summary><table class="claim-table"><thead><tr><th>Mission</th><th>Title</th><th>Lines</th><th>MTL</th><th>Claimed</th></tr></thead>
+        <tbody>${missionRows}</tbody></table></details></div>
+    ${others.map(([k, label]) => `<div class="claim-box"><h3>${esc(label)}: by line</h3>
+      <p class="muted">${fmt(O.groupSize[k] || 0)} lines. Each line's number shows on its row in the ${esc(label)} tab ("line 12"); lines not in the game keep their numbers too, so some numbers are skipped in the list.</p>
+      <form data-group="${k}" class="claim-form"><label>Lines to claim<input placeholder="for example 1-100" autocomplete="off"></label>
+        <button class="primary">Claim</button><span class="claim-error bad"></span></form>
+      ${claimRows(of(k))}</div>`).join('')}`;
+  for (const f of page.querySelectorAll('.claim-form')) f.onsubmit = async ev => {
+    ev.preventDefault();
+    const err = f.querySelector('.claim-error'); err.textContent = '';
+    try { await claimRanges(f.dataset.group, f.querySelector('input').value); flash('Claimed'); }
+    catch (e) { err.textContent = e.message; }
   };
+  for (const b of page.querySelectorAll('[data-release]')) b.onclick = () => fb.deleteDoc(ref('claims', b.dataset.release)).catch(e => alert(e.message));
+  for (const b of page.querySelectorAll('[data-renew]')) b.onclick = () => fb.updateDoc(ref('claims', b.dataset.renew), {t: now()}).catch(e => alert(e.message));
 }
 
 // ---------- who is online ----------

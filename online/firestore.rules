@@ -53,9 +53,14 @@ service cloud.firestore {
                         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seen']));
       allow delete: if isReviewer() || (isEditor() && resource.data.uid == request.auth.uid && resource.data.status == 'pending');
     }
-    // claims/{file}: who is translating which lines (each claim lasts a week; the page ignores older ones)
-    match /claims/{file} {
-      allow read, write: if isEditor();
+    // claims/{id}: someone's missions or lines for a week (the page ignores older ones); its owner renews or
+    // releases it, and reviewers can release anyone's
+    match /claims/{id} {
+      allow read: if isEditor();
+      allow create: if isEditor() && request.resource.data.uid == request.auth.uid && request.resource.data.e == me();
+      allow update: if isEditor() && resource.data.uid == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['t']);
+      allow delete: if isReviewer() || (isEditor() && resource.data.uid == request.auth.uid);
     }
     match /history/{item} {
       allow read: if isEditor();
