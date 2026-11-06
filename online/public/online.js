@@ -82,9 +82,7 @@ async function signedIn(user) {
   try {
     access = await fb.getDoc(ref('meta', 'access'));
   } catch {
-    showGate(`<h2>No access yet</h2><p>You are signed in as <b>${esc(O.email)}</b>, which is not on the team list.
-      Ask the team admin to add this address under <b>Team</b>, then reload this page.</p><p><button id="out">Use another account</button></p>`);
-    $('#out').onclick = () => fb.signOut(auth);
+    askForAccess();
     return;
   }
   if (!access.exists()) {
@@ -105,9 +103,81 @@ async function signedIn(user) {
   listen();
 }
 
+// ---------- asking to join: accessRequests/{uid}, answered by an admin from their inbox ----------
+
+function askForAccess() {
+  const mine = ref('accessRequests', O.user.uid);
+  fb.onSnapshot(mine, snap => {
+    const r = snap.exists() ? snap.data() : null;
+    if (r?.status === 'approved') { location.reload(); return; }
+    const out = '<button id="out">Use another account</button>';
+    if (r?.status === 'pending') {
+      showGate(`<h2>Request sent</h2><p>You asked to join as <b>${r.role === 'reviewers' ? 'a reviewer' : 'an editor'}</b>
+        (signed in as <b>${esc(O.email)}</b>). The team admin sees it in their inbox. This page opens the script by itself once they approve it.</p>
+        <p><button id="cancel-request">Cancel the request</button> ${out}</p>`);
+      $('#cancel-request').onclick = () => fb.deleteDoc(mine);
+    } else {
+      showGate(`<h2>No access yet</h2><p>You are signed in as <b>${esc(O.email)}</b>, which is not on the team list.
+        ${r?.status === 'declined' ? `<br><b>The admin declined your last request${r.answer ? `: "${esc(r.answer)}"` : ''}.</b> You can ask again.` : ''}</p>
+        <form id="request-form" class="request-form">
+          <label>Role you would like<select id="request-role"><option value="editors">Editor: suggest changes for review</option>
+            <option value="reviewers">Reviewer: review suggestions and edit directly</option></select></label>
+          <label>Message to the admin (optional)<textarea id="request-msg" rows="3" placeholder="Who you are, what you would like to work on"></textarea></label>
+          <p><button class="primary">Request access</button> ${out}</p></form>`);
+      $('#request-form').onsubmit = async ev => {
+        ev.preventDefault();
+        await fb.setDoc(mine, {uid: O.user.uid, e: O.email, n: O.name, role: $('#request-role').value, msg: $('#request-msg').value.trim(),
+          status: 'pending', t: now()}).catch(err => alert(err.message));
+      };
+    }
+    $('#out').onclick = () => fb.signOut(auth);
+  }, () => {});
+}
+
+// admins: requests waiting for an answer
+function listenRequests() {
+  if (!O.isAdmin) return;
+  fb.onSnapshot(fb.query(fb.collection(db, 'accessRequests'), fb.where('status', '==', 'pending')), snap => {
+    O.requests = snap.docs.map(d => ({ref: d.ref, ...d.data()}));
+    renderCounts();
+  }, () => {});
+}
+
+function requestsHtml() {
+  const list = (O.isAdmin && O.requests) || [];
+  if (!list.length) return '';
+  return `<h4>Asking to join the team</h4><div class="merge-list">${list.map((r, i) => `<div class="merge-item unseen">
+    <div class="merge-head"><b>${esc(r.n)} <code>${esc(r.e)}</code></b><span>${esc(when(r.t))}</span></div>
+    ${r.msg ? `<p class="review-said">${esc(r.msg)}</p>` : ''}
+    <div class="team-add"><label>Role<select id="q${i}-role">${ROLES.slice().reverse().map(([k, w]) => `<option value="${k}"${k === r.role ? ' selected' : ''}>${w}</option>`).join('')}</select></label>
+      <label>Note (optional, shown if you decline)<input id="q${i}-note"></label>
+      <button id="q${i}-yes" class="primary">Approve</button><button id="q${i}-no">Decline</button></div></div>`).join('')}</div>`;
+}
+
+function wireRequests() {
+  ((O.isAdmin && O.requests) || []).forEach((r, i) => {
+    $(`#q${i}-yes`).onclick = async () => {
+      const role = $(`#q${i}-role`).value, a = O.access;
+      const next = Object.fromEntries(ROLES.map(([k]) => [k, (a[k] || []).filter(x => x !== r.e)]));
+      next[role].push(r.e);
+      try {
+        await fb.updateDoc(ref('meta', 'access'), 'admins', next.admins, 'reviewers', next.reviewers, 'editors', next.editors,
+                           new fb.FieldPath('names', r.e), r.n);
+        await fb.updateDoc(r.ref, {status: 'approved', role, answeredBy: O.name, answeredAt: now()});
+      } catch (err) { alert(err.message); }
+      $('#inbox').click();
+    };
+    $(`#q${i}-no`).onclick = async () => {
+      await fb.updateDoc(r.ref, {status: 'declined', answer: $(`#q${i}-note`).value.trim(), answeredBy: O.name, answeredAt: now()});
+      $('#inbox').click();
+    };
+  });
+}
+
 // ---------- live data from the database ----------
 
 function listen() {
+  listenRequests();
   fb.onSnapshot(ref('meta', 'access'), snap => {
     if (!snap.exists()) return;
     O.access = snap.data();
@@ -985,8 +1055,9 @@ function renderCounts() {
   const review = waiting.filter(x => x.uid !== O.user?.uid).length;
   $('#review').textContent = review ? `Review (${fmt(review)})` : 'Review';
   $('#review').classList.toggle('primary', !!review);
-  $('#inbox').textContent = unseen ? `Inbox (${fmt(unseen)} new)` : mineWaiting ? `Inbox (${fmt(mineWaiting)} waiting)` : 'Inbox';
-  $('#inbox').classList.toggle('primary', !!unseen);
+  const asks = (O.isAdmin && O.requests || []).length;
+  $('#inbox').textContent = unseen + asks ? `Inbox (${fmt(unseen + asks)} new)` : mineWaiting ? `Inbox (${fmt(mineWaiting)} waiting)` : 'Inbox';
+  $('#inbox').classList.toggle('primary', !!(unseen + asks));
 }
 
 function suggestionTitle(x) {
@@ -1110,7 +1181,8 @@ $('#inbox').onclick = () => {
   const done = [...(O.mine || [])].sort((a, b) => (b.reviewedAt?.toMillis?.() || 0) - (a.reviewedAt?.toMillis?.() || 0)).slice(0, 150);
   const values = (x, change) => x.kind === 'face' ? faceImg(change.value) : x.kind === 'credits' ? textBox(creditsSummary(change.value))
     : Object.entries(change).map(([f, v]) => `${FIELD_WORDS[f] ? `<small>${FIELD_WORDS[f]}</small>` : ''}${textBox(String(shown(f, v)))}`).join('');
-  showJob(`<h3>Inbox</h3>
+  showJob(`<h3>Inbox</h3>${requestsHtml()}
+    ${O.isAdmin && O.requests?.length ? '<h4>Your suggestions</h4>' : ''}
     ${done.length ? `<div class="merge-list">${done.map(x => `<div class="merge-item${x.seen ? '' : ' unseen'}">
       <div class="merge-head"><b>${suggestionTitle(x)}</b><span><span class="badge status-${x.status}">${STATUS_WORDS[x.status] || esc(x.status)}</span>
         ${esc(x.reviewer?.n || '')}, ${esc(when(x.reviewedAt))}</span></div>
@@ -1120,6 +1192,7 @@ $('#inbox').onclick = () => {
     ${waiting.length ? `<p class="muted">${fmt(waiting.length)} of your suggestion${waiting.length === 1 ? ' is' : 's are'} waiting for review:
       ${waiting.slice(0, 40).map(([, x]) => suggestionTitle(x)).join(', ')}${waiting.length > 40 ? '…' : ''}</p>` : ''}`);
   wireGoto();
+  wireRequests();
   for (const x of done) if (!x.seen) fb.updateDoc(x.ref, {seen: true}).catch(() => {});
 };
 
@@ -1139,6 +1212,14 @@ function numberLines() {
   O.lineNo = {}; O.groupSize = {};
   for (const e of S.entries) if (e.group !== 'story') O.lineNo[e.id] = O.groupSize[e.group] = (O.groupSize[e.group] || 0) + 1;
   O.missions = [...new Set(S.entries.filter(e => e.group === 'story').map(e => +e.mission))].sort((a, b) => a - b);
+}
+// A story mission's English name: the game's mission name list (MsgLabels_mission_name line N is mission N,
+// "M-41«g:24»Mopping Up") as the script has it now; [in-game label, name]
+function missionName(m) {
+  const id = `MsgLabels_mission_name_msg_${String(m).padStart(3, '0')}`;
+  const text = (S.project[id] || {}).en || S.byId[id]?.jp || '';
+  const [label, name] = text.includes('»') ? [text.split('«')[0], text.split('»').slice(1).join('»')] : ['', text];
+  return [label, name.replace(/«[^»]*»/g, '').trim()];
 }
 const numberOf = e => e.group === 'story' ? +e.mission : O.lineNo[e.id];
 function claimOf(e) {
@@ -1248,7 +1329,12 @@ function renderClaimCount() {
 }
 
 function claimRows(list) {
-  return list.length ? `<ul class="claim-list">${list.map(([cid, c]) => `<li><b>${esc(rangeText(c))}</b> · ${esc(c.n)}, until ${until(c)}
+  const names = c => {
+    if (c.group !== 'story') return '';
+    const all = []; for (let m = c.from; m <= c.to; m++) all.push(missionName(m)[1]);
+    return ` <span class="muted">(${esc(all.slice(0, 4).join(', '))}${all.length > 4 ? `, … ${esc(all[all.length - 1])}` : ''})</span>`;
+  };
+  return list.length ? `<ul class="claim-list">${list.map(([cid, c]) => `<li><b>${esc(rangeText(c))}</b>${names(c)} · ${esc(c.n)}, until ${until(c)}
     ${c.uid === O.user.uid ? `<button data-renew="${cid}" title="Keep it for another week from today">Renew</button>` : ''}
     ${c.uid === O.user.uid || O.canReview ? `<button data-release="${cid}">Release</button>` : ''}</li>`).join('')}</ul>` : '<p class="muted">Nothing claimed.</p>';
 }
@@ -1262,8 +1348,8 @@ function renderClaims() {
   const story = S.entries.filter(e => e.group === 'story' && !isHidden(e));
   const missionRows = O.missions.map(m => {
     const lines = story.filter(e => +e.mission === m), c = claimOf({group: 'story', mission: m});
-    const title = lines.find(e => e.mission_title)?.mission_title || '';
-    return `<tr><td>${m}</td><td>${esc(title)}</td><td>${fmt(lines.length)}</td><td>${fmt(lines.filter(e => (S.project[e.id] || {}).mtl).length)}</td>
+    const [label, title] = missionName(m);
+    return `<tr><td>${m}</td><td>${esc(title)}${label ? ` <span class="muted">${esc(label)} in game</span>` : ''}</td><td>${fmt(lines.length)}</td><td>${fmt(lines.filter(e => (S.project[e.id] || {}).mtl).length)}</td>
       <td>${c ? `<span class="badge claim${c.uid === O.user.uid ? ' mine' : ''}">${c.uid === O.user.uid ? 'you' : esc(c.n)}</span> until ${until(c)}` : ''}</td></tr>`;
   }).join('');
   const others = S.config.groups.filter(([k]) => k !== 'story');
@@ -1274,7 +1360,7 @@ function renderClaims() {
       <form data-group="story" class="claim-form"><label>Missions to claim<input placeholder="for example 1-10, 14" autocomplete="off"></label>
         <button class="primary">Claim</button><span class="claim-error bad"></span></form>
       ${claimRows(of('story'))}
-      <details><summary>All ${O.missions.length} missions</summary><table class="claim-table"><thead><tr><th>Mission</th><th>Title</th><th>Lines</th><th>MTL</th><th>Claimed</th></tr></thead>
+      <details open><summary>All ${O.missions.length} missions</summary><table class="claim-table"><thead><tr><th>Mission</th><th>Title</th><th>Lines</th><th>MTL</th><th>Claimed</th></tr></thead>
         <tbody>${missionRows}</tbody></table></details></div>
     ${others.map(([k, label]) => `<div class="claim-box"><h3>${esc(label)}: by line</h3>
       <p class="muted">${fmt(O.groupSize[k] || 0)} lines. Each line's number shows on its row in the ${esc(label)} tab ("line 12"); lines not in the game keep their numbers too, so some numbers are skipped in the list.</p>

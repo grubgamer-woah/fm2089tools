@@ -62,6 +62,20 @@ service cloud.firestore {
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['t']);
       allow delete: if isReviewer() || (isEditor() && resource.data.uid == request.auth.uid);
     }
+    // accessRequests/{uid}: someone not on the team asks to join; an admin approves (adding them under
+    // meta/access) or declines. The asker sees only their own request.
+    match /accessRequests/{uid} {
+      allow get: if signedIn() && uid == request.auth.uid;
+      allow read: if isAdmin();
+      allow create: if signedIn() && uid == request.auth.uid && request.resource.data.uid == uid
+                    && request.resource.data.e == me() && request.resource.data.status == 'pending'
+                    && request.resource.data.role in ['editors', 'reviewers'];
+      allow update: if isAdmin()
+                    || (signedIn() && uid == request.auth.uid && resource.data.status != 'pending'
+                        && request.resource.data.status == 'pending' && request.resource.data.e == me()
+                        && request.resource.data.role in ['editors', 'reviewers']);
+      allow delete: if isAdmin() || (signedIn() && uid == request.auth.uid && resource.data.status == 'pending');
+    }
     match /history/{item} {
       allow read: if isEditor();
       allow create: if isEditor() && request.resource.data.e == me();

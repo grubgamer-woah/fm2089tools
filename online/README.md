@@ -40,9 +40,10 @@ page reads about 160 documents, and each saved edit is one or two writes.
 ## Who can get in
 
 Only Google accounts on the team list. The first person to sign in on a new database is offered the
-admin role; after that, admins add or remove people under **Team**. The rules in `firestore.rules` are
-what enforce this, so the page itself holds nothing secret and the settings in `firebase-config.js` are
-safe to share.
+admin role. Anyone else who signs in gets a "Request access" form (editor or reviewer, with a message);
+the request shows in the admins' **Inbox**, where they approve it (picking the role) or decline it with a
+note. Admins can also add or remove people under **Team**. The rules in `firestore.rules` enforce this, so
+the page holds nothing secret and the settings in `firebase-config.js` are safe to share.
 
 ## Setting it up (once)
 
