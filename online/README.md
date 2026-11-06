@@ -31,11 +31,15 @@ safe to share.
 
 1. Go to https://console.firebase.google.com, click **Create a project** and give it a name. Google
    Analytics is not needed.
-2. **Build > Authentication > Get started > Sign-in method > Google**: turn it on and save.
-3. **Build > Firestore Database > Create database**: pick a location near the team and **production mode**.
-4. **Project settings** (gear icon) **> Your apps > Web** (`</>`): register an app (any nickname, no
-   Hosting checkbox needed). Copy the `apiKey`, `authDomain`, `projectId` and `appId` it shows into
-   `public/firebase-config.js`.
+2. Turn on Google sign-in: open
+   `https://console.firebase.google.com/project/<project-id>/authentication/providers`, click
+   **Get started** if it shows, then **Google**, switch it on and save. (The console's menus move
+   around; these links go straight to the page.)
+3. Create the database: open `https://console.firebase.google.com/project/<project-id>/firestore`,
+   click **Create database**, pick a location near the team and **production mode**.
+4. Register a web app: open `https://console.firebase.google.com/project/<project-id>/settings/general`,
+   add a **Web** app (`</>`, any nickname, no Hosting checkbox needed), and copy the `apiKey`,
+   `authDomain`, `projectId` and `appId` it shows into `public/firebase-config.js`.
 5. Install Node.js (LTS) from https://nodejs.org if it is not installed, then double-click `deploy.cmd`.
    It asks for the project id, opens a browser to sign in to Firebase, and uploads the page and the
    database rules. At the end it prints the page's address, `https://<project-id>.web.app`.
