@@ -111,3 +111,12 @@ dialog h3{margin:0 0 10px}
 .team-add input{min-width:260px}
 .gate-buttons{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 @media (max-width:640px){header,.basebar{padding-left:16px;padding-right:16px}main{padding:14px 16px}}
+.row.has-face{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;align-items:start}
+.face{width:40px;height:40px;object-fit:contain;object-position:center top;image-rendering:pixelated;background:#10191a;border:1px solid var(--line);border-radius:4px;display:block}
+.face.big{width:64px;height:64px}
+.face.no-face{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:16px;font-weight:600}
+.face.big.no-face{font-size:22px}
+.mtlbar{display:flex;align-items:center;gap:12px;padding:7px 28px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}
+.mtlbar .meter{flex:0 0 220px;height:8px;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--panel)}
+#mtl-fill{height:100%;width:0;background:var(--orange)}
+.mtlbar[hidden]{display:none}

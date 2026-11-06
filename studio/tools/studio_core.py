@@ -4,6 +4,7 @@ Command line build (same as the Build button):
     python studio_core.py build [--project workspace/project.json]
 """
 import argparse
+import base64
 import csv
 import datetime as dt
 import hashlib
@@ -565,8 +566,20 @@ def web_pack(catalog, project):
         'glyphs': [font.advance(g) for g in range(font.count)],
         'entries': entries,
         'text': {k: {f: v[f] for f in ('en', 'note', 'mtl', 'edited', 'done') if v.get(f)} for k, v in project.entries.items()},
-        'speakers': dict(project.speakers), 'faces': dict(project.faces),
+        'speakers': dict(project.speakers), 'faces': dict(project.faces), 'default_faces': portraits.SPEAKER_FACES,
+        'portraits': web_portraits(catalog, project),
     }
+
+
+def web_portraits(catalog, project):
+    """The small face pictures of the portraits speakers use (base64 PNGs), for the online editor's speaker faces."""
+    used = {f for f in {**portraits.SPEAKER_FACES, **project.faces}.values() if f and f != '-'}
+    out = {}
+    for face in sorted(used):
+        data = catalog.portraits.image(face) if face in catalog.portraits.paths else None
+        if data:
+            out[face] = base64.b64encode(data).decode('ascii')
+    return out
 
 
 def export_web_pack(catalog, project, folder=EXPORTS):

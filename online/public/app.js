@@ -99,6 +99,8 @@ function startListening() {
     S.meta = snap.data();
     S.layout = JSON.parse(S.meta.layout);
     S.chars = S.layout.chars; S.glyphs = S.layout.glyphs;
+    S.faces = JSON.parse(S.meta.faces || '{}'); S.portraits = JSON.parse(S.meta.portraits || '{}');
+    if (S.loaded) renderRows();
     if (!S.listening) listenFiles();
   });
   fb.onSnapshot(ref('meta', 'speakers'), snap => {
@@ -130,7 +132,7 @@ function listenFiles() {
       } else changed.add('*');
     });
     if (changed.has('*') || !S.loaded) buildIndex();
-    else { applyFilter(true); if (S.current && changed.has(S.current)) refreshEditor(false); }
+    else { applyFilter(true); progress(); renderTabs(); if (S.current && changed.has(S.current)) refreshEditor(false); }
     const mine = snap.metadata.hasPendingWrites;
     $('#saved').textContent = mine ? 'Saving…' : 'All changes saved';
   });
@@ -147,7 +149,8 @@ function buildIndex() {
   S.byId = Object.fromEntries(all.map(e => [e.id, {e, doc: S.files[e.fileDoc]}]));
   if (!all.length) return;
   $('#gate').hidden = true; $('#app').hidden = false; $('#tabs').hidden = false;
-  $('#progress').textContent = `Script uploaded ${esc(S.meta.made || '')}${S.meta.uploaded ? ' by ' + S.meta.uploaded.n : ''}`;
+  $('#base').textContent = `Signed in as ${S.name} · script uploaded ${S.meta.made || ''}${S.meta.uploaded ? ' by ' + S.meta.uploaded.n : ''}`;
+  progress();
   if (!S.loaded) {
     S.loaded = true;
     const hash = new URLSearchParams(location.hash.slice(1));
@@ -164,6 +167,13 @@ const docOf = id => S.byId[id].doc;
 const textOf = (id, field = 'en') => (docOf(id)[field] || {})[id] || '';
 const seedOf = (id, field = 'en') => (docOf(id)[field === 'en' ? 'seed' : 'seedNote'] || {})[id] || '';
 const speakerEn = jp => (S.speakers.en || {})[jp] || S.layout.default_speakers[jp] || '';
+function faceImg(jp, cls = 'face') {
+  let face = S.faces[jp] || (S.layout.default_faces || {})[jp] || '';
+  if (face === '-') face = '';
+  if (face && S.portraits[face]) return `<img class="${cls}" src="data:image/png;base64,${S.portraits[face]}" alt="" title="${esc(face)}">`;
+  const letter = (speakerEn(jp) || jp).replace(/«[^»]*»/g, '').charAt(0) || '?';
+  return `<span class="${cls} no-face" title="No portrait">${esc(letter)}</span>`;
+}
 const changedOnline = id => textOf(id) !== seedOf(id) || textOf(id, 'note') !== seedOf(id, 'note');
 
 // ---------- length check (same rules as the desktop Studio) ----------
@@ -208,12 +218,26 @@ function check(e, text) {
 
 // ---------- list ----------
 
+// Same totals as the desktop Studio: text the game never shows is left out; text the game already writes in
+// English or fills in itself counts as translated
+const translated = e => !!textOf(e.id) || !!e.english || !!e.codes;
+function progress() {
+  const all = S.entries.filter(e => !e.unused), t = all.filter(translated).length;
+  $('#progress').textContent = `${fmt(t)} of ${fmt(all.length)} strings translated (${(100 * t / all.length).toFixed(1)}%)`;
+  $('#progress').title = `Leaves out ${fmt(S.entries.length - all.length)} strings that are not shown in game.`;
+  const typed = all.filter(e => textOf(e.id)), mtl = typed.filter(e => (docOf(e.id).mtl || {})[e.id]).length;
+  const online = all.filter(e => changedOnline(e.id)).length, pct = typed.length ? 100 * mtl / typed.length : 0;
+  $('#mtl-text').textContent = `MTL ${pct.toFixed(1)}% · ${fmt(mtl)} of ${fmt(typed.length)} translated strings · ${fmt(online)} changed online since the last upload`;
+  $('#mtl-fill').style.width = pct + '%';
+  $('#mtlbar').hidden = false;
+}
+
 function visible(e) { return !($('#hide-unused').checked && e.unused); }
 
 function renderTabs() {
   const counts = {};
-  for (const e of S.entries) if (visible(e) && !e.codes && (e.body || '').trim()) {
-    const c = counts[e.group] ||= [0, 0]; c[0]++; if (textOf(e.id)) c[1]++;
+  for (const e of S.entries) if (visible(e)) {
+    const c = counts[e.group] ||= [0, 0]; c[0]++; if (translated(e)) c[1]++;
   }
   $('#tabs').innerHTML = S.layout.groups.map(([k, label]) =>
     `<button data-g="${esc(k)}" class="${k === S.group ? 'active' : ''}">${esc(label)}<small>${fmt((counts[k] || [0, 0])[1])}/${fmt((counts[k] || [0])[0])}</small></button>`).join('');
@@ -273,11 +297,11 @@ function renderRows() {
     const badges = [changedOnline(e.id) ? '<span class="badge person">changed online</span>' : '',
                     (docOf(e.id).mtl || {})[e.id] ? '<span class="badge warn">MTL</span>' : '',
                     e.unused ? `<span class="badge hidden">${esc(e.unused)}</span>` : ''].join(' ');
-    html += `<button class="row ${e.id === S.current ? 'active' : ''}" data-id="${esc(e.id)}" role="listitem">
-      <div class="meta"><span>${esc(e.file)} #${e.index} <span class="here">${who}</span></span><span>${badges}</span></div>
+    html += `<button class="row ${e.speaker ? 'has-face' : ''} ${e.id === S.current ? 'active' : ''}" data-id="${esc(e.id)}" role="listitem">
+      ${e.speaker ? faceImg(e.speaker) + '<div class="row-text">' : ''}<div class="meta"><span>${esc(e.file)} #${e.index} <span class="here">${who}</span></span><span>${badges}</span></div>
       ${e.speaker ? `<div class="speaker">${esc(speakerEn(e.speaker) || e.speaker)}</div>` : ''}
       <div class="jp">${esc(e.body)}</div>
-      <div class="en ${en ? '' : 'none'}">${en ? esc(en) : (e.english ? 'already English in game' : e.codes ? 'filled in by the game' : 'not translated')}</div></button>`;
+      <div class="en ${en ? '' : 'none'}">${en ? esc(en) : (e.english ? 'already English in game' : e.codes ? 'filled in by the game' : 'not translated')}</div>${e.speaker ? '</div>' : ''}</button>`;
   }
   $('#rows').innerHTML = html || '<p class="empty-editor" style="padding:14px">Nothing matches.</p>';
   for (const b of $('#rows').querySelectorAll('.row')) b.onclick = () => select(b.dataset.id);
@@ -316,7 +340,7 @@ function renderEditor() {
     <h2>${esc(id)}</h2>
     <div class="sub">${esc(scene)}${esc(e.file)} #${e.index}</div>
     ${e.art ? `<div class="sub art">${esc(e.art)}</div>` : ''}
-    ${e.speaker ? `<div class="speaker-bar"><span>Speaker</span><b>${esc(e.speaker)}</b><label class="inline">English name (every line)<input id="sp-en" value="${esc(speakerEn(e.speaker))}"></label></div>` : ''}
+    ${e.speaker ? `<div class="speaker-bar">${faceImg(e.speaker, 'face big')}<span>Speaker</span><b>${esc(e.speaker)}</b><label class="inline">English name (every line)<input id="sp-en" value="${esc(speakerEn(e.speaker))}"></label></div>` : ''}
     <div class="jp-box">${esc(e.body)}</div>
     <div class="field"><label>English<textarea id="en" spellcheck="true">${esc(S.sync.en)}</textarea></label>
       <div class="widths" id="widths"></div><ul class="msgs" id="msgs"></ul><div id="live-en"></div></div>
@@ -556,8 +580,8 @@ async function uploadPack(pack, status) {
   }
   await fb.setDoc(ref('meta', 'speakers'), {en, seed: pack.speakers, by: sp.by || {}});
   const layout = {groups: pack.groups, dialogue_groups: pack.dialogue_groups, screen_width: pack.screen_width, hero: pack.hero,
-                  default_speakers: pack.default_speakers, chars: pack.chars, glyphs: pack.glyphs};
-  await fb.setDoc(ref('meta', 'script'), {made: pack.made, layout: JSON.stringify(layout), faces: JSON.stringify(pack.faces || {}),
+                  default_speakers: pack.default_speakers, default_faces: pack.default_faces || {}, chars: pack.chars, glyphs: pack.glyphs};
+  await fb.setDoc(ref('meta', 'script'), {made: pack.made, layout: JSON.stringify(layout), faces: JSON.stringify(pack.faces || {}), portraits: JSON.stringify(pack.portraits || {}),
                                           uploaded: {n: S.name, e: S.email, t: fb.serverTimestamp()}});
   return kept;
 }
