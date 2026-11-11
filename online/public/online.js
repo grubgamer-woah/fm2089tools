@@ -303,17 +303,18 @@ function listenScript() {
     renderCounts();
   });
   fb.onSnapshot(fb.collection(db, 'files'), snap => {
-    const changed = new Set();
+    const changed = new Set(), reviewedChanged = new Set();
     snap.docChanges().forEach(ch => {
       if (ch.type === 'removed') { delete O.files[ch.doc.id]; return; }
       const data = ch.doc.data(), old = O.files[ch.doc.id];
       O.files[ch.doc.id] = data;
       for (const e of data.entries) O.byId[e.id] = {e, file: ch.doc.id};
       if (old) for (const e of data.entries) if (FIELDS.some(f => (old[f] || {})[e.id] !== (data[f] || {})[e.id])) changed.add(e.id);
+      if (old) for (const e of data.entries) if (!(old.reviewed || {})[e.id] !== !(data.reviewed || {})[e.id]) reviewedChanged.add(e.id);
     });
     $('#saved').textContent = snap.metadata.hasPendingWrites ? 'Saving…' : $('#saved').textContent;
     if (first) { first = false; startStudio(); return; }
-    if (O.started) liveEntries(changed);
+    if (O.started) { liveEntries(changed); liveReviewed(reviewedChanged); }
   });
 }
 
@@ -388,7 +389,7 @@ function wrapStudio() {
   claimsTab();
   // the Studio writes "ROM: …" there once its page has loaded; say who is signed in instead
   const base = () => { $('#base').innerHTML = `Signed in as ${meLink()} · script uploaded ${esc(O.meta.made)}${O.meta.uploaded ? ' by ' + esc(nm(O.meta.uploaded)) : ''}`; };
-  const wait = setInterval(() => { if (S.entries.length) { clearInterval(wait); base(); numberLines(); listenClaims(); listenReviewed(); } }, 200);
+  const wait = setInterval(() => { if (S.entries.length) { clearInterval(wait); base(); numberLines(); listenClaims(); reviewSetup().catch(err => console.warn('review setup', err.message)); reviewMeter(); } }, 200);
   base();
   O.showBase = base;
   renderPresence();
@@ -439,6 +440,9 @@ function onlineEditorInfo() {
     ${others.length ? ` · <b>Also on this line now: ${others.map(esc).join(', ')}</b>` : ''}
     ${en !== seed ? ` · <a href="#" id="show-seed">Last upload from the Studio</a>` : ''} · <a href="#" id="line-history">History</a></div>
     ${lineSuggestions(id)}${claimInfo(id)}</div>`);
+  // no Done box online (the team asked); it stays in the page hidden because the Studio's save reads it
+  $('#done')?.closest('label').style.setProperty('display', 'none');
+  if (id !== O.lastOpened) { O.lastOpened = id; autoReview(id); }
   reviewedBox(id);
   lockEditor(id);
   for (const b of document.querySelectorAll('[data-withdraw]')) b.onclick = () => withdraw(b.dataset.withdraw);
@@ -654,7 +658,7 @@ async function saveEntry(data) {
   const after = projectSet(viewOf(id), {en: data.en, note: data.note, done: data.done, mtl: data.mtl, edited: data.edited, hidden});
   if (!O.canReview) { await suggestEntry(id, after); return {ok: true, entry: after, ...res}; }
   const args = [];
-  if (entryUpdates(id, after, args)) await fb.updateDoc(ref('files', O.byId[id].file), ...args);
+  if (entryUpdates(id, after, args)) { await fb.updateDoc(ref('files', O.byId[id].file), ...args); autoReview(id); }
   return {ok: true, entry: after, ...res};
 }
 
@@ -1235,6 +1239,7 @@ async function decide(sid, x, i, accept) {
   }
   batch.update(ref('suggestions', sid), {...reviewed, status: modified ? 'modified' : 'accepted', final});
   await batch.commit();
+  if (x.kind === 'entry') autoReview(x.id);
 }
 
 // ---------- your inbox: what happened to your suggestions ----------
@@ -1299,60 +1304,82 @@ function lockedBy(id) {
   const c = O.lineNo && S.byId[id] ? claimOf(S.byId[id]) : null;
   return c && c.uid !== O.user.uid && !O.isAdmin ? c : null;
 }
-// ---------- "Reviewed" box on story lines (online only): meta/reviewed ids.{id} = who ticked it ----------
-// Reviewers and admins tick it; editors see it greyed out. It is not part of the script .md export.
+// ---------- "Reviewed" box on every line (online only) ----------
+// A tick lives in its file's document: files/{file}.reviewed.{id} = {e, t} (who, shown as their username, and when).
+// Reviewers and admins tick it; editors see it greyed out. Opening a line or changing it ticks it for reviewers and
+// admins. It is not part of the script .md export. meta/reviewed only remembers which one-time steps have run.
 
-O.reviewed = {};
-const isReviewed = id => !!O.reviewed[id];
-// the story lines the Studio lists by default (not hidden, not empty): what the review meter counts
-const storyLines = () => S.entries.filter(e => e.group === 'story' && !isHidden(e) && (e.jp.trim() || (S.project[e.id] || {}).en !== undefined));
+const reviewedOf = id => { const f = O.byId[id]?.file; return f ? (O.files[f]?.reviewed || {})[id] : undefined; };
+const isReviewed = id => !!reviewedOf(id);
+const mark = () => ({e: O.email, t: now()});
+// the lines the Studio lists by default (not hidden, not empty), in every tab: what the review meter counts
+const listedLines = () => S.entries.filter(e => !isHidden(e) && (e.jp.trim() || (S.project[e.id] || {}).en !== undefined));
 
-// "Story review progress" meter under the MTL one
-// no "Signed in as" / strings-translated line online (the team asked to save the space); the Studio still writes into
-// #base and #progress, so they stay in the page, hidden. "Saved" notices move onto the meter line.
+// "Review progress" meter, on the MTL bar's line at its right end
 $('.mtlbar').appendChild($('#saved'));
 $('.basebar').hidden = true;
-$('.mtlbar').insertAdjacentHTML('beforeend', `<span class="reviewbar" title="Story lines with the Reviewed box ticked, out of the story lines in game">
-  <span class="meter"><span id="review-fill"></span></span><span id="review-text">Story review progress</span></span>`);
+$('.mtlbar').insertAdjacentHTML('beforeend', `<span class="reviewbar" title="Lines with the Reviewed box ticked, out of all the lines in game (every tab)">
+  <span class="meter"><span id="review-fill"></span></span><span id="review-text">Review progress</span></span>`);
 function reviewMeter() {
   if (typeof S === 'undefined' || !S.entries.length) return;
-  const story = storyLines(), done = story.filter(e => isReviewed(e.id)).length, pct = story.length ? 100 * done / story.length : 0;
-  $('#review-text').textContent = `Story review progress ${pct.toFixed(1)}% · ${fmt(done)} of ${fmt(story.length)} story lines reviewed`;
+  const all = listedLines(), done = all.filter(e => isReviewed(e.id)).length, pct = all.length ? 100 * done / all.length : 0;
+  $('#review-text').textContent = `Review progress ${pct.toFixed(1)}% · ${fmt(done)} of ${fmt(all.length)} lines reviewed`;
   $('#review-fill').style.width = pct + '%';
 }
-const reviewedBadge = e => e.group === 'story' && isReviewed(e.id) ? '<span class="badge reviewed" title="Marked reviewed">reviewed</span> ' : '';
 
-function listenReviewed() {
-  fb.onSnapshot(ref('meta', 'reviewed'), snap => {
-    if (!snap.exists()) { if (O.isAdmin) seedReviewed(); return; }
-    O.reviewed = snap.data().ids || {};
-    renderRows(); reviewMeter();
-    if (S.current && O.byId[S.current]) reviewedBox(S.current);
-  }, () => {});
+const reviewedBadge = e => isReviewed(e.id) ? '<span class="badge reviewed" title="Marked reviewed">reviewed</span> ' : '';
+
+// ticks changed in a file document (someone else, or yourself): redraw those rows, the meter and the box
+function liveReviewed(ids) {
+  if (!ids.size) return;
+  for (const id of ids) refreshRow(id);
+  reviewMeter();
+  if (S.current && ids.has(S.current)) reviewedBox(S.current);
 }
 
-// the first time: the story tab's first page (as the Studio lists it by default, 200 lines) starts out reviewed
-async function seedReviewed() {
-  if (O.seedingReviewed) return;
-  O.seedingReviewed = true;
-  const story = storyLines();
-  const who = {n: O.name, e: O.email, t: now()};
-  const ids = Object.fromEntries(story.slice(0, PAGE).map(e => [e.id, who]));
-  await fb.setDoc(ref('meta', 'reviewed'), {ids, seeded: who}).catch(err => console.warn('reviewed seed', err.message));
+function setReviewed(id, on) {
+  return fb.updateDoc(ref('files', O.byId[id].file), new fb.FieldPath('reviewed', id), on ? mark() : fb.deleteField());
+}
+
+function autoReview(id) {
+  if (!O.canReview || !O.byId[id] || isReviewed(id)) return;
+  setReviewed(id, true).then(() => history(id, 'reviewed', '', 'Reviewed')).catch(err => console.warn('auto review', err.message));
+}
+
+// one-time steps, run by the first admin to open the page: story page 1 (200 lines) and the whole Names tab start out
+// reviewed, every line a person has already edited counts as reviewed, and ticks from the first version (all in
+// meta/reviewed) move to the files
+async function reviewSetup() {
+  if (!O.isAdmin) return;
+  const flags = await fb.getDoc(ref('meta', 'reviewed'));
+  const f = flags.exists() ? flags.data() : {};
+  const who = mark(), add = {};
+  const tick = (id, v = who) => { if (O.byId[id] && !isReviewed(id)) (add[O.byId[id].file] ||= []).push(new fb.FieldPath('reviewed', id), v); };
+  if (!flags.exists()) for (const e of listedLines().filter(e => e.group === 'story').slice(0, PAGE)) tick(e.id);
+  for (const [id, v] of Object.entries(f.ids || {})) tick(id, {e: v.e, t: v.t});
+  if (!f.editedMarkedAll) for (const e of listedLines()) if ((S.project[e.id] || {}).edited) tick(e.id);
+  if (!f.namesMarked) for (const e of listedLines()) if (e.group === 'names') tick(e.id);
+  const files = Object.entries(add);
+  for (let i = 0; i < files.length; i += 20) {
+    const batch = fb.writeBatch(db);
+    for (const [file, args] of files.slice(i, i + 20)) batch.update(ref('files', file), ...args);
+    await batch.commit();
+  }
+  if (!files.length && f.inFiles && f.editedMarkedAll && f.namesMarked) return;
+  await fb.setDoc(ref('meta', 'reviewed'), {seeded: f.seeded || who, editedMarkedAll: f.editedMarkedAll || who, namesMarked: f.namesMarked || who, inFiles: true});
 }
 
 function reviewedBox(id) {
   document.querySelectorAll('#editor .reviewed-check').forEach(el => el.remove());
-  const e = O.byId[id]?.e;
-  if (!e || e.group !== 'story' || !$('#done')) return;
-  const r = O.reviewed[id];
+  if (!O.byId[id] || !$('#done')) return;
+  const r = reviewedOf(id);
   const title = r ? `Marked reviewed by ${nm(r)}, ${when(r.t)}` : O.canReview ? 'Tick once this line has been reviewed' : 'Reviewers and admins tick this';
   $('#done').closest('label').insertAdjacentHTML('afterend', `<label class="check reviewed-check" title="${esc(title)}">
     <input id="reviewed" type="checkbox"${r ? ' checked' : ''}${O.canReview ? '' : ' disabled'}> Reviewed</label>`);
   $('#reviewed').onchange = async ev => {
     const on = ev.target.checked;
     try {
-      await fb.updateDoc(ref('meta', 'reviewed'), new fb.FieldPath('ids', id), on ? {n: O.name, e: O.email, t: now()} : fb.deleteField());
+      await setReviewed(id, on);
       history(id, 'reviewed', on ? '' : 'Reviewed', on ? 'Reviewed' : '');
     } catch (err) { alert('Could not save: ' + err.message); ev.target.checked = !on; }
   };
@@ -1614,7 +1641,7 @@ async function uploadPack(pack, status) {
   const flags = p => ['done', 'mtl', 'edited', 'hidden'].map(f => JSON.stringify(p[f] ?? null)).join();
   const docs = Object.entries(byFile).map(([file, entries]) => {
     const old = O.files[file] || {};
-    const d = {entries, seed: {}, seedNote: {}, seedFlags: {}, by: old.by || {}};
+    const d = {entries, seed: {}, seedNote: {}, seedFlags: {}, by: old.by || {}, reviewed: old.reviewed || {}};
     for (const f of FIELDS) d[f] = {};
     for (const e of entries) {
       const t = pack.text[e.id] || {}, cur = {};
