@@ -46,7 +46,7 @@ note. Admins can also add or remove people under **Team**.
 
 Nobody's Google name is shown on the site. Everyone picks a username (on the request form, when claiming
 the admin role, or on first sign-in for people added under **Team**) and the site shows that next to their
-changes, suggestions, claims and in the online list. Clicking your own name at the top of the page changes it. Emails are only
+changes, suggestions, claims and in the online list. Clicking your own name in the list of who is online changes it. Emails are only
 shown to admins (Team list, access requests). The rules in `firestore.rules` enforce this, so
 the page holds nothing secret and the settings in `firebase-config.js` are safe to share.
 

@@ -122,7 +122,7 @@ async function signedIn(user) {
 // Team members who have no username yet (everyone added before usernames, or added straight from the Team list) pick one first
 function pickUsername(user) {
   showGate(`<h2>Pick a username</h2><p>The team sees this name next to your changes, suggestions and claims, instead of your Google name.
-    You can change it later by clicking your name at the top of the page.</p>
+    You can change it later by clicking your name in the list of who is online, at the top right.</p>
     <form id="name-form" class="request-form"><label>Username<input id="name-new" maxlength="24" required></label>
     <p><button class="primary">Save</button> <button type="button" id="out">Sign out</button></p></form>`);
   $('#out').onclick = () => fb.signOut(auth);
@@ -146,7 +146,7 @@ async function saveUsername(value) {
   return true;
 }
 
-// your own name (top of the page, and in the online list) is a link that changes your username
+// your own name (in the list of who is online) is a link that changes your username
 const meLink = () => `<a href="#" class="me-name" title="Click to change your username">${esc(O.name)}</a>`;
 document.addEventListener('click', ev => { if (ev.target.closest('.me-name')) { ev.preventDefault(); renameMe(); } });
 async function renameMe() {
@@ -1308,8 +1308,12 @@ const isReviewed = id => !!O.reviewed[id];
 const storyLines = () => S.entries.filter(e => e.group === 'story' && !isHidden(e) && (e.jp.trim() || (S.project[e.id] || {}).en !== undefined));
 
 // "Story review progress" meter under the MTL one
-$('.mtlbar').insertAdjacentHTML('afterend', `<div class="mtlbar reviewbar" title="Story lines with the Reviewed box ticked, out of the story lines in game">
-  <div class="meter"><div id="review-fill"></div></div><span id="review-text">Story review progress</span></div>`);
+// no "Signed in as" / strings-translated line online (the team asked to save the space); the Studio still writes into
+// #base and #progress, so they stay in the page, hidden. "Saved" notices move onto the meter line.
+$('.mtlbar').appendChild($('#saved'));
+$('.basebar').hidden = true;
+$('.mtlbar').insertAdjacentHTML('beforeend', `<span class="reviewbar" title="Story lines with the Reviewed box ticked, out of the story lines in game">
+  <span class="meter"><span id="review-fill"></span></span><span id="review-text">Story review progress</span></span>`);
 function reviewMeter() {
   if (typeof S === 'undefined' || !S.entries.length) return;
   const story = storyLines(), done = story.filter(e => isReviewed(e.id)).length, pct = story.length ? 100 * done / story.length : 0;
