@@ -42,7 +42,7 @@ service cloud.firestore {
     match /meta/{doc} {
       allow read: if isEditor() && doc != 'access';
       allow write: if isAdmin() && doc != 'access';
-      allow update: if isReviewer() && doc in ['speakers', 'project'];
+      allow update: if isReviewer() && doc in ['speakers', 'project', 'reviewed'];
       allow create: if isReviewer() && doc == 'project';
     }
     match /files/{file} {

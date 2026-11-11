@@ -365,6 +365,8 @@ function startStudio() {
 function wrapStudio() {
   const studioRenderEditor = window.renderEditor;
   window.renderEditor = function () { studioRenderEditor(); onlineEditorInfo(); };
+  const studioProgress = window.progress;
+  window.progress = function () { studioProgress(); reviewMeter(); };
   window.exportScript = exportScript;
   O.wrapped = true;
   const studioSave = window.save;
@@ -379,14 +381,14 @@ function wrapStudio() {
   // claims: line numbers and a tag on each claimed row, and the Claims tab
   const studioRowEl = window.rowEl;
   window.rowEl = function (e) {
-    const b = studioRowEl(e), badge = claimBadge(e);
+    const b = studioRowEl(e), badge = reviewedBadge(e) + claimBadge(e);
     if (badge) b.querySelector('.meta span:last-child').insertAdjacentHTML('afterbegin', badge + ' ');
     return b;
   };
   claimsTab();
   // the Studio writes "ROM: …" there once its page has loaded; say who is signed in instead
   const base = () => { $('#base').innerHTML = `Signed in as ${meLink()} · script uploaded ${esc(O.meta.made)}${O.meta.uploaded ? ' by ' + esc(nm(O.meta.uploaded)) : ''}`; };
-  const wait = setInterval(() => { if (S.entries.length) { clearInterval(wait); base(); numberLines(); listenClaims(); } }, 200);
+  const wait = setInterval(() => { if (S.entries.length) { clearInterval(wait); base(); numberLines(); listenClaims(); listenReviewed(); } }, 200);
   base();
   O.showBase = base;
   renderPresence();
@@ -437,6 +439,7 @@ function onlineEditorInfo() {
     ${others.length ? ` · <b>Also on this line now: ${others.map(esc).join(', ')}</b>` : ''}
     ${en !== seed ? ` · <a href="#" id="show-seed">Last upload from the Studio</a>` : ''} · <a href="#" id="line-history">History</a></div>
     ${lineSuggestions(id)}${claimInfo(id)}</div>`);
+  reviewedBox(id);
   lockEditor(id);
   for (const b of document.querySelectorAll('[data-withdraw]')) b.onclick = () => withdraw(b.dataset.withdraw);
   $('#review-line')?.addEventListener('click', () => renderReview(id));
@@ -1296,6 +1299,61 @@ function lockedBy(id) {
   const c = O.lineNo && S.byId[id] ? claimOf(S.byId[id]) : null;
   return c && c.uid !== O.user.uid && !O.isAdmin ? c : null;
 }
+// ---------- "Reviewed" box on story lines (online only): meta/reviewed ids.{id} = who ticked it ----------
+// Reviewers and admins tick it; editors see it greyed out. It is not part of the script .md export.
+
+O.reviewed = {};
+const isReviewed = id => !!O.reviewed[id];
+// the story lines the Studio lists by default (not hidden, not empty): what the review meter counts
+const storyLines = () => S.entries.filter(e => e.group === 'story' && !isHidden(e) && (e.jp.trim() || (S.project[e.id] || {}).en !== undefined));
+
+// "Story review progress" meter under the MTL one
+$('.mtlbar').insertAdjacentHTML('afterend', `<div class="mtlbar reviewbar" title="Story lines with the Reviewed box ticked, out of the story lines in game">
+  <div class="meter"><div id="review-fill"></div></div><span id="review-text">Story review progress</span></div>`);
+function reviewMeter() {
+  if (typeof S === 'undefined' || !S.entries.length) return;
+  const story = storyLines(), done = story.filter(e => isReviewed(e.id)).length, pct = story.length ? 100 * done / story.length : 0;
+  $('#review-text').textContent = `Story review progress ${pct.toFixed(1)}% · ${fmt(done)} of ${fmt(story.length)} story lines reviewed`;
+  $('#review-fill').style.width = pct + '%';
+}
+const reviewedBadge = e => e.group === 'story' && isReviewed(e.id) ? '<span class="badge reviewed" title="Marked reviewed">reviewed</span> ' : '';
+
+function listenReviewed() {
+  fb.onSnapshot(ref('meta', 'reviewed'), snap => {
+    if (!snap.exists()) { if (O.isAdmin) seedReviewed(); return; }
+    O.reviewed = snap.data().ids || {};
+    renderRows(); reviewMeter();
+    if (S.current && O.byId[S.current]) reviewedBox(S.current);
+  }, () => {});
+}
+
+// the first time: the story tab's first page (as the Studio lists it by default, 200 lines) starts out reviewed
+async function seedReviewed() {
+  if (O.seedingReviewed) return;
+  O.seedingReviewed = true;
+  const story = storyLines();
+  const who = {n: O.name, e: O.email, t: now()};
+  const ids = Object.fromEntries(story.slice(0, PAGE).map(e => [e.id, who]));
+  await fb.setDoc(ref('meta', 'reviewed'), {ids, seeded: who}).catch(err => console.warn('reviewed seed', err.message));
+}
+
+function reviewedBox(id) {
+  document.querySelectorAll('#editor .reviewed-check').forEach(el => el.remove());
+  const e = O.byId[id]?.e;
+  if (!e || e.group !== 'story' || !$('#done')) return;
+  const r = O.reviewed[id];
+  const title = r ? `Marked reviewed by ${nm(r)}, ${when(r.t)}` : O.canReview ? 'Tick once this line has been reviewed' : 'Reviewers and admins tick this';
+  $('#done').closest('label').insertAdjacentHTML('afterend', `<label class="check reviewed-check" title="${esc(title)}">
+    <input id="reviewed" type="checkbox"${r ? ' checked' : ''}${O.canReview ? '' : ' disabled'}> Reviewed</label>`);
+  $('#reviewed').onchange = async ev => {
+    const on = ev.target.checked;
+    try {
+      await fb.updateDoc(ref('meta', 'reviewed'), new fb.FieldPath('ids', id), on ? {n: O.name, e: O.email, t: now()} : fb.deleteField());
+      history(id, 'reviewed', on ? '' : 'Reviewed', on ? 'Reviewed' : '');
+    } catch (err) { alert('Could not save: ' + err.message); ev.target.checked = !on; }
+  };
+}
+
 const LOCKED_FIELDS = ['#en', '#note', '#save', '#clear', '#copy-jp', '#done', '#mtl', '#edited', '#hidden'];
 function lockEditor(id) {
   const c = lockedBy(id);
@@ -1463,7 +1521,7 @@ setInterval(renderPresence, 60000);
 // ---------- recent changes, line history and the team list ----------
 
 const histName = h => / \(accepted by /.test(h.n || '') ? h.n : nm(h);
-const fieldName = f => ({en: 'English', note: 'note', speaker: 'speaker name', face: 'portrait', credits: 'credits', import: 'import'}[f] || f);
+const fieldName = f => ({reviewed: 'reviewed', en: 'English', note: 'note', speaker: 'speaker name', face: 'portrait', credits: 'credits', import: 'import'}[f] || f);
 
 $('#recent').onclick = async () => {
   showJob('<h3>Recent changes</h3><p>Loading…</p>');
