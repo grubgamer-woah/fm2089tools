@@ -1413,6 +1413,8 @@ function nameSim(a, b) {
 }
 const partName = id => (enOf(id) ?? '').replace(/«[^»]*».*/s, '').trim();
 const statName = id => (splitStat(enOf(id), jpOf(id)) || [''])[0].trim();
+// "+1" upgrades: most stat pages put it after the part type ("Arm+1: Arm/Melee"), so the model name has none
+const noPlus = s => s.replace(/\s*\+\s*[0-9˥З]+$/, '');
 const sameName = (a, b) => a.replace(/\s+/g, ' ').toLowerCase() === b.replace(/\s+/g, ' ').toLowerCase();
 const titleCase = s => s.replace(/\b[A-Z]{3,}\b/g, w => w[0] + w.slice(1).toLowerCase());
 
@@ -1426,12 +1428,12 @@ function nameCheckRows() {
     if (!name) continue;
     let best = null, score = 0;
     for (const t of new Set(ids.map(i => partType(S.byId[i])))) for (const sk of stats[t] || []) {
-      const s = nameSim(name, statName(P.members[sk][0]));
+      const s = nameSim(noPlus(name), noPlus(statName(P.members[sk][0])));
       if (s > score) { score = s; best = sk; }
     }
     if (!best || score < 0.5) { unclear.push({k, ids, name}); continue; }
     const stat = statName(P.members[best][0]);
-    if (!sameName(name, stat)) rows.push({k, ids, name, sk: best, stat, score});
+    if (!sameName(noPlus(name), noPlus(stat))) rows.push({k, ids, name, sk: best, stat, score});
   }
   return {rows, unclear};
 }
