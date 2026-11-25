@@ -391,7 +391,7 @@ function wrapStudio() {
   claimsTab();
   // the Studio writes "ROM: …" there once its page has loaded; say who is signed in instead
   const base = () => { $('#base').innerHTML = `Signed in as ${meLink()} · script uploaded ${esc(O.meta.made)}${O.meta.uploaded ? ' by ' + esc(nm(O.meta.uploaded)) : ''}`; };
-  const wait = setInterval(() => { if (S.entries.length) { clearInterval(wait); base(); numberLines(); listenClaims(); reviewSetup().catch(err => console.warn('review setup', err.message)); reviewMeter(); } }, 200);
+  const wait = setInterval(() => { if (S.entries.length) { clearInterval(wait); base(); numberLines(); listenClaims(); reviewSetup().then(partsNamesNotMtl).catch(err => console.warn('review setup', err.message)); reviewMeter(); } }, 200);
   base();
   O.showBase = base;
   renderPresence();
@@ -1372,7 +1372,29 @@ async function reviewSetup() {
     await batch.commit();
   }
   if (!files.length && f.inFiles && f.editedMarkedAll && f.namesMarked) return;
-  await fb.setDoc(ref('meta', 'reviewed'), {seeded: f.seeded || who, editedMarkedAll: f.editedMarkedAll || who, namesMarked: f.namesMarked || who, inFiles: true});
+  await fb.setDoc(ref('meta', 'reviewed'), {seeded: f.seeded || who, editedMarkedAll: f.editedMarkedAll || who, namesMarked: f.namesMarked || who, inFiles: true}, {merge: true});
+}
+
+// one-time step (admin asked 2026-11-25): the one-line part and item names (MsgLabels_parts_menu_*) lose their MTL flag
+async function partsNamesNotMtl() {
+  if (!O.isAdmin) return;
+  const flags = await fb.getDoc(ref('meta', 'reviewed'));
+  if (flags.exists() && flags.data().partsNamesNotMtl) return;
+  const perFile = {};
+  for (const id of Object.keys(O.byId)) {
+    if (!id.startsWith('MsgLabels_parts_menu_')) continue;
+    const before = entryOf(id);
+    if (!before.mtl) continue;
+    const after = {...before}; delete after.mtl;
+    entryUpdates(id, after, perFile[O.byId[id].file] ||= []);
+  }
+  const files = Object.entries(perFile).filter(([, args]) => args.length);
+  for (let i = 0; i < files.length; i += 20) {
+    const batch = fb.writeBatch(db);
+    for (const [file, args] of files.slice(i, i + 20)) batch.update(ref('files', file), ...args);
+    await batch.commit();
+  }
+  await fb.setDoc(ref('meta', 'reviewed'), {partsNamesNotMtl: mark()}, {merge: true});
 }
 
 function reviewedBox(id) {
