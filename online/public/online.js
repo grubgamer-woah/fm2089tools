@@ -1268,12 +1268,16 @@ $('#inbox').onclick = () => {
 // ---------- claims: "I'm translating these" for a week, from the Claims tab ----------
 // claims/{auto}: {uid, n, e, t, group, from, to}. Story claims are mission numbers; every other tab's are its
 // line numbers (each line's place in that tab, shown as "line N" on its row). A claim older than a week is gone.
+// A reviewer or admin can mark a claim finished (done: {e, n, t}): it never runs out, nobody can claim those
+// numbers again, and its owner can't renew or release it. Reopen (reviewers and admins) deletes it.
 
 const WEEK = 7 * 24 * 3600 * 1000;
 const claimTime = c => c?.t?.toMillis ? c.t.toMillis() : Date.now();
-const live = c => claimTime(c) + WEEK > Date.now();
+const live = c => !!c.done || claimTime(c) + WEEK > Date.now();
 const until = c => new Date(claimTime(c) + WEEK).toLocaleDateString([], {month: 'short', day: 'numeric'});
 const unit = group => group === 'story' ? 'Mission' : 'Line';
+const doneTime = c => c?.done?.t?.toMillis ? c.done.t.toMillis() : Date.now();
+const doneDate = c => new Date(doneTime(c)).toLocaleDateString([], {month: 'short', day: 'numeric'});
 const rangeText = c => c.from === c.to ? `${c.from}` : `${c.from}-${c.to}`;
 
 // line numbers of the non-story tabs: each line's place among its tab's lines, in the Studio's order
@@ -1302,7 +1306,7 @@ function claimOf(e) {
 // Someone else's claim locks a line: only they and admins change it (the claim, or null when you may)
 function lockedBy(id) {
   const c = O.lineNo && S.byId[id] ? claimOf(S.byId[id]) : null;
-  return c && c.uid !== O.user.uid && !O.isAdmin ? c : null;
+  return c && !c.done && c.uid !== O.user.uid && !O.isAdmin ? c : null;
 }
 // ---------- "Reviewed" box on every line (online only) ----------
 // A tick lives in its file's document: files/{file}.reviewed.{id} = {e, t} (who, shown as their username, and when).
@@ -1402,6 +1406,7 @@ function listenClaims() {
     if (!O.wrapped) return;
     renderRows();
     onlineEditorInfo();
+    renderClaimCount();
     if (O.claimsOpen) renderClaims();
   });
 }
@@ -1411,6 +1416,7 @@ function claimBadge(e) {
   const c = claimOf(e);
   const no = e.group === 'story' ? '' : `<span class="badge" title="This line's number for claims">line ${fmt(O.lineNo[e.id])}</span> `;
   if (!c) return no;
+  if (c.done) return `${no}<span class="badge claim done" title="Claimed by ${esc(nm(c))}, finished by ${esc(nm(c.done))} on ${doneDate(c)}">finished</span>`;
   const mine = c.uid === O.user.uid;
   return `${no}<span class="badge claim${mine ? ' mine' : ''}" title="Claimed by ${esc(nm(c))} until ${until(c)}">${mine ? 'claimed by you' : 'claimed: ' + esc(nm(c))}</span>`;
 }
@@ -1420,6 +1426,7 @@ function claimInfo(id) {
   const c = claimOf(S.byId[id]);
   if (!c) return '';
   const what = `${c.group === 'story' ? 'missions' : 'lines'} ${rangeText(c)}`;
+  if (c.done) return `<div class="sub claim-sub">Finished: ${what} (claimed by ${esc(nm(c))}, finished by ${esc(nm(c.done))} on ${doneDate(c)}). Nobody can claim it now.</div>`;
   const lock = c.uid === O.user.uid ? '' : O.isAdmin ? ' As an admin you can still change it.' : ` Only ${esc(nm(c))} and admins can change it.`;
   return `<div class="sub claim-sub${lock && !O.isAdmin ? ' locked' : ''}">${c.uid === O.user.uid ? 'You claimed' : `<b>${esc(nm(c))} claimed</b>`} ${what} until ${until(c)}.${lock}</div>`;
 }
@@ -1443,12 +1450,17 @@ async function claimRanges(group, text) {
   const max = group === 'story' ? Math.max(...O.missions) : O.groupSize[group];
   const ranges = parseRanges(text, max);
   const taken = [];
+  const finished = [];
   for (const [a, b] of ranges) for (const c of Object.values(O.claims)) {
-    if (c.group === group && live(c) && c.uid !== O.user.uid && a <= c.to && b >= c.from) taken.push(`${rangeText({from: Math.max(a, c.from), to: Math.min(b, c.to)})} (${nm(c)})`);
+    if (c.group !== group || !live(c) || a > c.to || b < c.from) continue;
+    const part = rangeText({from: Math.max(a, c.from), to: Math.min(b, c.to)});
+    if (c.done) finished.push(part);
+    else if (c.uid !== O.user.uid) taken.push(`${part} (${nm(c)})`);
   }
+  if (finished.length) throw new Error(`Already finished, so nobody can claim them: ${unit(group).toLowerCase()}s ${finished.join(', ')}. Claim around them.`);
   if (taken.length) throw new Error(`Already claimed by someone else: ${unit(group).toLowerCase()}s ${taken.join(', ')}. Claim around them.`);
   // ranges you already hold need no new claim (Renew extends those)
-  const mine = Object.values(O.claims).filter(c => c.group === group && live(c) && c.uid === O.user.uid);
+  const mine = Object.values(O.claims).filter(c => c.group === group && live(c) && !c.done && c.uid === O.user.uid);
   const fresh = ranges.filter(([a, b]) => !mine.some(c => a >= c.from && b <= c.to));
   if (!fresh.length) throw new Error('You already hold that claim; use Renew to keep it longer.');
   const batch = fb.writeBatch(db);
@@ -1480,9 +1492,9 @@ function claimsTab() {
 }
 
 function renderClaimCount() {
-  const n = Object.values(O.claims).filter(live).length;
+  const all = Object.values(O.claims).filter(live), n = all.filter(c => !c.done).length, d = all.length - n;
   const el = $('#claims-tab-count');
-  if (el) el.textContent = n ? `${fmt(n)} active` : 'none';
+  if (el) el.textContent = [n ? `${fmt(n)} active` : '', d ? `${fmt(d)} finished` : ''].filter(Boolean).join(', ') || 'none';
 }
 
 function claimRows(list) {
@@ -1491,15 +1503,20 @@ function claimRows(list) {
     const all = []; for (let m = c.from; m <= c.to; m++) all.push(missionName(m)[1]);
     return ` <span class="muted">(${esc(all.slice(0, 4).join(', '))}${all.length > 4 ? `, … ${esc(all[all.length - 1])}` : ''})</span>`;
   };
-  return list.length ? `<ul class="claim-list">${list.map(([cid, c]) => `<li><b>${esc(rangeText(c))}</b>${names(c)} · ${esc(nm(c))}, until ${until(c)}
-    ${c.uid === O.user.uid ? `<button data-renew="${cid}" title="Keep it for another week from today">Renew</button>` : ''}
-    ${c.uid === O.user.uid || O.canReview ? `<button data-release="${cid}">Release</button>` : ''}</li>`).join('')}</ul>` : '<p class="muted">Nothing claimed.</p>';
+  const row = ([cid, c]) => c.done
+    ? `<li><b>${esc(rangeText(c))}</b>${names(c)} · <span class="badge claim done">finished</span> ${esc(nm(c))}'s claim, finished by ${esc(nm(c.done))} on ${doneDate(c)}
+      ${O.canReview ? `<button data-reopen="${cid}" title="Take the finished mark off; nobody holds it then and anyone can claim it">Reopen</button>` : ''}</li>`
+    : `<li><b>${esc(rangeText(c))}</b>${names(c)} · ${esc(nm(c))}, until ${until(c)}
+      ${c.uid === O.user.uid ? `<button data-renew="${cid}" title="Keep it for another week from today">Renew</button>` : ''}
+      ${c.uid === O.user.uid || O.canReview ? `<button data-release="${cid}">Release</button>` : ''}
+      ${O.canReview ? `<button data-finish="${cid}" title="Mark it done for good: nobody can claim it again (Reopen undoes it)">Finish</button>` : ''}</li>`;
+  return list.length ? `<ul class="claim-list">${list.map(row).join('')}</ul>` : '<p class="muted">Nothing claimed.</p>';
 }
 
 function renderClaims() {
   $('#app').hidden = true;
   const page = $('#claims-page'); page.hidden = false;
-  const active = Object.entries(O.claims).filter(([, c]) => live(c)).sort(([, a], [, b]) => a.from - b.from);
+  const active = Object.entries(O.claims).filter(([, c]) => live(c)).sort(([, a], [, b]) => !!a.done - !!b.done || a.from - b.from);
   const of = g => active.filter(([, c]) => c.group === g);
   const translatedIn = list => list.filter(e => translated(e) && !(S.project[e.id] || {}).mtl).length;
   const story = S.entries.filter(e => e.group === 'story' && !isHidden(e));
@@ -1507,12 +1524,13 @@ function renderClaims() {
     const lines = story.filter(e => +e.mission === m), c = claimOf({group: 'story', mission: m});
     const [label, title] = missionName(m);
     return `<tr><td>${m}</td><td>${esc(title)}${label ? ` <span class="muted">${esc(label)} in game</span>` : ''}</td><td>${fmt(lines.length)}</td><td>${fmt(lines.filter(e => (S.project[e.id] || {}).mtl).length)}</td>
-      <td>${c ? `<span class="badge claim${c.uid === O.user.uid ? ' mine' : ''}">${c.uid === O.user.uid ? 'you' : esc(nm(c))}</span> until ${until(c)}` : ''}</td></tr>`;
+      <td>${c?.done ? `<span class="badge claim done">finished</span> ${esc(nm(c))}` : c ? `<span class="badge claim${c.uid === O.user.uid ? ' mine' : ''}">${c.uid === O.user.uid ? 'you' : esc(nm(c))}</span> until ${until(c)}` : ''}</td></tr>`;
   }).join('');
   const others = S.config.groups.filter(([k]) => k !== 'story');
   page.innerHTML = `<h2>Claims</h2>
     <p>Claim what you are going to translate so nobody else starts on it. A claim lasts a week (Renew keeps it another week) and shows on
-      every claimed line as a purple tag. ${O.canReview ? 'As a reviewer you can release anyone\'s claim.' : ''}</p>
+      every claimed line as a purple tag. When a reviewer marks a claim <b>finished</b>, nobody can claim those missions or lines again
+      (a reviewer can Reopen it). ${O.canReview ? 'As a reviewer you can release or finish anyone\'s claim.' : ''}</p>
     <div class="claim-box"><h3>Story: by mission</h3>
       <form data-group="story" class="claim-form"><label>Missions to claim<input placeholder="for example 1-10, 14" autocomplete="off"></label>
         <button class="primary">Claim</button><span class="claim-error bad"></span></form>
@@ -1531,6 +1549,8 @@ function renderClaims() {
     catch (e) { err.textContent = e.message; }
   };
   for (const b of page.querySelectorAll('[data-release]')) b.onclick = () => fb.deleteDoc(ref('claims', b.dataset.release)).catch(e => alert(e.message));
+  for (const b of page.querySelectorAll('[data-finish]')) b.onclick = () => fb.updateDoc(ref('claims', b.dataset.finish), {done: {e: O.email, n: O.name, t: now()}}).then(() => flash('Finished')).catch(e => alert(e.message));
+  for (const b of page.querySelectorAll('[data-reopen]')) b.onclick = () => { if (confirm('Reopen this? The finished mark comes off and anyone can claim it again.')) fb.deleteDoc(ref('claims', b.dataset.reopen)).catch(e => alert(e.message)); };
   for (const b of page.querySelectorAll('[data-renew]')) b.onclick = () => fb.updateDoc(ref('claims', b.dataset.renew), {t: now()}).catch(e => alert(e.message));
 }
 

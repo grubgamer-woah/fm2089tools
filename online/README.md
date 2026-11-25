@@ -31,7 +31,9 @@ How the script travels:
 - **Inbox** shows each person what happened to their suggestions and the reviewer's note.
 - **Claims** (the Claims tab) mark work as someone's for a week: story by mission number ("1-10, 14"),
   the other tabs by line number (each row shows its "line N"). Claimed rows get a purple tag; the owner can
-  renew or release a claim, and reviewers can release anyone's.
+  renew or release a claim, and reviewers can release anyone's. Reviewers and admins can also **Finish** a claim:
+  it stays for good with a green "finished" tag, nobody can claim those missions or lines again, and its owner can't renew
+  or release it. **Reopen** (reviewers and admins) removes it so anyone can claim them again.
 - **Reviewed** (online only, not in the script export): every line has a Reviewed box that reviewers and admins
   tick; opening or changing a line ticks it for them. The "Review progress" meter on the MTL bar's line counts
   the ticked lines in all tabs. The first admin visit marks story page 1, the Names tab and every line already

@@ -20,6 +20,7 @@ body.gated #app, body.gated nav, body.gated .mtlbar { display: none; }
 .badge.status-rejected { background: #b3261e; color: #fff; }
 .badge.claim { background: #4a3a7a; color: #fff; }
 .badge.claim.mine { background: #6a4fc0; }
+.badge.claim.done { background: #2e7d32; }
 .claim-bar { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
 img.face { width: 48px; height: 48px; image-rendering: pixelated; }
 [hidden] { display: none !important; }
