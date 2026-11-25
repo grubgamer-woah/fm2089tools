@@ -35,6 +35,11 @@ How the script travels:
   button in the mission list):
   it stays for good with a green "finished" tag, nobody can claim those missions or lines again, and its owner can't renew
   or release it. Finished claims sit in each section's collapsible **Finished** table. **Reopen** (reviewers and admins) removes it so anyone can claim them again.
+- **Parts & items clones**: part names with the same Japanese (a Wanzer's arms, body and legs) and stat lines of the same
+  model are grouped; the first is the primary and the rest are clones, hidden unless **Show clones** is ticked. Saving a part
+  name copies it to its clones. On stat lines only the model name can change (the stats are locked), and it changes on
+  every stat line of that model. Admins get a **Name check** tab listing part names whose stat pages call the model something
+  else, to save one name or keep both, plus the part names with unusual clone counts.
 - **Reviewed** (online only, not in the script export): every line has a Reviewed box that reviewers and admins
   tick; opening or changing a line ticks it for them. The "Review progress" meter on the MTL bar's line counts
   the ticked lines in all tabs. The first admin visit marks story page 1, the Names tab and every line already

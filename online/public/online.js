@@ -334,7 +334,7 @@ function seedFlagsOf(id) {
 const seedOf = (id, field = 'en') => (O.files[O.byId[id].file][field === 'en' ? 'seed' : 'seedNote'] || {})[id] || '';
 // Parts & items lists the one-line part and item names (MsgLabels_parts_menu_*) before their help texts and stat lists
 const helpLast = e => /^MsgLabels_parts_help_/.test(e.file || e.id) ? 1 : 0;
-const allEntries = () => Object.values(O.files).flatMap(d => d.entries).sort((a, b) => helpLast(a) - helpLast(b) || a.pos - b.pos);
+const allEntries = () => groupParts(Object.values(O.files).flatMap(d => d.entries).sort((a, b) => helpLast(a) - helpLast(b) || a.pos - b.pos));
 // What you see: the shared script with your own suggestions still waiting for review laid over it
 // (an admin's changes go straight into the script, so an admin sees just the script)
 const mySuggestion = (kind, id) => (O.pending || {})[suggestionId(kind, id)];
@@ -384,14 +384,15 @@ function wrapStudio() {
   // claims: line numbers and a tag on each claimed row, and the Claims tab
   const studioRowEl = window.rowEl;
   window.rowEl = function (e) {
-    const b = studioRowEl(e), badge = reviewedBadge(e) + claimBadge(e);
+    const b = studioRowEl(e), badge = reviewedBadge(e) + claimBadge(e) + partsBadge(e);
     if (badge) b.querySelector('.meta span:last-child').insertAdjacentHTML('afterbegin', badge + ' ');
     return b;
   };
   claimsTab();
+  namesTab();
   // the Studio writes "ROM: …" there once its page has loaded; say who is signed in instead
   const base = () => { $('#base').innerHTML = `Signed in as ${meLink()} · script uploaded ${esc(O.meta.made)}${O.meta.uploaded ? ' by ' + esc(nm(O.meta.uploaded)) : ''}`; };
-  const wait = setInterval(() => { if (S.entries.length) { clearInterval(wait); base(); numberLines(); listenClaims(); reviewSetup().then(partsNotMtl).catch(err => console.warn('review setup', err.message)); reviewMeter(); } }, 200);
+  const wait = setInterval(() => { if (S.entries.length) { clearInterval(wait); base(); numberLines(); buildParts(); clonesFilter(); if (O.isAdmin) renderTabs(); listenClaims(); reviewSetup().then(partsNotMtl).catch(err => console.warn('review setup', err.message)); reviewMeter(); } }, 200);
   base();
   O.showBase = base;
   renderPresence();
@@ -441,7 +442,7 @@ function onlineEditorInfo() {
   $('#editor .sub').insertAdjacentHTML('afterend', `<div class="online-info"><div class="sub online-sub">${by ? `Last changed online by ${esc(nm(by))}, ${esc(when(by.t))}` : 'Not changed online yet'}
     ${others.length ? ` · <b>Also on this line now: ${others.map(esc).join(', ')}</b>` : ''}
     ${en !== seed ? ` · <a href="#" id="show-seed">Last upload from the Studio</a>` : ''} · <a href="#" id="line-history">History</a></div>
-    ${lineSuggestions(id)}${claimInfo(id)}</div>`);
+    ${partsInfo(id)}${lineSuggestions(id)}${claimInfo(id)}</div>`);
   // no Done box online (the team asked); it stays in the page hidden because the Studio's save reads it
   $('#done')?.closest('label').style.setProperty('display', 'none');
   if (id !== O.lastOpened) { O.lastOpened = id; autoReview(id); }
@@ -655,12 +656,18 @@ async function saveEntry(data) {
   if (res.errors.length && !data.force) return {ok: false, ...res};
   const lock = lockedBy(id);
   if (lock) return {ok: false, errors: [`${nm(lock)} claimed this line until ${until(lock)}; only they and admins can change it`], warnings: [], widths: []};
+  const statLock = statLockError(id, data.en);
+  if (statLock) return {ok: false, errors: [statLock], warnings: [], widths: []};
   const e = O.byId[id].e;
   const hidden = !('hidden' in data) ? undefined : !!data.hidden === !!e.unused ? '' : data.hidden;
   const after = projectSet(viewOf(id), {en: data.en, note: data.note, done: data.done, mtl: data.mtl, edited: data.edited, hidden});
   if (!O.canReview) { await suggestEntry(id, after); return {ok: true, entry: after, ...res}; }
-  const args = [];
-  if (entryUpdates(id, after, args)) { await fb.updateDoc(ref('files', O.byId[id].file), ...args); autoReview(id); }
+  const files = updatesByFile([[id, after], ...linkedLines(id, after)]);
+  if (files.length) {
+    if (files.length === 1) await fb.updateDoc(ref('files', files[0][0]), ...files[0][1]);
+    else { const batch = fb.writeBatch(db); for (const [file, args] of files) batch.update(ref('files', file), ...args); await batch.commit(); }
+    autoReview(id);
+  }
   return {ok: true, entry: after, ...res};
 }
 
@@ -1226,8 +1233,10 @@ async function decide(sid, x, i, accept) {
       const errors = check(x.id, final.en, speakerMap()).errors;
       if (errors.length && !confirm(`${x.id} has problems:\n${errors.join('\n')}\n\nAccept it anyway?`)) throw new Error('Not accepted.');
     }
-    const before = entryOf(x.id), after = projectSet(before, final), args = [];
-    if (entryUpdates(x.id, after, args, {n: nm(x), e: x.e, ok: O.name})) batch.update(ref('files', O.byId[x.id].file), ...args);
+    const statLock = statLockError(x.id, final.en);
+    if (statLock) throw new Error(`${x.id}: ${statLock}`);
+    const before = entryOf(x.id), after = projectSet(before, final);
+    for (const [file, args] of updatesByFile([[x.id, after], ...linkedLines(x.id, after)], {n: nm(x), e: x.e, ok: O.name})) batch.update(ref('files', file), ...args);
     for (const f of ['en', 'note']) if (f in final) history(x.id, f, before[f] || '', after[f] || '', who);
   } else if (x.kind === 'speaker' || x.kind === 'face') {
     if (x.kind === 'speaker' && final.value) { const [, problems] = tokens(final.value); if (problems.length) throw new Error(problems.join('\n')); }
@@ -1266,6 +1275,277 @@ $('#inbox').onclick = () => {
   wireRequests();
   for (const x of done) if (!x.seen) fb.updateDoc(x.ref, {seen: true}).catch(() => {});
 };
+
+// ---------- Parts & items: clones, shared model names on stat lines, and the Name check page ----------
+// Part names (MsgLabels_parts_menu_*) with the same Japanese are one group: the first is the primary, the rest are
+// clones (a Wanzer's left arm, right arm, body and legs mostly share a name). Stat lines (MsgLabels_parts_help_*)
+// are grouped by the model name before «g:24» (or before "："): the first is the primary, the rest clones. Clones are
+// hidden unless "Show clones" is ticked. Saving a part name copies it to its clones; saving a stat line may change
+// only its model name, and the new name goes to every stat line of that model. The stats themselves are locked.
+const isNameLine = e => e.group === 'parts' && /^MsgLabels_parts_menu_/.test(e.file);
+const isStatLine = e => e.group === 'parts' && /^MsgLabels_parts_help_/.test(e.file);
+const partType = e => e.file.replace(/^MsgLabels_parts_(menu|help)_/, '');
+const PART_WORDS = {arm: 'arm', body: 'body', leg: 'legs', shoulder: 'shoulder', grip: 'hand weapon', bp: 'backpack', cp: 'computer',
+  ig: 'built-in weapon', ip: 'built-in melee', item: 'item', d: 'other'};
+function statKey(jp) {
+  const l = jp.split('\n')[0];
+  return (l.includes('«g:24»') ? l.split('«g:24»')[0] : l.split('：')[0]).trim();
+}
+// a stat line's English as [model name, the rest], following where its Japanese puts the name; null if it can't
+function splitStat(en, jp) {
+  if (typeof en !== 'string') return null;
+  const l = jp.split('\n')[0], mark = l.includes('«g:24»') ? '«g:24»' : l.includes('：') ? ':' : null;
+  if (!mark) return null;
+  const i = en.split('\n')[0].indexOf(mark);
+  return i < 0 ? null : [en.slice(0, i), en.slice(i)];
+}
+function partsKey(e) {
+  if (!e.jp.trim() || e.unused) return null;
+  if (isNameLine(e)) return 'n:' + e.jp;
+  if (isStatLine(e)) { const k = statKey(e.jp); return k && k !== 'ダミー' ? 's:' + k : null; }
+  return null;
+}
+// list order: every clone right after its primary
+function groupParts(list) {
+  const first = {}, rank = new Map();
+  list.forEach((e, i) => { const k = e.group === 'parts' ? partsKey(e) : null; if (k && !(k in first)) first[k] = i; rank.set(e, k ? first[k] : i); });
+  return list.map((e, i) => [e, i]).sort((a, b) => rank.get(a[0]) - rank.get(b[0]) || a[1] - b[1]).map(([e]) => e);
+}
+function buildParts() {
+  const P = {groupOf: {}, members: {}, cloneOf: {}};
+  for (const e of S.entries) {
+    if (e.group !== 'parts') continue;
+    const k = partsKey(e);
+    if (!k) continue;
+    P.groupOf[e.id] = k;
+    (P.members[k] ||= []).push(e.id);
+  }
+  for (const ids of Object.values(P.members)) for (const id of ids.slice(1)) P.cloneOf[id] = ids[0];
+  O.parts = P;
+}
+const jpOf = id => O.byId[id].e.jp;
+const enOf = id => { const p = entryOf(id); return p.en !== undefined ? p.en : O.byId[id].e.english ? jpOf(id) : undefined; };
+
+// A stat line may only change its model name
+function statLockError(id, en) {
+  const e = O.byId[id]?.e;
+  if (!e || !isStatLine(e) || en === undefined || en === null) return null;
+  const old = splitStat(enOf(id), e.jp);
+  if (!old) return null;
+  const now = splitStat(en, e.jp);
+  if (!now || now[1] !== old[1]) return `Only the model name can change on a stat line (the part before ${e.jp.includes('«g:24»') ? '«g:24»' : '":"'}). The stats are locked.`;
+  return null;
+}
+// the other lines a save changes: a part name's clones, or every stat line of the same model ([id, after] pairs)
+function linkedLines(id, after) {
+  const k = O.parts?.groupOf[id];
+  if (!k || (entryOf(id).en || '') === (after.en || '')) return [];
+  const out = [], mine = splitStat(after.en, jpOf(id));
+  for (const id2 of O.parts.members[k]) {
+    if (id2 === id) continue;
+    const cur = entryOf(id2);
+    let en;
+    if (k.startsWith('n:') || jpOf(id2) === jpOf(id)) en = after.en ?? '';
+    else { const theirs = splitStat(enOf(id2), jpOf(id2)); if (!mine || !theirs) continue; en = mine[0] + theirs[1]; }
+    if (en === (cur.en || '')) continue;
+    out.push([id2, projectSet(cur, {en})]);
+  }
+  return out;
+}
+// field updates for [id, after] pairs, by file
+function updatesByFile(list, who) {
+  const perFile = {};
+  for (const [id, after] of list) entryUpdates(id, after, perFile[O.byId[id].file] ||= [], who);
+  return Object.entries(perFile).filter(([, args]) => args.length);
+}
+
+function partsBadge(e) {
+  if (!O.parts || e.group !== 'parts') return '';
+  const k = O.parts.groupOf[e.id];
+  if (!k) return '';
+  const n = O.parts.members[k].length, clone = O.parts.cloneOf[e.id];
+  if (clone) return `<span class="badge clone" title="Copies line #${S.byId[clone]?.index} of ${esc(S.byId[clone]?.file.replace('MsgLabels_', '') || '')}">clone</span>`;
+  return n > 1 ? `<span class="badge clone-count" title="${isStatLine(e) ? 'Stat lines that share this model name' : 'Lines with the same Japanese that copy this one'}">+${n - 1} clone${n > 2 ? 's' : ''}</span>` : '';
+}
+function partsInfo(id) {
+  const e = S.byId[id];
+  if (!O.parts || !e || !O.parts.groupOf[id]) return '';
+  const ids = O.parts.members[O.parts.groupOf[id]];
+  const where = [...new Set(ids.map(i => PART_WORDS[partType(S.byId[i])] || partType(S.byId[i])))].join(', ');
+  if (isStatLine(e)) return `<div class="sub parts-sub">Stat line: only the model name can change; the stats are locked.${ids.length > 1 ? ` Its model name is shared by ${ids.length} stat lines (${esc(where)}) and changes on all of them.` : ''}</div>`;
+  return ids.length > 1 ? `<div class="sub parts-sub">Part name: saving it copies the English to all ${ids.length} lines with this Japanese (${esc(where)}).</div>` : '';
+}
+
+function clonesFilter() {
+  const hide = $('#hide-unused')?.closest('label');
+  if (!hide || $('#show-clones')) return;
+  hide.insertAdjacentHTML('afterend', '<label class="check" id="show-clones-box" title="Clones copy their primary line: part names with the same Japanese, and stat lines of the same model"><input id="show-clones" type="checkbox"> Show clones</label>');
+  try { $('#show-clones').checked = localStorage.getItem('showClones') === 'yes'; } catch (err) {}
+  $('#show-clones').onchange = () => { try { localStorage.setItem('showClones', $('#show-clones').checked ? 'yes' : 'no'); } catch (err) {} applyFilter(); };
+  const studioApply = window.applyFilter;
+  window.applyFilter = function () {
+    $('#show-clones-box').hidden = S.group !== 'parts';
+    if ($('#show-clones').checked || !O.parts) return studioApply();
+    const render = window.renderRows;
+    window.renderRows = () => {};
+    try { studioApply(); } finally { window.renderRows = render; }
+    S.filtered = S.filtered.filter(e => !O.parts.cloneOf[e.id]);
+    S.page = Math.min(S.page, Math.max(1, Math.ceil(S.filtered.length / PAGE)) - 1);
+    renderRows();
+  };
+  applyFilter();
+}
+
+// ---------- Name check: part names next to the model names on their stat lines ----------
+const ROMAN = {'Ⅰ': 'I', 'Ⅱ': 'II', 'Ⅲ': 'III', 'Ⅳ': 'IV', 'Ⅴ': 'V', 'Ⅵ': 'VI', 'Ⅶ': 'VII', 'Ⅷ': 'VIII', 'Ⅸ': 'IX', 'Ⅹ': 'X', '˥': '1', 'З': '3'};
+const normName = s => (s || '').replace(/«[^»]*»/g, ' ').replace(/[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ˥З]/g, c => ' ' + ROMAN[c]).toUpperCase().replace(/[^A-Z0-9+]/g, '');
+function nameSim(a, b) {
+  a = normName(a); b = normName(b);
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  if (a.includes(b) || b.includes(a)) return 0.9;
+  const d = Array.from({length: b.length + 1}, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = d[0]; d[0] = i;
+    for (let j = 1; j <= b.length; j++) { const t = d[j]; d[j] = Math.min(d[j] + 1, d[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = t; }
+  }
+  return 1 - d[b.length] / Math.max(a.length, b.length);
+}
+const partName = id => (enOf(id) ?? '').replace(/«[^»]*».*/s, '').trim();
+const statName = id => (splitStat(enOf(id), jpOf(id)) || [''])[0].trim();
+const sameName = (a, b) => a.replace(/\s+/g, ' ').toLowerCase() === b.replace(/\s+/g, ' ').toLowerCase();
+const titleCase = s => s.replace(/\b[A-Z]{3,}\b/g, w => w[0] + w.slice(1).toLowerCase());
+
+// each part-name group with the stat model of the same part type whose English name is closest
+function nameCheckRows() {
+  const P = O.parts, stats = {}, rows = [], unclear = [];
+  for (const [k, ids] of Object.entries(P.members)) if (k.startsWith('s:')) for (const t of new Set(ids.map(i => partType(S.byId[i])))) (stats[t] ||= []).push(k);
+  for (const [k, ids] of Object.entries(P.members)) {
+    if (!k.startsWith('n:') || isHidden(S.byId[ids[0]])) continue;
+    const name = partName(ids[0]);
+    if (!name) continue;
+    let best = null, score = 0;
+    for (const t of new Set(ids.map(i => partType(S.byId[i])))) for (const sk of stats[t] || []) {
+      const s = nameSim(name, statName(P.members[sk][0]));
+      if (s > score) { score = s; best = sk; }
+    }
+    if (!best || score < 0.5) { unclear.push({k, ids, name}); continue; }
+    const stat = statName(P.members[best][0]);
+    if (!sameName(name, stat)) rows.push({k, ids, name, sk: best, stat, score});
+  }
+  return {rows, unclear};
+}
+
+// the usual number of lines per part name: 2 arms + body + legs for a Wanzer, a pair of hand or shoulder weapons, one otherwise
+function unusualClones() {
+  const out = [];
+  for (const [k, ids] of Object.entries(O.parts.members)) {
+    if (!k.startsWith('n:') || isHidden(S.byId[ids[0]])) continue;
+    const c = {};
+    for (const id of ids) { const t = partType(S.byId[id]); c[t] = (c[t] || 0) + 1; }
+    const types = Object.keys(c).sort().join();
+    const ok = types === 'arm,body,leg' ? c.arm === 2 && c.body === 1 && c.leg === 1
+      : types === 'grip' || types === 'shoulder' ? ids.length === 2 : ids.length === 1;
+    if (!ok) out.push({k, ids, name: partName(ids[0]), has: Object.entries(c).map(([t, n]) => `${n} ${PART_WORDS[t] || t}`).join(', ')});
+  }
+  return out.sort((a, b) => a.has.localeCompare(b.has) || a.name.localeCompare(b.name));
+}
+
+function namesTab() {
+  if (!O.isAdmin) return;
+  const studioRenderTabs = window.renderTabs;
+  window.renderTabs = function () {
+    studioRenderTabs();
+    const b = document.createElement('button');
+    b.id = 'names-tab'; b.className = O.namesOpen ? 'active' : '';
+    if (O.namesOpen) $('#tabs').querySelectorAll('button').forEach(x => x.classList.remove('active'));
+    const dec = O.nameDecisions || {}, left = O.parts ? nameCheckRows().rows.filter(r => !dec[r.k]).length : null;
+    b.innerHTML = `Name check<small id="names-tab-count">${left === null ? '' : left ? `${fmt(left)} to check` : 'done'}</small>`;
+    b.onclick = () => { O.namesOpen = true; renderTabs(); renderNameCheck(); };
+    $('#tabs').appendChild(b);
+    if (O.namesOpen) b.classList.add('active');
+  };
+  $('#tabs').addEventListener('click', ev => {
+    const b = ev.target.closest('button');
+    if (b && b.id !== 'names-tab' && O.namesOpen) { O.namesOpen = false; $('#names-page').hidden = true; if (b.id !== 'claims-tab') $('#app').hidden = false; }
+    if (b && b.id === 'names-tab' && O.claimsOpen) { O.claimsOpen = false; $('#claims-page').hidden = true; }
+  }, true);
+  $('main').insertAdjacentHTML('beforeend', '<section id="names-page" class="claims-page" hidden></section>');
+  fb.onSnapshot(ref('meta', 'partsNames'), snap => { O.nameDecisions = (snap.exists() && snap.data().decided) || {}; if (O.namesOpen) renderNameCheck(); });
+  if (S.config) renderTabs();
+}
+
+async function setNames(ids, sk, newPart, newStat) {
+  const list = [];
+  if (newPart !== null && !sameAs(partName(ids[0]), newPart)) {
+    const id = ids[0], after = projectSet(entryOf(id), {en: newPart});
+    list.push([id, after], ...linkedLines(id, after));
+  }
+  if (newStat !== null && sk) {
+    const id = O.parts.members[sk][0], cur = splitStat(enOf(id), jpOf(id));
+    if (!cur) throw new Error('That stat line has no English to change yet.');
+    if (cur[0].trim() !== newStat) { const after = projectSet(entryOf(id), {en: newStat + cur[1]}); list.push([id, after], ...linkedLines(id, after)); }
+  }
+  for (const [id, after] of list.slice(0, 1)) { const errors = check(id, after.en || '', speakerMap()).errors; if (errors.length && !confirm(`${errors.join('\n')}\n\nSave anyway?`)) throw new Error('Not saved.'); }
+  for (const [file, args] of updatesByFile(list)) await fb.updateDoc(ref('files', file), ...args);
+  return list.length;
+}
+const sameAs = (a, b) => (a || '') === (b || '');
+
+function renderNameCheck() {
+  $('#app').hidden = true;
+  const page = $('#names-page'); page.hidden = false;
+  if (!O.parts) { page.innerHTML = '<p>Loading…</p>'; return; }
+  const dec = O.nameDecisions || {}, {rows, unclear} = nameCheckRows(), odd = unusualClones();
+  const open = rows.filter(r => !dec[r.k]), done = Object.entries(dec).sort(([, a], [, b]) => (b.t?.toMillis?.() || 0) - (a.t?.toMillis?.() || 0));
+  const cnt = $('#names-tab-count'); if (cnt) cnt.textContent = open.length ? `${fmt(open.length)} to check` : 'done';
+  const where = ids => [...new Set(ids.map(i => PART_WORDS[partType(S.byId[i])] || partType(S.byId[i])))].join(', ');
+  const kept = O.nameKeep ||= {};
+  page.innerHTML = `<h2>Name check</h2>
+    <p>Each part name next to the model name its stat page shows, where they differ (ignoring capitals). Edit either box, or use the arrows to copy
+      one into the other, then <b>Save</b> (it changes every clone and every stat line of that model). <b>Keep both</b> leaves them as they are.
+      Either way the row moves to <b>Decided</b>.</p>
+    <div class="claim-box"><h3>To decide (${fmt(open.length)})</h3>
+      ${open.length ? `<table class="claim-table name-check"><thead><tr><th>Part name (menus)</th><th></th><th>Model name on the stat page</th><th></th></tr></thead><tbody>
+      ${open.map((r, i) => `<tr data-row="${i}"><td><input class="nc-part" value="${esc(kept[r.k]?.[0] ?? r.name)}"><div class="muted">${r.ids.length} line${r.ids.length > 1 ? 's' : ''}: ${esc(where(r.ids))}</div></td>
+        <td class="nc-arrows"><button class="small" data-to-stat title="Copy the part name to the stat page">→</button><button class="small" data-to-part title="Copy the stat page name to the part name, in capitals">←</button></td>
+        <td><input class="nc-stat" value="${esc(kept[r.k]?.[1] ?? r.stat)}"><div class="muted">${O.parts.members[r.sk].length} stat line${O.parts.members[r.sk].length > 1 ? 's' : ''}: ${esc(where(O.parts.members[r.sk]))}${r.score < 0.7 ? ' · <b>weak match, check it is the same part</b>' : ''}</div></td>
+        <td><button class="small primary" data-save>Save</button> <button class="small" data-keep>Keep both</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted">Nothing left to decide.</p>'}
+    </div>
+    <div class="claim-box"><details data-nc="done"${O.ncOpen?.done ? ' open' : ''}><summary>Decided (${fmt(done.length)})</summary>
+      <table class="claim-table"><thead><tr><th>Part name</th><th>Stat page</th><th>Decision</th><th></th></tr></thead><tbody>
+      ${done.map(([k, d]) => `<tr><td>${esc(d.part ?? '')}</td><td>${esc(d.statName ?? '')}</td><td>${d.choice === 'kept' ? 'Kept both' : 'Saved'} by ${esc(nm(d))}</td>
+        <td><button class="small" data-undo="${esc(k)}" title="Put it back in the list to decide (names you saved stay as saved)">Undo</button></td></tr>`).join('')}</tbody></table></details>
+    <details data-nc="unclear"${O.ncOpen?.unclear ? ' open' : ''}><summary>No clear stat page match (${fmt(unclear.length)})</summary>
+      <p class="muted">Part names whose English is not close to any stat page model name of the same part type (for example ARM PUNCH, whose stat pages name each Wanzer).</p>
+      <table class="claim-table"><tbody>${unclear.map(r => `<tr><td>${esc(r.name)}</td><td class="muted">${r.ids.length} line${r.ids.length > 1 ? 's' : ''}: ${esc(where(r.ids))}</td></tr>`).join('')}</tbody></table></details>
+    <details data-nc="odd"${O.ncOpen?.odd ? ' open' : ''}><summary>Unusual clone counts (${fmt(odd.length)})</summary>
+      <p class="muted">Usual: a Wanzer part name has 2 arms, a body and legs; hand and shoulder weapons come in pairs; everything else once.</p>
+      <table class="claim-table"><thead><tr><th>Part name</th><th>Lines</th></tr></thead><tbody>${odd.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(r.has)}</td></tr>`).join('')}</tbody></table></details></div>`;
+  for (const d of page.querySelectorAll('details[data-nc]')) d.ontoggle = () => { (O.ncOpen ||= {})[d.dataset.nc] = d.open; };
+  for (const tr of page.querySelectorAll('tr[data-row]')) {
+    const r = open[+tr.dataset.row], part = tr.querySelector('.nc-part'), stat = tr.querySelector('.nc-stat');
+    const remember = () => { kept[r.k] = [part.value, stat.value]; };
+    part.oninput = stat.oninput = remember;
+    tr.querySelector('[data-to-stat]').onclick = () => { stat.value = /[a-z]/.test(r.stat) ? titleCase(part.value) : part.value; remember(); };
+    tr.querySelector('[data-to-part]').onclick = () => { part.value = /[a-z]/.test(r.name) ? stat.value : stat.value.toUpperCase(); remember(); };
+    const decide = async choice => {
+      for (const b of tr.querySelectorAll('button')) b.disabled = true;
+      try {
+        if (choice === 'saved') await setNames(r.ids, r.sk, part.value.trim(), stat.value.trim());
+        await fb.setDoc(ref('meta', 'partsNames'), {decided: {[r.k]: {choice, stat: r.sk, part: part.value.trim(), statName: stat.value.trim(), e: O.email, n: O.name, t: now()}}}, {merge: true});
+        delete kept[r.k];
+        flash(choice === 'saved' ? 'Saved' : 'Kept');
+      } catch (e) { alert(e.message); for (const b of tr.querySelectorAll('button')) b.disabled = false; }
+    };
+    tr.querySelector('[data-save]').onclick = () => decide('saved');
+    tr.querySelector('[data-keep]').onclick = () => decide('kept');
+  }
+  for (const b of page.querySelectorAll('[data-undo]')) b.onclick = () => fb.updateDoc(ref('meta', 'partsNames'), new fb.FieldPath('decided', b.dataset.undo), fb.deleteField()).catch(e => alert(e.message));
+}
+
+// testing only: the emulator page exposes its state to test scripts
+if (emulator) window.__online = {O, nameCheckRows, unusualClones};
 
 // ---------- claims: "I'm translating these" for a week, from the Claims tab ----------
 // claims/{auto}: {uid, n, e, t, group, from, to}. Story claims are mission numbers; every other tab's are its

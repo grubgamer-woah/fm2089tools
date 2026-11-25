@@ -51,3 +51,10 @@ a.me-name { color: inherit; text-decoration: underline dotted; }
 .reviewbar .meter { display: block; }
 #review-fill { display: block; height: 100%; width: 0; background: #2fae8a; }
 .mtlbar #saved { margin-left: 12px; }
+
+.badge.clone { background: #3a4a5a; color: #cfe3f5; }
+.badge.clone-count { border-color: #7fb3e0; color: #7fb3e0; }
+.parts-sub { color: #7fb3e0; }
+.name-check input { width: 100%; min-width: 10rem; }
+.name-check td { vertical-align: top; }
+.nc-arrows { white-space: nowrap; }
