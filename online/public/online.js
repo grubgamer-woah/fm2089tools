@@ -1376,6 +1376,8 @@ async function reviewSetup() {
 }
 
 // one-time step (admin asked 2026-11-25): every Parts & items line (names, and help texts with stats) loses its MTL flag
+// and the "Source: Claude's machine translation (MTL)." line of its note
+const MTL_SOURCE = /^Source: Claude's machine translation \(MTL\)\.( Since edited by a person\.)?$/;
 async function partsNotMtl() {
   if (!O.isAdmin) return;
   const flags = await fb.getDoc(ref('meta', 'reviewed'));
@@ -1383,16 +1385,20 @@ async function partsNotMtl() {
   const perFile = {};
   for (const id of Object.keys(O.byId)) {
     if (!id.startsWith('MsgLabels_parts_')) continue;
-    const before = entryOf(id);
-    if (!before.mtl) continue;
-    const after = {...before}; delete after.mtl;
-    entryUpdates(id, after, perFile[O.byId[id].file] ||= []);
+    const before = entryOf(id), after = {...before};
+    delete after.mtl;
+    if (before.note) {
+      const note = before.note.split('\n').filter(l => !MTL_SOURCE.test(l)).join('\n').trim();
+      if (note) after.note = note; else delete after.note;
+    }
+    if (JSON.stringify(after) === JSON.stringify(before)) continue;
+    (perFile[O.byId[id].file] ||= []).push([id, after]);
   }
-  const files = Object.entries(perFile).filter(([, args]) => args.length);
-  for (let i = 0; i < files.length; i += 20) {
-    const batch = fb.writeBatch(db);
-    for (const [file, args] of files.slice(i, i + 20)) batch.update(ref('files', file), ...args);
-    await batch.commit();
+  // a commit takes at most 500 server timestamps (one per line here), so save 200 lines at a time
+  for (const [file, list] of Object.entries(perFile)) for (let i = 0; i < list.length; i += 200) {
+    const args = [];
+    for (const [id, after] of list.slice(i, i + 200)) entryUpdates(id, after, args);
+    if (args.length) await fb.updateDoc(ref('files', file), ...args);
   }
   await fb.setDoc(ref('meta', 'reviewed'), {partsNotMtl: mark()}, {merge: true});
 }
