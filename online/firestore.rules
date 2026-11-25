@@ -66,16 +66,25 @@ service cloud.firestore {
     // claims/{id}: someone's missions or lines for a week (the page ignores older ones); its owner renews or
     // releases it, and reviewers can release anyone's. A reviewer can mark it finished (done: {e, n, t}, set once):
     // then it never runs out, its owner can't renew or release it, and only reviewers can delete it (Reopen).
+    // Finishing one mission of a claim splits it: reviewers create the finished part (and the rest after it) for the
+    // claim's owner and shrink the original.
+    function stampsDone() {
+      return request.resource.data.done.keys().hasOnly(['e', 'n', 't'])
+        && request.resource.data.done.e == me() && request.resource.data.done.t == request.time;
+    }
     match /claims/{id} {
       allow read: if isEditor();
-      allow create: if isEditor() && request.resource.data.uid == request.auth.uid && request.resource.data.e == me()
-                    && !('done' in request.resource.data);
+      allow create: if (isEditor() && request.resource.data.uid == request.auth.uid && request.resource.data.e == me()
+                        && !('done' in request.resource.data))
+                    || (isReviewer() && (!('done' in request.resource.data) || stampsDone()));
       allow update: if (isEditor() && resource.data.uid == request.auth.uid && !('done' in resource.data)
                         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['t']))
                     || (isReviewer() && !('done' in resource.data)
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done'])
-                        && request.resource.data.done.keys().hasOnly(['e', 'n', 't'])
-                        && request.resource.data.done.e == me() && request.resource.data.done.t == request.time);
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done']) && stampsDone())
+                    || (isReviewer() && !('done' in resource.data)
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['from', 'to'])
+                        && request.resource.data.from >= resource.data.from && request.resource.data.to <= resource.data.to
+                        && request.resource.data.from <= request.resource.data.to);
       allow delete: if isReviewer() || (isEditor() && resource.data.uid == request.auth.uid && !('done' in resource.data));
     }
     // accessRequests/{uid}: someone not on the team asks to join; an admin approves (adding them under

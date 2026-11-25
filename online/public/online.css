@@ -21,6 +21,10 @@ body.gated #app, body.gated nav, body.gated .mtlbar { display: none; }
 .badge.claim { background: #4a3a7a; color: #fff; }
 .badge.claim.mine { background: #6a4fc0; }
 .badge.claim.done { background: #2e7d32; }
+.finished-claims { margin: .4rem 0 .8rem; }
+.finished-claims > summary { cursor: pointer; color: #4fd1a5; }
+.finished-claims .claim-table button.small { margin-left: 0; }
+.claim-table button.small { padding: .1rem .5rem; font-size: .85em; margin-left: .4rem; }
 .claim-bar { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
 img.face { width: 48px; height: 48px; image-rendering: pixelated; }
 [hidden] { display: none !important; }

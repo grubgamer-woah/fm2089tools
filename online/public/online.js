@@ -1509,8 +1509,29 @@ function claimRows(list) {
     : `<li><b>${esc(rangeText(c))}</b>${names(c)} · ${esc(nm(c))}, until ${until(c)}
       ${c.uid === O.user.uid ? `<button data-renew="${cid}" title="Keep it for another week from today">Renew</button>` : ''}
       ${c.uid === O.user.uid || O.canReview ? `<button data-release="${cid}">Release</button>` : ''}
-      ${O.canReview ? `<button data-finish="${cid}" title="Mark it done for good: nobody can claim it again (Reopen undoes it)">Finish</button>` : ''}</li>`;
-  return list.length ? `<ul class="claim-list">${list.map(row).join('')}</ul>` : '<p class="muted">Nothing claimed.</p>';
+      ${O.canReview ? `<button data-finish="${cid}" title="Mark it done for good: nobody can claim it again (Reopen undoes it)">${c.from === c.to ? 'Finish' : 'Finish all'}</button>` : ''}</li>`;
+  const open = list.filter(([, c]) => !c.done), done = list.filter(([, c]) => c.done), g = list[0]?.[1].group;
+  return (open.length ? `<ul class="claim-list">${open.map(row).join('')}</ul>` : '<p class="muted">Nothing claimed.</p>')
+    + (done.length ? `<details class="finished-claims" data-finished="${g}"${O.finishedOpen?.[g] ? ' open' : ''}><summary>Finished (${fmt(done.length)})</summary>
+      <table class="claim-table"><thead><tr><th>${g === 'story' ? 'Missions' : 'Lines'}</th>${g === 'story' ? '<th>Title</th>' : ''}<th>Claimed by</th><th>Finished by</th><th>Finished on</th><th></th></tr></thead>
+      <tbody>${done.map(([cid, c]) => `<tr><td>${esc(rangeText(c))}</td>${g === 'story' ? `<td>${names(c).replace(/^ <span class="muted">\((.*)\)<\/span>$/, '$1')}</td>` : ''}
+        <td>${esc(nm(c))}</td><td>${esc(nm(c.done))}</td><td>${doneDate(c)}</td>
+        <td>${O.canReview ? `<button class="small" data-reopen="${cid}" title="Take the finished mark off; nobody holds it then and anyone can claim it">Reopen</button>` : ''}</td></tr>`).join('')}</tbody></table></details>` : '');
+}
+
+// Finish one mission (or line) of a claim: it becomes its own finished claim (same owner and date) and the rest of
+// the claim stays as it was, split in two when the number is in the middle.
+async function finishPart(cid, n) {
+  const c = O.claims[cid];
+  if (!c || c.done || n < c.from || n > c.to) return;
+  const done = {e: O.email, n: O.name, t: now()};
+  if (c.from === c.to) return fb.updateDoc(ref('claims', cid), {done});
+  const batch = fb.writeBatch(db), part = (from, to, extra = {}) => ({uid: c.uid, n: c.n, e: c.e, t: c.t, group: c.group, from, to, ...extra});
+  batch.set(fb.doc(fb.collection(db, 'claims')), part(n, n, {done}));
+  if (n === c.from) batch.update(ref('claims', cid), {from: n + 1});
+  else if (n === c.to) batch.update(ref('claims', cid), {to: n - 1});
+  else { batch.update(ref('claims', cid), {to: n - 1}); batch.set(fb.doc(fb.collection(db, 'claims')), part(n + 1, c.to)); }
+  await batch.commit();
 }
 
 function renderClaims() {
@@ -1522,15 +1543,16 @@ function renderClaims() {
   const story = S.entries.filter(e => e.group === 'story' && !isHidden(e));
   const missionRows = O.missions.map(m => {
     const lines = story.filter(e => +e.mission === m), c = claimOf({group: 'story', mission: m});
+    const cid = c && !c.done && O.canReview ? Object.keys(O.claims).find(k => O.claims[k] === c) : null;
     const [label, title] = missionName(m);
     return `<tr><td>${m}</td><td>${esc(title)}${label ? ` <span class="muted">${esc(label)} in game</span>` : ''}</td><td>${fmt(lines.length)}</td><td>${fmt(lines.filter(e => (S.project[e.id] || {}).mtl).length)}</td>
-      <td>${c?.done ? `<span class="badge claim done">finished</span> ${esc(nm(c))}` : c ? `<span class="badge claim${c.uid === O.user.uid ? ' mine' : ''}">${c.uid === O.user.uid ? 'you' : esc(nm(c))}</span> until ${until(c)}` : ''}</td></tr>`;
+      <td>${c?.done ? `<span class="badge claim done">finished</span> ${esc(nm(c))}` : c ? `<span class="badge claim${c.uid === O.user.uid ? ' mine' : ''}">${c.uid === O.user.uid ? 'you' : esc(nm(c))}</span> until ${until(c)}${cid ? ` <button class="small" data-finish-one="${cid}" data-n="${m}" title="Mark this mission done for good: nobody can claim it again (Reopen undoes it)">Finish</button>` : ''}` : ''}</td></tr>`;
   }).join('');
   const others = S.config.groups.filter(([k]) => k !== 'story');
   page.innerHTML = `<h2>Claims</h2>
     <p>Claim what you are going to translate so nobody else starts on it. A claim lasts a week (Renew keeps it another week) and shows on
       every claimed line as a purple tag. When a reviewer marks a claim <b>finished</b>, nobody can claim those missions or lines again
-      (a reviewer can Reopen it). ${O.canReview ? 'As a reviewer you can release or finish anyone\'s claim.' : ''}</p>
+      (a reviewer can Reopen it). Finished claims are listed in each section's <b>Finished</b> table (click it to open). ${O.canReview ? 'As a reviewer you can release or finish anyone\'s claim, a whole claim at once or one mission at a time in the mission list.' : ''}</p>
     <div class="claim-box"><h3>Story: by mission</h3>
       <form data-group="story" class="claim-form"><label>Missions to claim<input placeholder="for example 1-10, 14" autocomplete="off"></label>
         <button class="primary">Claim</button><span class="claim-error bad"></span></form>
@@ -1550,6 +1572,8 @@ function renderClaims() {
   };
   for (const b of page.querySelectorAll('[data-release]')) b.onclick = () => fb.deleteDoc(ref('claims', b.dataset.release)).catch(e => alert(e.message));
   for (const b of page.querySelectorAll('[data-finish]')) b.onclick = () => fb.updateDoc(ref('claims', b.dataset.finish), {done: {e: O.email, n: O.name, t: now()}}).then(() => flash('Finished')).catch(e => alert(e.message));
+  for (const b of page.querySelectorAll('[data-finish-one]')) b.onclick = () => finishPart(b.dataset.finishOne, +b.dataset.n).then(() => flash('Finished')).catch(e => alert(e.message));
+  for (const d of page.querySelectorAll('[data-finished]')) d.ontoggle = () => { (O.finishedOpen ||= {})[d.dataset.finished] = d.open; };
   for (const b of page.querySelectorAll('[data-reopen]')) b.onclick = () => { if (confirm('Reopen this? The finished mark comes off and anyone can claim it again.')) fb.deleteDoc(ref('claims', b.dataset.reopen)).catch(e => alert(e.message)); };
   for (const b of page.querySelectorAll('[data-renew]')) b.onclick = () => fb.updateDoc(ref('claims', b.dataset.renew), {t: now()}).catch(e => alert(e.message));
 }
