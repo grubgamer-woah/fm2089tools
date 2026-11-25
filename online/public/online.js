@@ -1477,6 +1477,31 @@ function namesTab() {
   if (S.config) renderTabs();
 }
 
+// Undo a decision: a saved one puts the part name and the stat page model name back as they were (from the decision,
+// or for decisions made before that was recorded, from the last upload from the Studio), then the row is undecided
+async function undoDecision(k, d) {
+  if (d.choice === 'saved' && O.parts.members[k]) {
+    const list = [], id = O.parts.members[k][0], e = O.byId[id].e;
+    const part = d.prevPart !== undefined ? (d.prevPart === e.jp && e.english ? '' : d.prevPart) : seedOf(id);
+    if ((entryOf(id).en || '') !== part) {
+      const after = {...entryOf(id)};
+      if (part) after.en = part; else delete after.en;
+      list.push([id, after], ...linkedLines(id, after));
+    }
+    const sid = (O.parts.members[d.stat] || [])[0];
+    if (sid) {
+      const cur = splitStat(enOf(sid), jpOf(sid));
+      const name = d.prevStat !== undefined ? d.prevStat : (splitStat(seedOf(sid), jpOf(sid)) || [])[0];
+      if (cur && name !== undefined && cur[0].trim() !== name.trim()) {
+        const after = {...entryOf(sid), en: name.trim() + cur[1]};
+        list.push([sid, after], ...linkedLines(sid, after));
+      }
+    }
+    for (const [file, args] of updatesByFile(list)) await fb.updateDoc(ref('files', file), ...args);
+  }
+  await fb.updateDoc(ref('meta', 'partsNames'), new fb.FieldPath('decided', k), fb.deleteField());
+}
+
 async function setNames(ids, sk, newPart, newStat) {
   const list = [];
   if (newPart !== null && !sameAs(partName(ids[0]), newPart)) {
@@ -1515,9 +1540,10 @@ function renderNameCheck() {
         <td><button class="small primary" data-save>Save</button> <button class="small" data-keep>Keep both</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted">Nothing left to decide.</p>'}
     </div>
     <div class="claim-box"><details data-nc="done"${O.ncOpen?.done ? ' open' : ''}><summary>Decided (${fmt(done.length)})</summary>
+      ${done.length ? `<p><button class="small" id="nc-undo-all">Undo all ${fmt(done.length)}</button> <span class="muted">Saved ones get their old names back.</span></p>` : ''}
       <table class="claim-table"><thead><tr><th>Part name</th><th>Stat page</th><th>Decision</th><th></th></tr></thead><tbody>
       ${done.map(([k, d]) => `<tr><td>${esc(d.part ?? '')}</td><td>${esc(d.statName ?? '')}</td><td>${d.choice === 'kept' ? 'Kept both' : 'Saved'} by ${esc(nm(d))}</td>
-        <td><button class="small" data-undo="${esc(k)}" title="Put it back in the list to decide (names you saved stay as saved)">Undo</button></td></tr>`).join('')}</tbody></table></details>
+        <td><button class="small" data-undo="${esc(k)}" title="Put it back in the list to decide; a saved one gets its old names back">Undo</button></td></tr>`).join('')}</tbody></table></details>
     <details data-nc="unclear"${O.ncOpen?.unclear ? ' open' : ''}><summary>No clear stat page match (${fmt(unclear.length)})</summary>
       <p class="muted">Part names whose English is not close to any stat page model name of the same part type (for example ARM PUNCH, whose stat pages name each Wanzer).</p>
       <table class="claim-table"><tbody>${unclear.map(r => `<tr><td>${esc(r.name)}</td><td class="muted">${r.ids.length} line${r.ids.length > 1 ? 's' : ''}: ${esc(where(r.ids))}</td></tr>`).join('')}</tbody></table></details>
@@ -1535,7 +1561,7 @@ function renderNameCheck() {
       for (const b of tr.querySelectorAll('button')) b.disabled = true;
       try {
         if (choice === 'saved') await setNames(r.ids, r.sk, part.value.trim(), stat.value.trim());
-        await fb.setDoc(ref('meta', 'partsNames'), {decided: {[r.k]: {choice, stat: r.sk, part: part.value.trim(), statName: stat.value.trim(), e: O.email, n: O.name, t: now()}}}, {merge: true});
+        await fb.setDoc(ref('meta', 'partsNames'), {decided: {[r.k]: {choice, stat: r.sk, part: part.value.trim(), statName: stat.value.trim(), prevPart: r.name, prevStat: r.stat, e: O.email, n: O.name, t: now()}}}, {merge: true});
         delete kept[r.k];
         flash(choice === 'saved' ? 'Saved' : 'Kept');
       } catch (e) { alert(e.message); for (const b of tr.querySelectorAll('button')) b.disabled = false; }
@@ -1543,7 +1569,15 @@ function renderNameCheck() {
     tr.querySelector('[data-save]').onclick = () => decide('saved');
     tr.querySelector('[data-keep]').onclick = () => decide('kept');
   }
-  for (const b of page.querySelectorAll('[data-undo]')) b.onclick = () => fb.updateDoc(ref('meta', 'partsNames'), new fb.FieldPath('decided', b.dataset.undo), fb.deleteField()).catch(e => alert(e.message));
+  for (const b of page.querySelectorAll('[data-undo]')) b.onclick = () => { b.disabled = true; undoDecision(b.dataset.undo, dec[b.dataset.undo]).then(() => flash('Undone')).catch(e => { alert(e.message); b.disabled = false; }); };
+  const all = $('#nc-undo-all');
+  if (all) all.onclick = async () => {
+    if (!confirm(`Undo all ${done.length} decisions? Names you saved go back to what they were.`)) return;
+    all.disabled = true;
+    let n = 0;
+    try { for (const [k, d] of done) { all.textContent = `Undoing ${++n} of ${done.length}…`; await undoDecision(k, d); } flash('All undone'); }
+    catch (e) { alert(e.message); all.disabled = false; }
+  };
 }
 
 // testing only: the emulator page exposes its state to test scripts
