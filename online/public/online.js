@@ -332,7 +332,9 @@ function seedFlagsOf(id) {
   return {done, mtl, edited, hidden};
 }
 const seedOf = (id, field = 'en') => (O.files[O.byId[id].file][field === 'en' ? 'seed' : 'seedNote'] || {})[id] || '';
-const allEntries = () => Object.values(O.files).flatMap(d => d.entries).sort((a, b) => a.pos - b.pos);
+// Parts & items lists the one-line part and item names (MsgLabels_parts_menu_*) before their help texts and stat lists
+const helpLast = e => /^MsgLabels_parts_help_/.test(e.file || e.id) ? 1 : 0;
+const allEntries = () => Object.values(O.files).flatMap(d => d.entries).sort((a, b) => helpLast(a) - helpLast(b) || a.pos - b.pos);
 // What you see: the shared script with your own suggestions still waiting for review laid over it
 // (an admin's changes go straight into the script, so an admin sees just the script)
 const mySuggestion = (kind, id) => (O.pending || {})[suggestionId(kind, id)];
