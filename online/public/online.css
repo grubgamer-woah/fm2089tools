@@ -58,3 +58,5 @@ a.me-name { color: inherit; text-decoration: underline dotted; }
 .name-check input { width: 100%; min-width: 10rem; }
 .name-check td { vertical-align: top; }
 .nc-arrows { white-space: nowrap; }
+.nc-none { font-style: italic; }
+.name-check tr.nc-same input { opacity: .75; }

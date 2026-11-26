@@ -1418,12 +1418,15 @@ const noPlus = s => s.replace(/\s*\+\s*[0-9˥З]+$/, '');
 const sameName = (a, b) => a.replace(/\s+/g, ' ').toLowerCase() === b.replace(/\s+/g, ' ').toLowerCase();
 const titleCase = s => s.replace(/\b[A-Z]{3,}\b/g, w => w[0] + w.slice(1).toLowerCase());
 
-// Part names next to the stat page model names they belong to. Part-name groups with the same English are one unit
-// (shown once). Units pair with stat models of the same part type, best English match first, and every stat page goes
-// to one unit only; "+1", "+2"... units follow their base unit (to the same stat page, or to its own "+N" page if it has
-// one) and are listed in the base's row. Rows are the pairs whose names differ (ignoring capitals and the +N).
+// Model/Stats Names: every part name (menus) and every stat page model name, side by side where they belong together.
+// Part-name groups with the same English are one unit. Units pair with stat models of the same part type, best English
+// match first, and every stat page goes to one unit only. "+1", "+2"... part names sit under their base part name (paired
+// with the base's stat page, or its own "+N" page if it has one); "+N" stat pages nobody pairs with sit under their base
+// stat page. Stat pages with no part name get rows of their own.
+const PART_ORDER = ['arm', 'body', 'leg', 'shoulder', 'grip', 'bp', 'cp', 'ig', 'ip', 'item', 'd'];
+const plusOf = s => s.slice(noPlus(s).length);
 function nameCheckRows() {
-  const P = O.parts, stats = {}, unclear = [];
+  const P = O.parts, stats = {};
   for (const [k, ids] of Object.entries(P.members)) if (k.startsWith('s:')) for (const t of new Set(ids.map(i => partType(S.byId[i])))) (stats[t] ||= []).push(k);
   // a stat model whose name is exactly some part's name belongs to that part only: "Zenith" is ZENITH's stat page, so
   // ZENITH GLEN CUSTOM (which has no stat page of its own) is not paired with it
@@ -1435,16 +1438,16 @@ function nameCheckRows() {
     if (!name) continue;
     partNames.add(flat(name));
     if (isHidden(S.byId[ids[0]])) continue;
-    const u = units[name.toLowerCase()] ||= {k, keys: [], ids: [], name, variants: []};
+    const u = units[name.toLowerCase()] ||= {k, keys: [], ids: [], name, variants: [], sk: null, stat: null, score: 0};
     u.keys.push(k); u.ids.push(...ids);
   }
   const list = Object.values(units);
   const baseOf = u => noPlus(u.name) !== u.name ? units[noPlus(u.name).toLowerCase()] : null;
-  const typesOf = u => new Set(u.ids.map(i => partType(S.byId[i])));
+  const typesOf = ids => new Set(ids.map(i => partType(S.byId[i])));
   const cands = [];
   for (const u of list) {
     if (baseOf(u)) continue;
-    for (const t of typesOf(u)) for (const sk of stats[t] || []) {
+    for (const t of typesOf(u.ids)) for (const sk of stats[t] || []) {
       const sn = statName(P.members[sk][0]);
       if (partNames.has(flat(sn)) && flat(sn) !== flat(u.name)) continue;
       const sc = nameSim(noPlus(u.name), noPlus(sn));
@@ -1456,25 +1459,40 @@ function nameCheckRows() {
   for (const [sc, u, sk] of cands) if (!u.sk && !used.has(sk)) { u.sk = sk; u.score = sc; used.add(sk); }
   for (const u of list) {
     const b = baseOf(u);
-    if (!b || !b.sk) continue;
-    const want = (noPlus(statName(P.members[b.sk][0])) + u.name.slice(noPlus(u.name).length)).toLowerCase();
+    if (!b) continue;
+    b.variants.push(u); u.base = b;
+    if (!b.sk) continue;
+    const want = (noPlus(statName(P.members[b.sk][0])) + plusOf(u.name)).toLowerCase();
     let own = null;
-    for (const t of typesOf(u)) for (const sk of stats[t] || []) if (!used.has(sk) && statName(P.members[sk][0]).toLowerCase() === want) own = sk;
+    for (const t of typesOf(u.ids)) for (const sk of stats[t] || []) if (!used.has(sk) && statName(P.members[sk][0]).toLowerCase() === want) own = sk;
     if (own) used.add(own);
-    u.sk = own || b.sk; u.score = b.score; u.base = b;
+    u.sk = own || b.sk; u.score = b.score;
   }
+  for (const u of list) if (u.sk) u.stat = statName(P.members[u.sk][0]);
   const rows = [];
   for (const u of list) {
-    if (!u.sk) { unclear.push(u); continue; }
-    u.stat = statName(P.members[u.sk][0]);
+    if (u.base) continue;
+    const statVariants = [...new Set(u.variants.map(v => v.sk).filter(sk => sk && sk !== u.sk))];
+    rows.push({...u, statVariants, first: u.ids[0]});
   }
-  for (const u of list) {
-    if (!u.sk || u.base) continue;
-    u.variants = list.filter(v => v.base === u);
-    if (!sameName(noPlus(u.name), noPlus(u.stat))) rows.push(u);
-    else for (const v of u.variants) if (!sameName(noPlus(v.name), noPlus(v.stat)) || v.sk !== u.sk && !sameName(v.name, v.stat)) rows.push({...v, variants: []});
+  // stat pages no part name pairs with: one row per base model, its "+N" pages under it
+  const orphans = {};
+  for (const [sk, ids] of Object.entries(P.members)) {
+    if (!sk.startsWith('s:') || used.has(sk)) continue;
+    const sn = statName(ids[0]);
+    (orphans[noPlus(sn).toLowerCase() + '|' + [...typesOf(ids)].sort()] ||= []).push([sk, sn]);
   }
-  return {rows, unclear};
+  for (const group of Object.values(orphans)) {
+    group.sort(([, a], [, b]) => (noPlus(a) === a ? 0 : 1) - (noPlus(b) === b ? 0 : 1) || a.localeCompare(b));
+    const [[sk, sn], ...rest] = group;
+    rows.push({k: sk, keys: [], ids: [], name: null, variants: [], sk, stat: sn, score: 1, statVariants: rest.map(([k]) => k), first: P.members[sk][0]});
+  }
+  for (const r of rows) {
+    r.same = !!(r.name && r.stat) && sameName(noPlus(r.name), noPlus(r.stat)) && r.variants.every(v => v.stat && sameName(noPlus(v.name), noPlus(v.stat)));
+    const e = S.byId[r.first];
+    r.order = [PART_ORDER.indexOf(partType(e)), e.index];
+  }
+  return rows.sort((a, b) => a.order[0] - b.order[0] || a.order[1] - b.order[1]);
 }
 
 // the usual number of lines per part name: 2 arms + body + legs for a Wanzer, a pair of hand or shoulder weapons, one otherwise
@@ -1500,8 +1518,8 @@ function namesTab() {
     const b = document.createElement('button');
     b.id = 'names-tab'; b.className = O.namesOpen ? 'active' : '';
     if (O.namesOpen) $('#tabs').querySelectorAll('button').forEach(x => x.classList.remove('active'));
-    const dec = O.nameDecisions || {}, left = O.parts ? nameCheckRows().rows.filter(r => !dec[r.k]).length : null;
-    b.innerHTML = `Name check<small id="names-tab-count">${left === null ? '' : left ? `${fmt(left)} to check` : 'done'}</small>`;
+    const dec = O.nameDecisions || {}, left = O.parts ? nameCheckRows().filter(r => !r.same && !((r.name === null || r.keys.every(k => dec[k])) && (r.sk === null || dec[r.sk]))).length : null;
+    b.innerHTML = `Model/Stats Names<small id="names-tab-count">${left === null ? '' : left ? `${fmt(left)} to check` : 'done'}</small>`;
     b.onclick = () => { O.namesOpen = true; renderTabs(); renderNameCheck(); };
     $('#tabs').appendChild(b);
     if (O.namesOpen) b.classList.add('active');
@@ -1518,10 +1536,11 @@ function namesTab() {
 
 // Undo a decision: a saved one puts the part name and the stat page model name back as they were (from the decision,
 // or for decisions made before that was recorded, from the last upload from the Studio), then the row is undecided
-async function undoDecision(k, d) {
+function undoLines(k, d) {
+  const list = [];
   if (d.choice === 'saved' && O.parts.members[k]) {
-    const list = [], id = O.parts.members[k][0], e = O.byId[id].e;
-    const part = d.prevPart !== undefined ? (d.prevPart === e.jp && e.english ? '' : d.prevPart) : seedOf(id);
+    const id = O.parts.members[k][0], e = O.byId[id].e;
+    const part = !k.startsWith('n:') ? (entryOf(id).en || '') : d.prevPart !== undefined ? (d.prevPart === e.jp && e.english ? '' : d.prevPart) : seedOf(id);
     if ((entryOf(id).en || '') !== part) {
       const after = {...entryOf(id)};
       if (part) after.en = part; else delete after.en;
@@ -1536,9 +1555,29 @@ async function undoDecision(k, d) {
         list.push([sid, after], ...linkedLines(sid, after));
       }
     }
-    for (const [file, args] of updatesByFile(list)) await fb.updateDoc(ref('files', file), ...args);
   }
-  await fb.updateDoc(ref('meta', 'partsNames'), new fb.FieldPath('decided', k), fb.deleteField());
+  return list;
+}
+// write [id, after] pairs together: 200 entries per commit (a commit takes 500 server timestamps), all commits at once
+async function writeLines(list, extra) {
+  const byId = new Map(list);
+  const files = {};
+  for (const [id, after] of byId) (files[O.byId[id].file] ||= []).push([id, after]);
+  const chunks = [];
+  for (const [file, pairs] of Object.entries(files)) for (let i = 0; i < pairs.length; i += 200) chunks.push(pairs.slice(i, i + 200));
+  const batches = [];
+  let batch = fb.writeBatch(db), n = 0;
+  for (const chunk of chunks) {
+    if (n + chunk.length > 200 && n) { batches.push(batch); batch = fb.writeBatch(db); n = 0; }
+    for (const [file, args] of updatesByFile(chunk)) batch.update(ref('files', file), ...args);
+    n += chunk.length;
+  }
+  if (extra) extra(batch);
+  batches.push(batch);
+  await Promise.all(batches.map(b => b.commit()));
+}
+async function undoDecision(k, d) {
+  await writeLines(undoLines(k, d), b => b.update(ref('meta', 'partsNames'), new fb.FieldPath('decided', k), fb.deleteField()));
 }
 
 async function setNames(ids, sk, newPart, newStat) {
@@ -1562,67 +1601,92 @@ function renderNameCheck() {
   $('#app').hidden = true;
   const page = $('#names-page'); page.hidden = false;
   if (!O.parts) { page.innerHTML = '<p>Loading…</p>'; return; }
-  const dec = O.nameDecisions || {}, {rows, unclear} = nameCheckRows(), odd = unusualClones();
-  const open = rows.filter(r => !dec[r.k]), done = Object.entries(dec).sort(([, a], [, b]) => (b.t?.toMillis?.() || 0) - (a.t?.toMillis?.() || 0));
-  const cnt = $('#names-tab-count'); if (cnt) cnt.textContent = open.length ? `${fmt(open.length)} to check` : 'done';
+  const dec = O.nameDecisions || {}, rows = nameCheckRows(), odd = unusualClones();
+  const partDone = r => r.name === null || r.keys.every(k => dec[k]), statDone = r => r.sk === null || !!dec[r.sk];
+  const open = rows.filter(r => !(partDone(r) && statDone(r))), done = Object.entries(dec).sort(([, a], [, b]) => (b.t?.toMillis?.() || 0) - (a.t?.toMillis?.() || 0));
+  const toCheck = open.filter(r => !r.same).length;
+  const cnt = $('#names-tab-count'); if (cnt) cnt.textContent = toCheck ? `${fmt(toCheck)} to check` : 'done';
   const where = ids => [...new Set(ids.map(i => PART_WORDS[partType(S.byId[i])] || partType(S.byId[i])))].join(', ');
   const kept = O.nameKeep ||= {};
-  page.innerHTML = `<h2>Name check</h2>
-    <p>Each part name next to the model name its stat page shows, where they differ (ignoring capitals). Its +1, +2… upgrades are listed with it and change with it. Edit either box, or use the arrows to copy
-      one into the other, then <b>Save</b> (it changes every clone and every stat line of that model). <b>Keep both</b> leaves them as they are.
-      Either way the row moves to <b>Decided</b>.</p>
-    <div class="claim-box"><h3>To decide (${fmt(open.length)})</h3>
-      ${open.length ? `<table class="claim-table name-check"><thead><tr><th>Part name (menus)</th><th></th><th>Model name on the stat page</th><th></th></tr></thead><tbody>
-      ${open.map((r, i) => `<tr data-row="${i}"><td><input class="nc-part" value="${esc(kept[r.k]?.[0] ?? r.name)}"><div class="muted">${r.ids.length} line${r.ids.length > 1 ? 's' : ''}: ${esc(where(r.ids))}${r.variants.length ? ` · also ${r.variants.map(v => esc(v.name)).join(', ')}` : ''}</div></td>
-        <td class="nc-arrows"><button class="small" data-to-stat title="Copy the part name to the stat page">→</button><button class="small" data-to-part title="Copy the stat page name to the part name, in capitals">←</button></td>
-        <td><input class="nc-stat" value="${esc(kept[r.k]?.[1] ?? r.stat)}"><div class="muted">${O.parts.members[r.sk].length} stat line${O.parts.members[r.sk].length > 1 ? 's' : ''}: ${esc(where(O.parts.members[r.sk]))}${r.score < 0.7 ? ' · <b>weak match, check it is the same part</b>' : ''}</div></td>
-        <td><button class="small primary" data-save>Save</button> <button class="small" data-keep>Keep both</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted">Nothing left to decide.</p>'}
+  const lines = n => `${fmt(n)} entr${n === 1 ? 'y' : 'ies'}`;
+  // "8 entries: arm ×2, arm+1 ×2, body, body+1, legs, legs+1": each entry's part type and its +N, read from its Japanese
+  const kinds = ids => {
+    const c = {};
+    for (const i of ids) {
+      const m = /\+\s*([0-9˥З]+)/.exec(S.byId[i].jp.split('\n')[0]);
+      const label = (PART_WORDS[partType(S.byId[i])] || partType(S.byId[i])) + (m ? '+' + m[1].replace(/˥/g, '1').replace(/З/g, '3') : '');
+      c[label] = (c[label] || 0) + 1;
+    }
+    return Object.entries(c).map(([k, n]) => n > 1 ? `${k} ×${n}` : k).join(', ');
+  };
+  const statInfo = r => { const ids = [r.sk, ...r.statVariants].flatMap(sk => O.parts.members[sk]); return `${lines(ids.length)}: ${esc(kinds(ids))}`; };
+  const partCell = r => r.name === null ? '<td class="muted nc-none">No part name in the menus</td>'
+    : `<td><input class="nc-part" value="${esc(kept[r.k]?.[0] ?? r.name)}"><div class="muted">${lines(r.ids.length)}: ${esc(kinds(r.ids))}${r.variants.map(v => `<br>+ ${esc(v.name)}: ${lines(v.ids.length)}, ${esc(kinds(v.ids))}`).join('')}</div>
+      ${partDone(r) ? '<span class="badge done">saved</span>' : `<button class="small" data-save-part>Save part name${r.variants.length ? ` (and ${r.variants.map(v => esc(plusOf(v.name))).join(', ')})` : ''}</button>`}</td>`;
+  const statCell = r => r.sk === null ? '<td class="muted nc-none">No stat page found</td>'
+    : `<td><input class="nc-stat" value="${esc(kept[r.k]?.[1] ?? r.stat)}"><div class="muted">${statInfo(r)}${r.statVariants.length ? ` (including ${r.statVariants.map(sk => esc(statName(O.parts.members[sk][0]))).join(', ')})` : ''}${r.name !== null && r.score < 0.7 ? ' · <b>weak match, check it is the same part</b>' : ''}</div>
+      ${statDone(r) ? '<span class="badge done">saved</span>' : `<button class="small" data-save-stat>Save stat name${r.statVariants.length ? ` (and ${r.statVariants.map(sk => esc(plusOf(statName(O.parts.members[sk][0])))).join(', ')})` : ''}</button>`}</td>`;
+  page.innerHTML = `<h2>Model/Stats Names</h2>
+    <p>Every part name in the menus next to the model name its stat page shows. Its +1, +2… upgrades are listed with it and change with it.
+      Rows marked <span class="badge">same</span> already match (ignoring capitals). Edit either box, or use the arrows to copy one into the other,
+      then save a column (or <b>Save both</b>). Saving a part name changes it on every clone and on its +1, +2… part names; saving a stat page
+      name changes it on every stat entry of that model, which already covers the +1, +2… parts (they say "arm+1" and so on), plus any +1, +2…
+      stat pages listed with it. A row moves to <b>Decided</b> once both columns are saved. "Entries" are single lines in the Parts &amp; items list.</p>
+    <div class="claim-box"><h3>To decide (${fmt(open.length)}, ${fmt(toCheck)} not matching)</h3>
+      ${open.length ? `<table class="claim-table name-check"><thead><tr><th>Menu page name</th><th></th><th>Stat page name</th><th></th></tr></thead><tbody>
+      ${open.map((r, i) => `<tr data-row="${i}"${r.same ? ' class="nc-same"' : ''}>${partCell(r)}
+        <td class="nc-arrows">${r.name !== null && r.sk !== null ? '<button class="small" data-to-stat title="Copy the part name to the stat page">→</button><button class="small" data-to-part title="Copy the stat page name to the part name, in capitals">←</button>' : ''}</td>
+        ${statCell(r)}
+        <td>${r.same ? '<span class="badge">same</span> ' : ''}${r.name !== null && r.sk !== null && !partDone(r) && !statDone(r) ? '<button class="small primary" data-save-both>Save both</button>' : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Nothing left to decide.</p>'}
     </div>
     <div class="claim-box"><details data-nc="done"${O.ncOpen?.done ? ' open' : ''}><summary>Decided (${fmt(done.length)})</summary>
       ${done.length ? `<p><button class="small" id="nc-undo-all">Undo all ${fmt(done.length)}</button> <span class="muted">Saved ones get their old names back.</span></p>` : ''}
-      <table class="claim-table"><thead><tr><th>Part name</th><th>Stat page</th><th>Decision</th><th></th></tr></thead><tbody>
-      ${done.map(([k, d]) => `<tr><td>${esc(d.part ?? '')}</td><td>${esc(d.statName ?? '')}</td><td>${d.choice === 'kept' ? 'Kept both' : 'Saved'} by ${esc(nm(d))}</td>
+      <table class="claim-table"><thead><tr><th>Menu page name</th><th>Stat page name</th><th>Decision</th><th></th></tr></thead><tbody>
+      ${done.map(([k, d]) => `<tr><td>${k.startsWith('n:') ? esc(d.part ?? '') : ''}</td><td>${k.startsWith('s:') || d.prevStat !== undefined ? esc(d.statName ?? '') : ''}</td><td>${d.choice === 'kept' ? 'Kept' : 'Saved'} by ${esc(nm(d))}</td>
         <td><button class="small" data-undo="${esc(k)}" title="Put it back in the list to decide; a saved one gets its old names back">Undo</button></td></tr>`).join('')}</tbody></table></details>
-    <details data-nc="unclear"${O.ncOpen?.unclear ? ' open' : ''}><summary>No clear stat page match (${fmt(unclear.length)})</summary>
-      <p class="muted">Part names whose English is not close to any stat page model name of the same part type (for example ARM PUNCH, whose stat pages name each Wanzer).</p>
-      <table class="claim-table"><tbody>${unclear.map(r => `<tr><td>${esc(r.name)}</td><td class="muted">${r.ids.length} line${r.ids.length > 1 ? 's' : ''}: ${esc(where(r.ids))}</td></tr>`).join('')}</tbody></table></details>
     <details data-nc="odd"${O.ncOpen?.odd ? ' open' : ''}><summary>Unusual clone counts (${fmt(odd.length)})</summary>
       <p class="muted">Usual: a Wanzer part name has 2 arms, a body and legs; hand and shoulder weapons come in pairs; everything else once.</p>
-      <table class="claim-table"><thead><tr><th>Part name</th><th>Lines</th></tr></thead><tbody>${odd.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(r.has)}</td></tr>`).join('')}</tbody></table></details></div>`;
+      <table class="claim-table"><thead><tr><th>Part name</th><th>Entries</th></tr></thead><tbody>${odd.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(r.has)}</td></tr>`).join('')}</tbody></table></details></div>`;
   for (const d of page.querySelectorAll('details[data-nc]')) d.ontoggle = () => { (O.ncOpen ||= {})[d.dataset.nc] = d.open; };
   for (const tr of page.querySelectorAll('tr[data-row]')) {
     const r = open[+tr.dataset.row], part = tr.querySelector('.nc-part'), stat = tr.querySelector('.nc-stat');
-    const remember = () => { kept[r.k] = [part.value, stat.value]; };
-    part.oninput = stat.oninput = remember;
-    tr.querySelector('[data-to-stat]').onclick = () => { stat.value = /[a-z]/.test(r.stat) ? titleCase(part.value) : part.value; remember(); };
-    tr.querySelector('[data-to-part]').onclick = () => { part.value = /[a-z]/.test(r.name) ? stat.value : stat.value.toUpperCase(); remember(); };
-    const decide = async choice => {
+    const remember = () => { kept[r.k] = [part?.value, stat?.value]; };
+    if (part) part.oninput = remember;
+    if (stat) stat.oninput = remember;
+    tr.querySelector('[data-to-stat]')?.addEventListener('click', () => { stat.value = /[a-z]/.test(r.stat) ? titleCase(part.value) : part.value; remember(); });
+    tr.querySelector('[data-to-part]')?.addEventListener('click', () => { part.value = /[a-z]/.test(r.name) ? stat.value : stat.value.toUpperCase(); remember(); });
+    const save = async (doPart, doStat) => {
       for (const b of tr.querySelectorAll('button')) b.disabled = true;
       try {
-        const p = part.value.trim(), st = stat.value.trim(), decided = {};
-        // the row and its "+N" upgrades: each keeps its own +N on the part name, and on the stat page name if it had one
-        for (const v of [r, ...r.variants]) {
-          const vp = p + v.name.slice(noPlus(v.name).length), vs = st + v.stat.slice(noPlus(v.stat).length);
-          for (const [n, key] of v.keys.entries()) {
-            if (choice === 'saved') await setNames(O.parts.members[key], n ? null : v.sk, vp, n ? null : vs);
-            decided[key] = {choice, stat: v.sk, part: vp, statName: vs, prevPart: v.name, prevStat: v.stat, e: O.email, n: O.name, t: now()};
-          }
+        const p = part ? part.value.trim() : null, st = stat ? stat.value.trim() : null, decided = {};
+        const base = {choice: 'saved', part: p ?? '', statName: st ?? '', e: O.email, n: O.name, t: now()};
+        // part names: the row's and its "+N" upgrades', each keeping its own +N
+        if (doPart && p !== null) for (const v of [r, ...r.variants]) for (const key of v.keys) {
+          await setNames(O.parts.members[key], null, p + plusOf(v.name), null);
+          decided[key] = {...base, part: p + plusOf(v.name), prevPart: v.name, stat: null};
+        }
+        // stat pages: the row's and its "+N" ones, each keeping its own +N
+        if (doStat && st !== null) for (const sk of [r.sk, ...r.statVariants]) {
+          const old = statName(O.parts.members[sk][0]);
+          await setNames([], sk, null, st + plusOf(old));
+          decided[sk] = {...base, statName: st + plusOf(old), prevStat: old, stat: sk};
         }
         await fb.setDoc(ref('meta', 'partsNames'), {decided}, {merge: true});
         delete kept[r.k];
-        flash(choice === 'saved' ? 'Saved' : 'Kept');
+        flash('Saved');
       } catch (e) { alert(e.message); for (const b of tr.querySelectorAll('button')) b.disabled = false; }
     };
-    tr.querySelector('[data-save]').onclick = () => decide('saved');
-    tr.querySelector('[data-keep]').onclick = () => decide('kept');
+    tr.querySelector('[data-save-part]')?.addEventListener('click', () => save(true, false));
+    tr.querySelector('[data-save-stat]')?.addEventListener('click', () => save(false, true));
+    tr.querySelector('[data-save-both]')?.addEventListener('click', () => save(true, true));
   }
   for (const b of page.querySelectorAll('[data-undo]')) b.onclick = () => { b.disabled = true; undoDecision(b.dataset.undo, dec[b.dataset.undo]).then(() => flash('Undone')).catch(e => { alert(e.message); b.disabled = false; }); };
   const all = $('#nc-undo-all');
   if (all) all.onclick = async () => {
     if (!confirm(`Undo all ${done.length} decisions? Names you saved go back to what they were.`)) return;
     all.disabled = true;
-    let n = 0;
-    try { for (const [k, d] of done) { all.textContent = `Undoing ${++n} of ${done.length}…`; await undoDecision(k, d); } flash('All undone'); }
+    all.textContent = `Undoing ${done.length}…`;
+    try { await writeLines(done.flatMap(([k, d]) => undoLines(k, d)), b => b.set(ref('meta', 'partsNames'), {decided: {}})); flash('All undone'); }
     catch (e) { alert(e.message); all.disabled = false; }
   };
 }
