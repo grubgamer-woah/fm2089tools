@@ -1403,7 +1403,7 @@ function nameSim(a, b) {
   a = normName(a); b = normName(b);
   if (!a || !b) return 0;
   if (a === b) return 1;
-  if (a.includes(b) || b.includes(a)) return 0.9;
+  if (a.includes(b) || b.includes(a)) return 0.8 + 0.15 * Math.min(a.length, b.length) / Math.max(a.length, b.length);
   const d = Array.from({length: b.length + 1}, (_, j) => j);
   for (let i = 1; i <= a.length; i++) {
     let prev = d[0]; d[0] = i;
@@ -1418,28 +1418,61 @@ const noPlus = s => s.replace(/\s*\+\s*[0-9˥З]+$/, '');
 const sameName = (a, b) => a.replace(/\s+/g, ' ').toLowerCase() === b.replace(/\s+/g, ' ').toLowerCase();
 const titleCase = s => s.replace(/\b[A-Z]{3,}\b/g, w => w[0] + w.slice(1).toLowerCase());
 
-// each part-name group with the stat model of the same part type whose English name is closest
+// Part names next to the stat page model names they belong to. Part-name groups with the same English are one unit
+// (shown once). Units pair with stat models of the same part type, best English match first, and every stat page goes
+// to one unit only; "+1", "+2"... units follow their base unit (to the same stat page, or to its own "+N" page if it has
+// one) and are listed in the base's row. Rows are the pairs whose names differ (ignoring capitals and the +N).
 function nameCheckRows() {
-  const P = O.parts, stats = {}, rows = [], unclear = [];
+  const P = O.parts, stats = {}, unclear = [];
   for (const [k, ids] of Object.entries(P.members)) if (k.startsWith('s:')) for (const t of new Set(ids.map(i => partType(S.byId[i])))) (stats[t] ||= []).push(k);
   // a stat model whose name is exactly some part's name belongs to that part only: "Zenith" is ZENITH's stat page, so
   // ZENITH GLEN CUSTOM (which has no stat page of its own) is not paired with it
   const flat = s => noPlus(s).replace(/\s+/g, ' ').toLowerCase(), partNames = new Set();
-  for (const [k, ids] of Object.entries(P.members)) if (k.startsWith('n:')) partNames.add(flat(partName(ids[0])));
+  const units = {};
   for (const [k, ids] of Object.entries(P.members)) {
-    if (!k.startsWith('n:') || isHidden(S.byId[ids[0]])) continue;
+    if (!k.startsWith('n:')) continue;
     const name = partName(ids[0]);
     if (!name) continue;
-    let best = null, score = 0;
-    for (const t of new Set(ids.map(i => partType(S.byId[i])))) for (const sk of stats[t] || []) {
+    partNames.add(flat(name));
+    if (isHidden(S.byId[ids[0]])) continue;
+    const u = units[name.toLowerCase()] ||= {k, keys: [], ids: [], name, variants: []};
+    u.keys.push(k); u.ids.push(...ids);
+  }
+  const list = Object.values(units);
+  const baseOf = u => noPlus(u.name) !== u.name ? units[noPlus(u.name).toLowerCase()] : null;
+  const typesOf = u => new Set(u.ids.map(i => partType(S.byId[i])));
+  const cands = [];
+  for (const u of list) {
+    if (baseOf(u)) continue;
+    for (const t of typesOf(u)) for (const sk of stats[t] || []) {
       const sn = statName(P.members[sk][0]);
-      if (partNames.has(flat(sn)) && flat(sn) !== flat(name)) continue;
-      const s = nameSim(noPlus(name), noPlus(sn));
-      if (s > score) { score = s; best = sk; }
+      if (partNames.has(flat(sn)) && flat(sn) !== flat(u.name)) continue;
+      const sc = nameSim(noPlus(u.name), noPlus(sn));
+      if (sc >= 0.5) cands.push([sc, u, sk]);
     }
-    if (!best || score < 0.5) { unclear.push({k, ids, name}); continue; }
-    const stat = statName(P.members[best][0]);
-    if (!sameName(noPlus(name), noPlus(stat))) rows.push({k, ids, name, sk: best, stat, score});
+  }
+  cands.sort((a, b) => b[0] - a[0]);
+  const used = new Set();
+  for (const [sc, u, sk] of cands) if (!u.sk && !used.has(sk)) { u.sk = sk; u.score = sc; used.add(sk); }
+  for (const u of list) {
+    const b = baseOf(u);
+    if (!b || !b.sk) continue;
+    const want = (noPlus(statName(P.members[b.sk][0])) + u.name.slice(noPlus(u.name).length)).toLowerCase();
+    let own = null;
+    for (const t of typesOf(u)) for (const sk of stats[t] || []) if (!used.has(sk) && statName(P.members[sk][0]).toLowerCase() === want) own = sk;
+    if (own) used.add(own);
+    u.sk = own || b.sk; u.score = b.score; u.base = b;
+  }
+  const rows = [];
+  for (const u of list) {
+    if (!u.sk) { unclear.push(u); continue; }
+    u.stat = statName(P.members[u.sk][0]);
+  }
+  for (const u of list) {
+    if (!u.sk || u.base) continue;
+    u.variants = list.filter(v => v.base === u);
+    if (!sameName(noPlus(u.name), noPlus(u.stat))) rows.push(u);
+    else for (const v of u.variants) if (!sameName(noPlus(v.name), noPlus(v.stat)) || v.sk !== u.sk && !sameName(v.name, v.stat)) rows.push({...v, variants: []});
   }
   return {rows, unclear};
 }
@@ -1535,12 +1568,12 @@ function renderNameCheck() {
   const where = ids => [...new Set(ids.map(i => PART_WORDS[partType(S.byId[i])] || partType(S.byId[i])))].join(', ');
   const kept = O.nameKeep ||= {};
   page.innerHTML = `<h2>Name check</h2>
-    <p>Each part name next to the model name its stat page shows, where they differ (ignoring capitals). Edit either box, or use the arrows to copy
+    <p>Each part name next to the model name its stat page shows, where they differ (ignoring capitals). Its +1, +2… upgrades are listed with it and change with it. Edit either box, or use the arrows to copy
       one into the other, then <b>Save</b> (it changes every clone and every stat line of that model). <b>Keep both</b> leaves them as they are.
       Either way the row moves to <b>Decided</b>.</p>
     <div class="claim-box"><h3>To decide (${fmt(open.length)})</h3>
       ${open.length ? `<table class="claim-table name-check"><thead><tr><th>Part name (menus)</th><th></th><th>Model name on the stat page</th><th></th></tr></thead><tbody>
-      ${open.map((r, i) => `<tr data-row="${i}"><td><input class="nc-part" value="${esc(kept[r.k]?.[0] ?? r.name)}"><div class="muted">${r.ids.length} line${r.ids.length > 1 ? 's' : ''}: ${esc(where(r.ids))}</div></td>
+      ${open.map((r, i) => `<tr data-row="${i}"><td><input class="nc-part" value="${esc(kept[r.k]?.[0] ?? r.name)}"><div class="muted">${r.ids.length} line${r.ids.length > 1 ? 's' : ''}: ${esc(where(r.ids))}${r.variants.length ? ` · also ${r.variants.map(v => esc(v.name)).join(', ')}` : ''}</div></td>
         <td class="nc-arrows"><button class="small" data-to-stat title="Copy the part name to the stat page">→</button><button class="small" data-to-part title="Copy the stat page name to the part name, in capitals">←</button></td>
         <td><input class="nc-stat" value="${esc(kept[r.k]?.[1] ?? r.stat)}"><div class="muted">${O.parts.members[r.sk].length} stat line${O.parts.members[r.sk].length > 1 ? 's' : ''}: ${esc(where(O.parts.members[r.sk]))}${r.score < 0.7 ? ' · <b>weak match, check it is the same part</b>' : ''}</div></td>
         <td><button class="small primary" data-save>Save</button> <button class="small" data-keep>Keep both</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted">Nothing left to decide.</p>'}
@@ -1566,8 +1599,16 @@ function renderNameCheck() {
     const decide = async choice => {
       for (const b of tr.querySelectorAll('button')) b.disabled = true;
       try {
-        if (choice === 'saved') await setNames(r.ids, r.sk, part.value.trim(), stat.value.trim());
-        await fb.setDoc(ref('meta', 'partsNames'), {decided: {[r.k]: {choice, stat: r.sk, part: part.value.trim(), statName: stat.value.trim(), prevPart: r.name, prevStat: r.stat, e: O.email, n: O.name, t: now()}}}, {merge: true});
+        const p = part.value.trim(), st = stat.value.trim(), decided = {};
+        // the row and its "+N" upgrades: each keeps its own +N on the part name, and on the stat page name if it had one
+        for (const v of [r, ...r.variants]) {
+          const vp = p + v.name.slice(noPlus(v.name).length), vs = st + v.stat.slice(noPlus(v.stat).length);
+          for (const [n, key] of v.keys.entries()) {
+            if (choice === 'saved') await setNames(O.parts.members[key], n ? null : v.sk, vp, n ? null : vs);
+            decided[key] = {choice, stat: v.sk, part: vp, statName: vs, prevPart: v.name, prevStat: v.stat, e: O.email, n: O.name, t: now()};
+          }
+        }
+        await fb.setDoc(ref('meta', 'partsNames'), {decided}, {merge: true});
         delete kept[r.k];
         flash(choice === 'saved' ? 'Saved' : 'Kept');
       } catch (e) { alert(e.message); for (const b of tr.querySelectorAll('button')) b.disabled = false; }
