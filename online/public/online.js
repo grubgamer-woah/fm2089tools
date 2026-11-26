@@ -1422,13 +1422,19 @@ const titleCase = s => s.replace(/\b[A-Z]{3,}\b/g, w => w[0] + w.slice(1).toLowe
 function nameCheckRows() {
   const P = O.parts, stats = {}, rows = [], unclear = [];
   for (const [k, ids] of Object.entries(P.members)) if (k.startsWith('s:')) for (const t of new Set(ids.map(i => partType(S.byId[i])))) (stats[t] ||= []).push(k);
+  // a stat model whose name is exactly some part's name belongs to that part only: "Zenith" is ZENITH's stat page, so
+  // ZENITH GLEN CUSTOM (which has no stat page of its own) is not paired with it
+  const flat = s => noPlus(s).replace(/\s+/g, ' ').toLowerCase(), partNames = new Set();
+  for (const [k, ids] of Object.entries(P.members)) if (k.startsWith('n:')) partNames.add(flat(partName(ids[0])));
   for (const [k, ids] of Object.entries(P.members)) {
     if (!k.startsWith('n:') || isHidden(S.byId[ids[0]])) continue;
     const name = partName(ids[0]);
     if (!name) continue;
     let best = null, score = 0;
     for (const t of new Set(ids.map(i => partType(S.byId[i])))) for (const sk of stats[t] || []) {
-      const s = nameSim(noPlus(name), noPlus(statName(P.members[sk][0])));
+      const sn = statName(P.members[sk][0]);
+      if (partNames.has(flat(sn)) && flat(sn) !== flat(name)) continue;
+      const s = nameSim(noPlus(name), noPlus(sn));
       if (s > score) { score = s; best = sk; }
     }
     if (!best || score < 0.5) { unclear.push({k, ids, name}); continue; }
