@@ -60,3 +60,16 @@ a.me-name { color: inherit; text-decoration: underline dotted; }
 .nc-arrows { white-space: nowrap; }
 .nc-none { font-style: italic; }
 .name-check tr.nc-same input { opacity: .75; }
+.name-check { table-layout: fixed; }
+.name-check col.nc-col { width: 38%; }
+.name-check td.nc-status { white-space: normal; }
+.name-check td.nc-status button { margin: .15rem .2rem .15rem 0; }
+.name-check tr.nc-section th { padding-top: 1.2rem; font-size: 1.05em; border-bottom: 2px solid rgba(127,127,127,.5); }
+.nc-badge { display: inline-block; padding: .1rem .5rem; border-radius: 4px; font-size: .85em; font-weight: 600; margin: 0 .3rem .3rem 0; }
+.nc-same { background: #2e7d32; color: #fff; }
+.nc-confirmed { background: #1b5e20; color: #fff; border: 1px solid #8fdc94; }
+.nc-strong { background: #1f5fa8; color: #fff; }
+.nc-weak { background: #c77700; color: #fff; }
+.nc-none-badge { background: #5a5a5a; color: #fff; }
+/* the Claims tab always sits at the far right, after any other tab (the team asked) */
+#tabs #claims-tab { order: 99; margin-left: auto; }

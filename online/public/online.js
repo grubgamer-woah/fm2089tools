@@ -1454,9 +1454,18 @@ function nameCheckRows() {
       if (sc >= 0.5) cands.push([sc, u, sk]);
     }
   }
-  cands.sort((a, b) => b[0] - a[0]);
+  // links the team set: "confirmed" pairs first, "removed" pairs never
+  const links = O.nameLinks || {};
   const used = new Set();
-  for (const [sc, u, sk] of cands) if (!u.sk && !used.has(sk)) { u.sk = sk; u.score = sc; used.add(sk); }
+  for (const u of list) {
+    const l = links[u.k];
+    if (l?.state === 'confirmed' && P.members[l.sk] && !used.has(l.sk)) { u.sk = l.sk; u.score = 1; u.confirmed = true; used.add(l.sk); }
+  }
+  cands.sort((a, b) => b[0] - a[0]);
+  for (const [sc, u, sk] of cands) {
+    if (u.sk || used.has(sk) || (links[u.k]?.state === 'removed' && links[u.k].sk === sk)) continue;
+    u.sk = sk; u.score = sc; used.add(sk);
+  }
   for (const u of list) {
     const b = baseOf(u);
     if (!b) continue;
@@ -1489,10 +1498,13 @@ function nameCheckRows() {
   }
   for (const r of rows) {
     r.same = !!(r.name && r.stat) && sameName(noPlus(r.name), noPlus(r.stat)) && r.variants.every(v => v.stat && sameName(noPlus(v.name), noPlus(v.stat)));
+    // which list it goes in: 0 linked (same name, confirmed or a strong match), 1 questionable link, 2 menu name only, 3 stat page only
+    r.status = !r.name ? 'stat' : !r.sk ? 'menu' : r.same ? 'same' : r.confirmed ? 'confirmed' : r.score >= 0.7 ? 'strong' : 'weak';
+    r.section = {same: 0, confirmed: 0, strong: 0, weak: 1, menu: 2, stat: 3}[r.status];
     const e = S.byId[r.first];
     r.order = [PART_ORDER.indexOf(partType(e)), e.index];
   }
-  return rows.sort((a, b) => a.order[0] - b.order[0] || a.order[1] - b.order[1]);
+  return rows.sort((a, b) => a.section - b.section || a.order[0] - b.order[0] || a.order[1] - b.order[1]);
 }
 
 // the usual number of lines per part name: 2 arms + body + legs for a Wanzer, a pair of hand or shoulder weapons, one otherwise
@@ -1518,8 +1530,7 @@ function namesTab() {
     const b = document.createElement('button');
     b.id = 'names-tab'; b.className = O.namesOpen ? 'active' : '';
     if (O.namesOpen) $('#tabs').querySelectorAll('button').forEach(x => x.classList.remove('active'));
-    const dec = O.nameDecisions || {}, left = O.parts ? nameCheckRows().filter(r => !r.same && !((r.name === null || r.keys.every(k => dec[k])) && (r.sk === null || dec[r.sk]))).length : null;
-    b.innerHTML = `Model/Stats Names<small id="names-tab-count">${left === null ? '' : left ? `${fmt(left)} to check` : 'done'}</small>`;
+    b.innerHTML = `Model/Stats Names<small id="names-tab-count">${namesCount()}</small>`;
     b.onclick = () => { O.namesOpen = true; renderTabs(); renderNameCheck(); };
     $('#tabs').appendChild(b);
     if (O.namesOpen) b.classList.add('active');
@@ -1530,7 +1541,7 @@ function namesTab() {
     if (b && b.id === 'names-tab' && O.claimsOpen) { O.claimsOpen = false; $('#claims-page').hidden = true; }
   }, true);
   $('main').insertAdjacentHTML('beforeend', '<section id="names-page" class="claims-page" hidden></section>');
-  fb.onSnapshot(ref('meta', 'partsNames'), snap => { O.nameDecisions = (snap.exists() && snap.data().decided) || {}; if (O.namesOpen) renderNameCheck(); });
+  fb.onSnapshot(ref('meta', 'partsNames'), snap => { O.nameDecisions = (snap.exists() && snap.data().decided) || {}; O.nameLinks = (snap.exists() && snap.data().links) || {}; if (O.namesOpen) renderNameCheck(); });
   if (S.config) renderTabs();
 }
 
@@ -1597,6 +1608,15 @@ async function setNames(ids, sk, newPart, newStat) {
 }
 const sameAs = (a, b) => (a || '') === (b || '');
 
+// the tab's "decided/all" count, like the other tabs' "translated/all": rows whose columns are all saved
+function namesCount(rows) {
+  if (!O.parts) return '';
+  rows ||= nameCheckRows();
+  const dec = O.nameDecisions || {};
+  const done = rows.filter(r => (r.name === null || r.keys.every(k => dec[k])) && (r.sk === null || dec[r.sk])).length;
+  return `${fmt(done)}/${fmt(rows.length)}`;
+}
+
 function renderNameCheck() {
   $('#app').hidden = true;
   const page = $('#names-page'); page.hidden = false;
@@ -1605,7 +1625,7 @@ function renderNameCheck() {
   const partDone = r => r.name === null || r.keys.every(k => dec[k]), statDone = r => r.sk === null || !!dec[r.sk];
   const open = rows.filter(r => !(partDone(r) && statDone(r))), done = Object.entries(dec).sort(([, a], [, b]) => (b.t?.toMillis?.() || 0) - (a.t?.toMillis?.() || 0));
   const toCheck = open.filter(r => !r.same).length;
-  const cnt = $('#names-tab-count'); if (cnt) cnt.textContent = toCheck ? `${fmt(toCheck)} to check` : 'done';
+  const cnt = $('#names-tab-count'); if (cnt) cnt.textContent = namesCount(rows);
   const where = ids => [...new Set(ids.map(i => PART_WORDS[partType(S.byId[i])] || partType(S.byId[i])))].join(', ');
   const kept = O.nameKeep ||= {};
   const lines = n => `${fmt(n)} entr${n === 1 ? 'y' : 'ies'}`;
@@ -1620,24 +1640,47 @@ function renderNameCheck() {
     return Object.entries(c).map(([k, n]) => n > 1 ? `${k} ×${n}` : k).join(', ');
   };
   const statInfo = r => { const ids = [r.sk, ...r.statVariants].flatMap(sk => O.parts.members[sk]); return `${lines(ids.length)}: ${esc(kinds(ids))}`; };
-  const partCell = r => r.name === null ? '<td class="muted nc-none">No part name in the menus</td>'
+  const partCell = r => r.name === null ? '<td class="muted nc-none">No menu name</td>'
     : `<td><input class="nc-part" value="${esc(kept[r.k]?.[0] ?? r.name)}"><div class="muted">${lines(r.ids.length)}: ${esc(kinds(r.ids))}${r.variants.map(v => `<br>+ ${esc(v.name)}: ${lines(v.ids.length)}, ${esc(kinds(v.ids))}`).join('')}</div>
-      ${partDone(r) ? '<span class="badge done">saved</span>' : `<button class="small" data-save-part>Save part name${r.variants.length ? ` (and ${r.variants.map(v => esc(plusOf(v.name))).join(', ')})` : ''}</button>`}</td>`;
+      ${partDone(r) ? '<span class="badge done">saved</span>' : '<button class="small" data-save-part>Save menu name</button>'}</td>`;
   const statCell = r => r.sk === null ? '<td class="muted nc-none">No stat page found</td>'
-    : `<td><input class="nc-stat" value="${esc(kept[r.k]?.[1] ?? r.stat)}"><div class="muted">${statInfo(r)}${r.statVariants.length ? ` (including ${r.statVariants.map(sk => esc(statName(O.parts.members[sk][0]))).join(', ')})` : ''}${r.name !== null && r.score < 0.7 ? ' · <b>weak match, check it is the same part</b>' : ''}</div>
-      ${statDone(r) ? '<span class="badge done">saved</span>' : `<button class="small" data-save-stat>Save stat name${r.statVariants.length ? ` (and ${r.statVariants.map(sk => esc(plusOf(statName(O.parts.members[sk][0])))).join(', ')})` : ''}</button>`}</td>`;
+    : `<td><input class="nc-stat" value="${esc(kept[r.k]?.[1] ?? r.stat)}"><div class="muted">${statInfo(r)}${r.statVariants.length ? ` (including ${r.statVariants.map(sk => esc(statName(O.parts.members[sk][0]))).join(', ')})` : ''}</div>
+      ${statDone(r) ? '<span class="badge done">saved</span>' : '<button class="small" data-save-stat>Save stat name</button>'}</td>`;
+  const STATUS = {same: ['nc-same', 'Same name', 'The menu and stat page names already match (ignoring capitals and +N)'],
+    confirmed: ['nc-confirmed', 'Confirmed link', 'You confirmed these belong together'],
+    strong: ['nc-strong', 'Linked', 'Close English names, so they are taken to be the same part'],
+    weak: ['nc-weak', 'Questionable link', 'Only a loose English match: check it is the same part'],
+    menu: ['nc-none-badge', 'No stat page', 'No stat page name was found for this menu name'],
+    stat: ['nc-none-badge', 'No menu name', 'No menu name was found for this stat page']};
+  const statusCell = r => {
+    const [cls, label, tip] = STATUS[r.status];
+    const linkButtons = r.name !== null && r.sk !== null
+      ? `${r.status === 'confirmed' || r.status === 'same' ? '' : `<button class="small" data-confirm title="Mark this link as right">Confirm link</button>`}
+         <button class="small" data-unlink title="These are not the same part: show them as separate rows">Remove link</button>` : '';
+    return `<td class="nc-status"><span class="nc-badge ${cls}" title="${esc(tip)}">${label}</span>
+      ${r.name !== null && r.sk !== null && !partDone(r) && !statDone(r) ? '<button class="small primary" data-save-both>Save both</button>' : ''}${linkButtons}</td>`;
+  };
+  const SECTIONS = ['Linked names: menu and stat page names that belong together', 'Questionable links: check these are the same part',
+    'Menu names with no stat page', 'Stat pages with no menu name'];
+  let body = '', section = -1;
+  open.forEach((r, i) => {
+    if (r.section !== section) {
+      section = r.section;
+      body += `<tr class="nc-section"><th colspan="3">${SECTIONS[section]} (${fmt(open.filter(x => x.section === section).length)})</th></tr>`;
+    }
+    body += `<tr data-row="${i}">${partCell(r)}${statCell(r)}${statusCell(r)}</tr>`;
+  });
   page.innerHTML = `<h2>Model/Stats Names</h2>
-    <p>Every part name in the menus next to the model name its stat page shows. Its +1, +2… upgrades are listed with it and change with it.
-      Rows marked <span class="badge">same</span> already match (ignoring capitals). Edit either box, or use the arrows to copy one into the other,
-      then save a column (or <b>Save both</b>). Saving a part name changes it on every clone and on its +1, +2… part names; saving a stat page
-      name changes it on every stat entry of that model, which already covers the +1, +2… parts (they say "arm+1" and so on), plus any +1, +2…
-      stat pages listed with it. A row moves to <b>Decided</b> once both columns are saved. "Entries" are single lines in the Parts &amp; items list.</p>
+    <p>Every menu page name next to the stat page name it belongs to. Its +1, +2… upgrades are listed with it and change with it.
+      Edit a box and save that column (or <b>Save both</b>). Saving a menu name changes it on every clone and on its +1, +2… names; saving a stat
+      page name changes it on every stat entry of that model, which already covers the +1, +2… parts (they say "arm+1" and so on), plus any
+      +1, +2… stat pages listed with it. The right column says how sure the link is: <span class="nc-badge nc-same">Same name</span>
+      <span class="nc-badge nc-confirmed">Confirmed link</span> <span class="nc-badge nc-strong">Linked</span> <span class="nc-badge nc-weak">Questionable link</span>.
+      <b>Confirm link</b> keeps a pair together; <b>Remove link</b> splits it into a menu-only and a stat-only row. A row moves to <b>Decided</b> once
+      both its columns are saved. "Entries" are single lines in the Parts &amp; items list.</p>
     <div class="claim-box"><h3>To decide (${fmt(open.length)}, ${fmt(toCheck)} not matching)</h3>
-      ${open.length ? `<table class="claim-table name-check"><thead><tr><th>Menu page name</th><th></th><th>Stat page name</th><th></th></tr></thead><tbody>
-      ${open.map((r, i) => `<tr data-row="${i}"${r.same ? ' class="nc-same"' : ''}>${partCell(r)}
-        <td class="nc-arrows">${r.name !== null && r.sk !== null ? '<button class="small" data-to-stat title="Copy the part name to the stat page">→</button><button class="small" data-to-part title="Copy the stat page name to the part name, in capitals">←</button>' : ''}</td>
-        ${statCell(r)}
-        <td>${r.same ? '<span class="badge">same</span> ' : ''}${r.name !== null && r.sk !== null && !partDone(r) && !statDone(r) ? '<button class="small primary" data-save-both>Save both</button>' : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Nothing left to decide.</p>'}
+      ${open.length ? `<table class="claim-table name-check"><colgroup><col class="nc-col"><col class="nc-col"><col></colgroup>
+        <thead><tr><th>Menu page name</th><th>Stat page name</th><th></th></tr></thead><tbody>${body}</tbody></table>` : '<p class="muted">Nothing left to decide.</p>'}
     </div>
     <div class="claim-box"><details data-nc="done"${O.ncOpen?.done ? ' open' : ''}><summary>Decided (${fmt(done.length)})</summary>
       ${done.length ? `<p><button class="small" id="nc-undo-all">Undo all ${fmt(done.length)}</button> <span class="muted">Saved ones get their old names back.</span></p>` : ''}
@@ -1653,8 +1696,10 @@ function renderNameCheck() {
     const remember = () => { kept[r.k] = [part?.value, stat?.value]; };
     if (part) part.oninput = remember;
     if (stat) stat.oninput = remember;
-    tr.querySelector('[data-to-stat]')?.addEventListener('click', () => { stat.value = /[a-z]/.test(r.stat) ? titleCase(part.value) : part.value; remember(); });
-    tr.querySelector('[data-to-part]')?.addEventListener('click', () => { part.value = /[a-z]/.test(r.name) ? stat.value : stat.value.toUpperCase(); remember(); });
+    const link = state => fb.setDoc(ref('meta', 'partsNames'), {links: {[r.k]: {sk: r.sk, state, e: O.email, n: O.name, t: now()}}}, {merge: true})
+      .then(() => flash(state === 'confirmed' ? 'Link confirmed' : 'Link removed')).catch(e => alert(e.message));
+    tr.querySelector('[data-confirm]')?.addEventListener('click', () => link('confirmed'));
+    tr.querySelector('[data-unlink]')?.addEventListener('click', () => link('removed'));
     const save = async (doPart, doStat) => {
       for (const b of tr.querySelectorAll('button')) b.disabled = true;
       try {
