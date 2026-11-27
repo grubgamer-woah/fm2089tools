@@ -392,7 +392,7 @@ function wrapStudio() {
   namesTab();
   // the Studio writes "ROM: …" there once its page has loaded; say who is signed in instead
   const base = () => { $('#base').innerHTML = `Signed in as ${meLink()} · script uploaded ${esc(O.meta.made)}${O.meta.uploaded ? ' by ' + esc(nm(O.meta.uploaded)) : ''}`; };
-  const wait = setInterval(() => { if (S.entries.length) { clearInterval(wait); base(); numberLines(); buildParts(); clonesFilter(); if (O.isAdmin) renderTabs(); listenClaims(); reviewSetup().then(partsNotMtl).catch(err => console.warn('review setup', err.message)); reviewMeter(); } }, 200);
+  const wait = setInterval(() => { if (S.entries.length) { clearInterval(wait); base(); numberLines(); buildParts(); clonesFilter(); if (O.isAdmin) renderTabs(); listenClaims(); reviewSetup().then(partsNotMtl).then(menuNamesCaps).catch(err => console.warn('review setup', err.message)); reviewMeter(); } }, 200);
   base();
   O.showBase = base;
   renderPresence();
@@ -1703,7 +1703,7 @@ function renderNameCheck() {
     const save = async (doPart, doStat) => {
       for (const b of tr.querySelectorAll('button')) b.disabled = true;
       try {
-        const p = part ? part.value.trim() : null, st = stat ? stat.value.trim() : null, decided = {};
+        const p = part ? capsName(part.value.trim()) : null, st = stat ? stat.value.trim() : null, decided = {};
         const base = {choice: 'saved', part: p ?? '', statName: st ?? '', e: O.email, n: O.name, t: now()};
         // part names: the row's and its "+N" upgrades', each keeping its own +N
         if (doPart && p !== null) for (const v of [r, ...r.variants]) for (const key of v.keys) {
@@ -1849,6 +1849,21 @@ async function reviewSetup() {
 
 // one-time step (admin asked 2026-11-25): every Parts & items line (names, and help texts with stats) loses its MTL flag
 // and the "Source: Claude's machine translation (MTL)." line of its note
+// one-time step (admin asked 2026-11-27): every menu page (part) name in capitals, control codes left as they are
+const capsName = s => s.replace(/(«[^»]*»)|([^«]+)/g, (m, code, text) => code || text.toUpperCase());
+async function menuNamesCaps() {
+  if (!O.isAdmin) return;
+  const flags = await fb.getDoc(ref('meta', 'reviewed'));
+  if (flags.exists() && flags.data().menuNamesCaps) return;
+  const list = [];
+  for (const id of Object.keys(O.byId)) {
+    if (!id.startsWith('MsgLabels_parts_menu_')) continue;
+    const base = enOf(id);
+    if (base && capsName(base) !== base) list.push([id, {...entryOf(id), en: capsName(base)}]);
+  }
+  if (list.length) await writeLines(list);
+  await fb.setDoc(ref('meta', 'reviewed'), {menuNamesCaps: mark()}, {merge: true});
+}
 const MTL_SOURCE = /^Source: Claude's machine translation \(MTL\)\.( Since edited by a person\.)?$/;
 async function partsNotMtl() {
   if (!O.isAdmin) return;
